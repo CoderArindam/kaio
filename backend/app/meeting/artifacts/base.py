@@ -14,5 +14,9 @@ class MeetingArtifact(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     status: str = "created"
 
+    @property
+    def artifact_id(self) -> str:
+        return self.id
+
     class Config:
         frozen = True

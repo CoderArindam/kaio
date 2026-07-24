@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Kanban, Plus, FolderPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
@@ -52,10 +52,11 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
   const { user: currentUser } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [boardMembersMap, setBoardMembersMap] = useState<Record<number, BoardMember[]>>({});
+  const fetchedBoardIdsRef = useRef<Set<number>>(new Set());
   const pageSize = 3;
 
-  const displayBoards =
-    summaryBoards.length > 0
+  const displayBoards = useMemo(() => {
+    return summaryBoards.length > 0
       ? summaryBoards.map((sb) => ({
           id: sb.id,
           name: sb.name,
@@ -80,12 +81,14 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           member_count: ab.member_count || 1,
           created_at: ab.created_at,
         }));
+  }, [summaryBoards, activeBoardsFallback]);
 
-  // Fetch actual board members from PostgreSQL backend for each display board
+  // Fetch actual board members once per board
   useEffect(() => {
     let isMounted = true;
     displayBoards.forEach((board) => {
-      if (!boardMembersMap[board.id]) {
+      if (!fetchedBoardIdsRef.current.has(board.id)) {
+        fetchedBoardIdsRef.current.add(board.id);
         getBoardMembers(board.id)
           .then((members) => {
             if (isMounted && members) {
@@ -97,13 +100,14 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           })
           .catch((err) => {
             console.error(`Failed to fetch members for board ${board.id}:`, err);
+            fetchedBoardIdsRef.current.delete(board.id);
           });
       }
     });
     return () => {
       isMounted = false;
     };
-  }, [displayBoards, boardMembersMap]);
+  }, [displayBoards]);
 
   const totalPages = Math.ceil(displayBoards.length / pageSize) || 1;
   const paginatedBoards = displayBoards.slice(

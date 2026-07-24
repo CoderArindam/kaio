@@ -55,5 +55,20 @@ class SpeakerDOM:
                         return name
         except Exception:
             pass
+        # Strategy 3: Side panel speaking indicator (animated equalizer)
+        try:
+            indicators = page.locator(SEL["side_panel_speaking_indicator"])
+            count = await indicators.count()
+            if count > 0:
+                for i in range(count):
+                    ind = indicators.nth(i)
+                    if await ind.is_visible():
+                        # Extract name from parent listitem's aria-label
+                        name = await ind.evaluate("el => { const p = el.closest('[role=\"listitem\"]'); return p ? p.getAttribute('aria-label') : null; }")
+                        if name:
+                            log.debug("Speaker detected via strategy 3 (side panel)", name=name)
+                            return name.strip()
+        except Exception:
+            pass
 
         return None

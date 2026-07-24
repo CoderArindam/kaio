@@ -1,18 +1,18 @@
 """Audio Preprocessing Stage."""
 
-from typing import List, Type
 from pathlib import Path
-import os
+from typing import List, Type
 
 from app.meeting.artifacts.base import MeetingArtifact
 from app.meeting.artifacts.recording import MeetingRecording, ProcessedAudio
+from app.meeting.audio.ffmpeg_service import FFmpegService
+from app.meeting.config import meeting_config
 from app.meeting.pipeline.context import PipelineContext
 from app.meeting.pipeline.stage import PipelineStage, StageStatus
 from app.meeting.processing.service import AudioProcessingService
-from app.meeting.audio.ffmpeg_service import FFmpegService
 from app.meeting.processing.validator import RecordingValidator
-from app.meeting.recording.storage import LocalRecordingStorage
-from app.meeting.config import meeting_config
+from app.meeting.storage.local import LocalStorageProvider
+
 
 class AudioPreprocessingStage(PipelineStage):
     """Processes raw meeting recordings into normalized audio."""
@@ -45,12 +45,12 @@ class AudioPreprocessingStage(PipelineStage):
         recording = context.artifacts.get(MeetingRecording)
         if not recording:
             return StageStatus.FAILED
-            
+
         ffmpeg = FFmpegService()
         validator = RecordingValidator(ffmpeg)
-        storage = LocalRecordingStorage(root=str(meeting_config.PROCESSING_OUTPUT_DIR))
+        storage = LocalStorageProvider(root=str(meeting_config.PROCESSING_OUTPUT_DIR))
         service = AudioProcessingService(ffmpeg=ffmpeg, validator=validator, storage=storage)
-        
+
         try:
             processed_audio = await service.process(recording)
             context.artifacts.register(processed_audio)
@@ -58,4 +58,3 @@ class AudioPreprocessingStage(PipelineStage):
         except Exception as e:
             context.warnings.append(f"Audio preprocessing failed: {str(e)}")
             return StageStatus.FAILED
-

@@ -1,12 +1,10 @@
 """MeetingService — top-level orchestration for the meeting module.
 
-Responsibilities:
-- Accept join / leave requests
-- Fire async browser-join flows without blocking HTTP
-- Coordinate: BrowserController -> Provider -> HealthMonitor -> ObserverSupervisor
-- Bridge EventBus -> MeetingSession (service is the only writer to session state)
-- Centralise all debug capture on failure
-- Own a MeetingRuntime per session for deterministic cleanup
+Responsibilities (SRP Refactored):
+- Pure orchestration facade for the meeting subsystem
+- Delegates execution to BotController, RecordingService, PipelineService, StorageService
+- Coordinates session lifecycle (MeetingSessionManager)
+- Bridges EventBus events -> MeetingSession
 
 Dependency rules:
 - Depends ONLY on meeting-internal components
@@ -19,34 +17,27 @@ import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from app.meeting.bot.browser.controller import BrowserController
-from app.meeting.bot.browser.profile_manager import ProfileManager
-from app.meeting.bot.recorder.recorder import MeetingRecorder
+from app.meeting.bot.executor import LocalPlaywrightExecutor, MeetingExecutor
 from app.meeting.bot.session.manager import MeetingSessionManager
-from app.meeting.bot.session.monitor import HealthMonitor
 from app.meeting.config import meeting_config
-from app.meeting.exceptions import BrowserLaunchError, MeetingError
-from app.meeting.intelligence.clock import MeetingClock
-from app.meeting.intelligence.context import MeetingContext
 from app.meeting.intelligence.event_bus import EventBus
 from app.meeting.intelligence.lifecycle import MeetingLifecycle
 from app.meeting.intelligence.models import (
+    EventCategory,
     EventType,
     MeetingEvent,
-    MeetingState,
     Participant,
-    SpeakerSlot,
 )
 from app.meeting.intelligence.supervisor import ObserverSupervisor
 from app.meeting.logger import get_logger
 from app.meeting.models.session import JoinState, MeetingSession, SessionStatus, TERMINAL_STATUSES
-from app.meeting.providers import get_provider
-from app.meeting.recording.storage import LocalRecordingStorage
-from app.meeting.utils.debug import DebugCapture
-from app.meeting.utils.playwright_errors import is_playwright_fatal, page_is_usable
-from app.meeting.utils.retry import with_retry
+from app.meeting.bot.recorder.recorder import MeetingRecorder
+from app.meeting.services.bot_controller import BotController
+from app.meeting.services.pipeline_service import PipelineService
+from app.meeting.services.recording_service import RecordingService
+from app.meeting.services.storage_service import StorageService
 
 log = get_logger("service")
 
@@ -67,33 +58,40 @@ class RuntimeState(str, Enum):
 @dataclass
 class MeetingRuntime:
     """The single-owner container for all resources of a session.
-    
+
     Guarantees cleanup is executed exactly once via the join task.
     """
     session_id: str
-    
+
     state: RuntimeState = RuntimeState.STARTING
     shutdown_reason: str | None = None
     _cleanup_event: asyncio.Event = field(default_factory=asyncio.Event)
     _cleanup_finished: asyncio.Event = field(default_factory=asyncio.Event)
 
-    # Core Playwright
-    controller: BrowserController | None = None
-    profile_path: Path | None = None
+    # Executor abstraction
+    executor: MeetingExecutor | None = None
 
     # Intelligence (populated after join)
-    context: MeetingContext | None = None
+    context: Any | None = None
     supervisor: ObserverSupervisor | None = None
     event_bus: EventBus | None = None
     lifecycle: MeetingLifecycle | None = None
 
     # Recording (populated after intelligence starts, before RUNNING)
     recorder: MeetingRecorder | None = None
-    recording_artifact: Any | None = None  # MeetingRecording | None
+    recording_artifact: Any | None = None
 
-    # Scalable task registry (join_flow, health_monitor, observers, transcription, etc.)
+    # Task registry
     background_tasks: dict[str, asyncio.Task] = field(default_factory=dict)
-    
+
+    @property
+    def controller(self) -> Any:
+        return self.executor.get_controller() if self.executor else None
+
+    @property
+    def profile_path(self) -> Path | None:
+        return self.executor.get_profile_path() if self.executor else None
+
     def request_shutdown(self, reason: str) -> None:
         """Signal the join flow owner to begin teardown."""
         log.info("cleanup_requested.set", reason=reason)
@@ -112,20 +110,46 @@ class MeetingRuntime:
 
 
 # ------------------------------------------------------------------ #
-# MeetingService                                                       #
+# MeetingService (Pure Orchestrator)                                 #
 # ------------------------------------------------------------------ #
 
 class MeetingService:
-    """High-level orchestrator — the only entry point for the meeting API."""
+    """High-level orchestrator — coordinates SRP services for meeting workflows."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        executor_factory: Callable[[], MeetingExecutor] | None = None,
+        storage_service: StorageService | None = None,
+        recording_service: RecordingService | None = None,
+        pipeline_service: PipelineService | None = None,
+        bot_controller: BotController | None = None,
+    ) -> None:
         self._session_manager = MeetingSessionManager()
-        self._monitor = HealthMonitor(self._session_manager)
-        self._debug = DebugCapture(meeting_config.DEBUG_DIR)
-        self._profile_manager = ProfileManager(meeting_config.PROFILE_DIR)
-        self._recording_storage = LocalRecordingStorage(meeting_config.RECORDING_OUTPUT_DIR)
+        self._storage_service = storage_service or StorageService()
+        self._recording_service = recording_service or RecordingService(self._storage_service)
+        self._pipeline_service = pipeline_service or PipelineService()
+        self._bot_controller = bot_controller or BotController(
+            executor_factory=executor_factory or (lambda: LocalPlaywrightExecutor()),
+            session_manager=self._session_manager,
+        )
 
         self._runtimes: dict[str, MeetingRuntime] = {}
+
+    @property
+    def bot_controller(self) -> BotController:
+        return self._bot_controller
+
+    @property
+    def recording_service(self) -> RecordingService:
+        return self._recording_service
+
+    @property
+    def pipeline_service(self) -> PipelineService:
+        return self._pipeline_service
+
+    @property
+    def storage_service(self) -> StorageService:
+        return self._storage_service
 
     # ------------------------------------------------------------------ #
     # Public API                                                           #
@@ -139,8 +163,8 @@ class MeetingService:
         metadata: dict | None = None
     ) -> MeetingSession:
         """Create a session and fire the join flow asynchronously."""
-        profile_path = self._profile_manager.get_profile_path()
-        profile_name = profile_path.name
+        executor = self._bot_controller.create_executor()
+        profile_path = executor.get_profile_path()
 
         # Emit structured dump of every registered MeetingRuntime
         detailed_registry_dump = {}
@@ -157,7 +181,7 @@ class MeetingService:
                 "join_task_cancelled": join_task.cancelled() if join_task and join_task.done() else None,
                 "join_task_exception": str(join_task.exception()) if join_task and join_task.done() and not join_task.cancelled() and not isinstance(join_task.exception(), asyncio.CancelledError) else None,
                 "controller_exists": rt.controller is not None,
-                "page_is_closed": rt.controller.get_page().is_closed() if rt.controller and hasattr(rt.controller, "get_page") and rt.controller.get_page() else None,
+                "page_is_closed": rt.executor.get_page().is_closed() if rt.executor and rt.executor.get_page() and hasattr(rt.executor.get_page(), "is_closed") else None,
             }
         log.warning("diagnostic.registry_dump", dump=detailed_registry_dump)
 
@@ -174,7 +198,7 @@ class MeetingService:
         )
 
         task = asyncio.create_task(
-            self._run_join_flow(session.session_id, meeting_url),
+            self._run_join_flow(session.session_id, meeting_url, executor),
             name=f"meeting-join-{session.session_id[:8]}",
         )
 
@@ -192,7 +216,7 @@ class MeetingService:
             return None
 
         self._session_manager.update_state(session_id, SessionStatus.LEAVING)
-        
+
         runtime = self._runtimes.get(session_id)
         if runtime:
             if runtime.state == RuntimeState.RUNNING:
@@ -235,7 +259,7 @@ class MeetingService:
         if tasks_to_await:
             await asyncio.gather(*tasks_to_await, return_exceptions=True)
 
-        self._monitor.stop_all()
+        self._bot_controller._monitor.stop_all()
         log.info("shutdown.completed")
 
     # ------------------------------------------------------------------ #
@@ -243,28 +267,27 @@ class MeetingService:
     # ------------------------------------------------------------------ #
 
     def get_participants(self, session_id: str) -> list[Participant]:
-        from app.meeting.providers.participant_presence.registry import presence_registry
-        from app.meeting.intelligence.models import Participant
         from datetime import datetime, timezone
-        
+        from app.meeting.providers.participant_presence.registry import presence_registry
+
         provider = presence_registry.get_provider(session_id)
         if not provider:
             return []
-            
+
         participants = []
         for p in provider.get_current_snapshot():
             try:
                 jt = datetime.fromisoformat(p.join_time.replace("Z", "+00:00"))
             except Exception:
                 jt = datetime.now(timezone.utc)
-            
+
             lt = None
             if p.leave_time:
                 try:
                     lt = datetime.fromisoformat(p.leave_time.replace("Z", "+00:00"))
                 except Exception:
                     pass
-                    
+
             participants.append(Participant(
                 participant_id=p.participant_id,
                 display_name=p.display_name,
@@ -275,7 +298,7 @@ class MeetingService:
                 join_time=jt,
                 leave_time=lt
             ))
-            
+
         return participants
 
     def get_timeline(self, session_id: str) -> list[MeetingEvent]:
@@ -294,9 +317,14 @@ class MeetingService:
     # Internal — async join flow (SINGLE OWNER)                            #
     # ------------------------------------------------------------------ #
 
-    async def _run_join_flow(self, session_id: str, meeting_url: str) -> None:
-        """Full join sequence — the SINGLE OWNER of the session lifecycle."""
-        runtime = MeetingRuntime(session_id=session_id)
+    async def _run_join_flow(
+        self,
+        session_id: str,
+        meeting_url: str,
+        executor: MeetingExecutor,
+    ) -> None:
+        """Full join sequence — orchestrates BotController, RecordingService, and Runtime."""
+        runtime = MeetingRuntime(session_id=session_id, executor=executor)
         self._runtimes[session_id] = runtime
 
         # Track this join task itself
@@ -304,55 +332,31 @@ class MeetingService:
         if current_task:
             runtime.background_tasks["join_flow"] = current_task
 
-        controller = BrowserController()
-        runtime.controller = controller
-        
-        profile_path = self._profile_manager.get_profile_path()
-        runtime.profile_path = profile_path
-        profile_name = profile_path.name
+        profile_path = executor.get_profile_path()
+        profile_name = profile_path.name if profile_path else "unknown"
 
         log.info("runtime.starting", session_id=session_id, runtime_state=runtime.state.value, profile_name=profile_name)
 
         try:
-            # ── Step 1: Browser launch ──────────────────────────── #
+            # ── Step 1: Launch browser & join via BotController ──────── #
             self._session_manager.update_state(session_id, SessionStatus.AUTHENTICATING)
-
-            self._profile_manager.ensure_exists(profile_path)
-            self._profile_manager.lock(profile_path, session_id, profile_name)
-
-            await with_retry(
-                lambda: controller.launch_persistent(
-                    str(profile_path),
-                    headless=meeting_config.HEADLESS,
-                    page_timeout=meeting_config.PAGE_TIMEOUT,
-                ),
-                max_attempts=meeting_config.RETRY_COUNT,
-                base_delay=meeting_config.RETRY_BASE_DELAY,
-                max_delay=meeting_config.RETRY_MAX_DELAY,
-                retryable_exceptions=(BrowserLaunchError,),
-                logger=log,
-                session_id=session_id,
-            )
-
-            page = await controller.new_page()
-            self._session_manager.attach_browser(session_id, controller, page)
-
-            # ── Step 2: Resolve provider + authenticate ─────────────── #
-            provider = get_provider(meeting_url)
-            await provider.ensure_authenticated(page)
-
-            # ── Step 3: Navigate to meeting ─────────────────────────── #
             self._session_manager.update_state(session_id, SessionStatus.OPENING_MEET)
             self._session_manager.update_state(session_id, SessionStatus.JOINING)
 
-            join_state = await provider.join(page, meeting_url, meeting_config.BOT_NAME)
+            join_state = await self._bot_controller.launch_and_join(executor, session_id, meeting_url, meeting_config.BOT_NAME)
+
+            page = executor.get_page()
+            controller = executor.get_controller()
+            if page and controller:
+                self._session_manager.attach_browser(session_id, controller, page)
+
             self._session_manager.update_join_state(session_id, join_state)
 
             session = self._session_manager.get(session_id)
-            if session:
-                session.current_url = page.url
+            if session and page:
+                session.current_url = getattr(page, "url", "")
 
-            # ── Step 4: Evaluate outcome and wait for shutdown ──────── #
+            # ── Step 2: Evaluate outcome and wait for shutdown ──────── #
             if join_state in (JoinState.IN_MEETING, JoinState.WAITING_FOR_ADMISSION):
                 new_status = (
                     SessionStatus.IN_MEETING
@@ -362,19 +366,20 @@ class MeetingService:
                 self._session_manager.update_state(session_id, new_status)
                 await self._start_intelligence(session_id, page, runtime)
 
-                # ── Step 5: Start Recording ──────────────────────────── #
-                await self._start_recording(session_id, page, runtime)
+                # ── Step 3: Start Recording ──────────────────────────── #
+                recorder = await self._recording_service.start_recording(session_id, page, session)
+                runtime.recorder = recorder
 
-                monitor_task = self._monitor.start(
+                monitor_task = self._bot_controller.start_health_monitor(
                     session_id, controller, page,
                     supervisor=runtime.supervisor,
-                    shutdown_callback=lambda sid, reason: runtime.request_shutdown(reason),
-                    shutdown_requested=lambda: runtime._cleanup_event.is_set(),
+                    shutdown_cb=lambda sid, reason: runtime.request_shutdown(reason),
+                    shutdown_req_cb=lambda: runtime._cleanup_event.is_set(),
                 )
                 runtime.background_tasks["health_monitor"] = monitor_task
-                
+
                 log.info("meeting.join.success", session_id=session_id, join_state=join_state.value)
-                
+
                 # Yield control to the runtime. Wait until something requests shutdown.
                 runtime.state = RuntimeState.RUNNING
                 log.info("runtime.running", session_id=session_id, runtime_state=runtime.state.value, profile_name=profile_name)
@@ -388,17 +393,18 @@ class MeetingService:
                 self._session_manager.update_state(session_id, SessionStatus.IN_MEETING)
                 await self._start_intelligence(session_id, page, runtime)
 
-                # ── Step 5: Start Recording ──────────────────────────── #
-                await self._start_recording(session_id, page, runtime)
+                # ── Step 3: Start Recording ──────────────────────────── #
+                recorder = await self._recording_service.start_recording(session_id, page, session)
+                runtime.recorder = recorder
 
-                monitor_task = self._monitor.start(
+                monitor_task = self._bot_controller.start_health_monitor(
                     session_id, controller, page,
                     supervisor=runtime.supervisor,
-                    shutdown_callback=lambda sid, reason: runtime.request_shutdown(reason),
-                    shutdown_requested=lambda: runtime._cleanup_event.is_set(),
+                    shutdown_cb=lambda sid, reason: runtime.request_shutdown(reason),
+                    shutdown_req_cb=lambda: runtime._cleanup_event.is_set(),
                 )
                 runtime.background_tasks["health_monitor"] = monitor_task
-                
+
                 # Defer to HealthMonitor. Wait until shutdown requested.
                 runtime.state = RuntimeState.RUNNING
                 log.info("runtime.running", session_id=session_id, runtime_state=runtime.state.value, profile_name=profile_name)
@@ -410,8 +416,8 @@ class MeetingService:
             else:
                 # Definitive error state — capture diagnostics then trigger cleanup via finally
                 if meeting_config.SCREENSHOT_ON_FAILURE:
-                    debug_dir = await self._debug.capture(page, session_id, "join_failed")
-                    if session:
+                    debug_dir = await self._bot_controller.capture_debug_on_failure(executor, session_id, "join_failed")
+                    if session and debug_dir:
                         session.debug_dir = debug_dir
 
                 self._session_manager.fail(
@@ -433,23 +439,21 @@ class MeetingService:
                 error_type=type(exc).__name__,
             )
 
-            page = controller.get_page() if controller else None
-            if page_is_usable(page) and meeting_config.SCREENSHOT_ON_FAILURE:
+            if meeting_config.SCREENSHOT_ON_FAILURE:
                 try:
-                    debug_dir = await self._debug.capture(page, session_id, "exception")
+                    debug_dir = await self._bot_controller.capture_debug_on_failure(executor, session_id, "exception")
                     session = self._session_manager.get(session_id)
-                    if session:
+                    if session and debug_dir:
                         session.debug_dir = debug_dir
                 except Exception:
                     pass
 
-            error_code = exc.code if isinstance(exc, MeetingError) else "UNKNOWN_ERROR"
+            error_code = getattr(exc, "code", "UNKNOWN_ERROR")
             self._session_manager.fail(session_id, str(exc), error_code)
             runtime.request_shutdown(f"exception_{type(exc).__name__}")
 
         finally:
             try:
-                # ONLY this block is allowed to execute cleanup.
                 await self._cleanup_runtime(runtime)
             except Exception as exc:
                 log.critical("join_flow.fatal_cleanup_error", session_id=session_id, error=str(exc))
@@ -459,17 +463,17 @@ class MeetingService:
     # ------------------------------------------------------------------ #
 
     async def _cleanup_runtime(self, runtime: MeetingRuntime) -> None:
-        """Deterministic, idempotent cleanup, executed ONLY by the join flow task."""
+        """Deterministic cleanup delegating sub-service shutdowns."""
         log.info("cleanup.started")
         if runtime.state in (RuntimeState.CLEANING_UP, RuntimeState.CLOSED):
             return
-            
+
         import time
         start_time = time.time()
-        
+
         profile_name = runtime.profile_path.name if runtime.profile_path else "unknown"
         log.info("cleanup.started", session_id=runtime.session_id, runtime_state=runtime.state.value, profile_name=profile_name, reason=runtime.shutdown_reason)
-        
+
         # 1. Signal Shutdown
         t_stage = time.time()
         log.info("cleanup.signal_shutdown.start", session_id=runtime.session_id)
@@ -491,7 +495,6 @@ class MeetingService:
         monitor_task = runtime.background_tasks.pop("health_monitor", None)
         if monitor_task and not monitor_task.done():
             try:
-                # Give it 2s to exit cooperatively now that shutdown_requested is true
                 await asyncio.wait_for(asyncio.shield(monitor_task), timeout=2.0)
             except asyncio.TimeoutError:
                 log.warning("cleanup.monitor_cooperative_exit_timeout", session_id=runtime.session_id)
@@ -504,48 +507,28 @@ class MeetingService:
                 pass
         log.info("cleanup.monitor_shutdown.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
 
-        # 2.5 Stop Recording (must happen before observer shutdown and browser close)
+        # 2.5 Stop Recording via RecordingService
         t_stage = time.time()
         log.info("cleanup.recording_stop.start", session_id=runtime.session_id)
         if runtime.recorder:
             try:
-                artifact = await asyncio.wait_for(runtime.recorder.stop(), timeout=10.0)
+                artifact = await self._recording_service.stop_recording(runtime.session_id, runtime.recorder, session)
                 if artifact:
                     runtime.recording_artifact = artifact
-                    session = self._session_manager.get(runtime.session_id)
-                    if session:
-                        session.recording_status = "completed"
-                        session.recording_artifact_id = artifact.id
-                        session.recording_duration = artifact.duration_seconds
-                    log.info(
-                        "recording.completed",
-                        session_id=runtime.session_id,
-                        artifact_id=artifact.id,
-                        duration_seconds=artifact.duration_seconds,
-                        file_size_bytes=artifact.file_size_bytes,
-                    )
-            except asyncio.TimeoutError:
-                log.warning("cleanup.recording_stop.timeout", session_id=runtime.session_id)
-                await runtime.recorder.cancel()
             except Exception as exc:
                 log.error("cleanup.recording_stop.failed", session_id=runtime.session_id, error=str(exc))
             finally:
-                try:
-                    await runtime.recorder.cleanup()
-                except Exception:
-                    pass
+                runtime.recorder = None
         log.info("cleanup.recording_stop.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
 
-        # 3. Stop Observers
+        # 3. Stop Observers via BotController
         t_stage = time.time()
         log.info("cleanup.observers_stop.start", session_id=runtime.session_id)
         try:
             if runtime.supervisor:
-                await asyncio.wait_for(runtime.supervisor.stop_all(), timeout=5.0)
+                await self._bot_controller.stop_intelligence(runtime.supervisor)
                 if session:
                     session.intelligence_alive = False
-        except asyncio.TimeoutError:
-            log.warning("cleanup.observers_stop.timeout", session_id=runtime.session_id)
         except Exception as exc:
             log.warning("cleanup.observers_stop_error", session_id=runtime.session_id, error=str(exc))
         log.info("cleanup.observers_stop.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
@@ -567,56 +550,36 @@ class MeetingService:
             log.warning("cleanup.tasks_cancel_error", session_id=runtime.session_id, error=str(exc))
         log.info("cleanup.cancel_tasks.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
 
-        # 5. Leave Meeting
+        # 5. Leave Meeting via BotController
         t_stage = time.time()
         log.info("cleanup.leave_meeting.start", session_id=runtime.session_id)
         try:
-            if runtime.controller:
-                page = runtime.controller.get_page()
-                if page_is_usable(page):
-                    provider = get_provider(session.meeting_url if session else "")
-                    await asyncio.wait_for(provider.leave(page), timeout=5.0)
-        except asyncio.TimeoutError:
-            log.warning("cleanup.leave_meeting.timeout", session_id=runtime.session_id)
+            meeting_url = session.meeting_url if session else ""
+            await self._bot_controller.leave_meeting(runtime.executor, meeting_url)
         except Exception as exc:
             log.warning("cleanup.leave_failed", session_id=runtime.session_id, error=str(exc))
         log.info("cleanup.leave_meeting.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
 
-        # 6. Close Browser
+        # 6. Close Browser & Release Profile Locks via BotController
         t_stage = time.time()
         log.info("cleanup.browser_close.start", session_id=runtime.session_id)
         try:
-            if runtime.controller:
-                await asyncio.wait_for(runtime.controller.close(), timeout=5.0)
-                if runtime.controller.is_closed:
-                    log.info("runtime.browser_closed", session_id=runtime.session_id, runtime_state=runtime.state.value, profile_name=profile_name)
-        except asyncio.TimeoutError:
-            log.warning("cleanup.browser_close.timeout", session_id=runtime.session_id)
+            await self._bot_controller.close_executor(runtime.executor)
+            log.info("runtime.browser_closed", session_id=runtime.session_id, runtime_state=runtime.state.value, profile_name=profile_name)
         except Exception as exc:
             log.warning("cleanup.browser_close_error", session_id=runtime.session_id, error=str(exc))
         log.info("cleanup.browser_close.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
-
-        # 7. Unlock Profile
-        t_stage = time.time()
-        log.info("cleanup.profile_unlock.start", session_id=runtime.session_id)
-        try:
-            if runtime.profile_path:
-                self._profile_manager.unlock(runtime.profile_path, runtime.session_id)
-                log.info("runtime.profile_unlocked", session_id=runtime.session_id, runtime_state=runtime.state.value, profile_name=profile_name)
-        except Exception as exc:
-            log.warning("cleanup.profile_unlock_error", session_id=runtime.session_id, error=str(exc))
-        log.info("cleanup.profile_unlock.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
 
         # 8. Remove Registry
         t_stage = time.time()
         log.info("cleanup.registry_remove.start", session_id=runtime.session_id)
         try:
             self._runtimes.pop(runtime.session_id, None)
-            
+
             # Release presence provider
             from app.meeting.providers.participant_presence.registry import presence_registry
             presence_registry.release_provider(runtime.session_id)
-            
+
         except Exception as exc:
             log.warning("cleanup.runtime_remove_error", session_id=runtime.session_id, error=str(exc))
         log.info("cleanup.registry_remove.complete", session_id=runtime.session_id, duration_ms=int((time.time() - t_stage) * 1000))
@@ -629,77 +592,52 @@ class MeetingService:
             log.info("runtime.closed", session_id=runtime.session_id, runtime_state=runtime.state.value, profile_name=profile_name)
         except Exception as exc:
             log.warning("cleanup.finalize_error", session_id=runtime.session_id, error=str(exc))
-            
+
         runtime._cleanup_finished.set()
         log.info("cleanup.finished", session_id=runtime.session_id, total_duration_ms=int((time.time() - start_time) * 1000))
 
-        # 10. Start Pipeline
-        if session and session.recording_artifact_id:
-            try:
-                from app.meeting.pipeline.orchestrator import MeetingPipelineOrchestrator
-                log.info("pipeline.starting", session_id=runtime.session_id, org_id=getattr(session, "org_id", 1))
-                pipeline_meta = {"org_id": getattr(session, "org_id", 1), **(getattr(session, "metadata", {}) or {})}
-                orchestrator = MeetingPipelineOrchestrator(meeting_id=runtime.session_id, metadata=pipeline_meta)
-                asyncio.create_task(orchestrator.execute_pipeline(), name=f"pipeline-{runtime.session_id[:8]}")
-            except Exception as exc:
-                log.error("pipeline.start_failed", session_id=runtime.session_id, error=str(exc))
+        # 9.5 Save DOM Speaker Timeline for the Pipeline
+        try:
+            from app.meeting.config import meeting_config
+            from pathlib import Path
+            import json
+            
+            timeline = None
+            if runtime.supervisor and hasattr(runtime.supervisor, 'speaker_detector'):
+                timeline = runtime.supervisor.speaker_detector.get_speaker_timeline()
+                
+            if timeline:
+                out_dir = Path(meeting_config.PROCESSING_OUTPUT_DIR) / runtime.session_id
+                out_dir.mkdir(parents=True, exist_ok=True)
+                dom_speakers = [s.to_dict() for s in timeline]
+                (out_dir / "dom_speakers.json").write_text(json.dumps(dom_speakers, indent=2), encoding="utf-8")
+                log.info("cleanup.dom_speakers_saved", session_id=runtime.session_id, count=len(dom_speakers))
+            else:
+                log.info("cleanup.dom_speakers_empty", session_id=runtime.session_id)
+        except Exception as exc:
+            log.warning("cleanup.dom_speakers_save_error", session_id=runtime.session_id, error=str(exc))
+
+        # 10. Start Pipeline via PipelineService
+        self._pipeline_service.trigger_pipeline(runtime.session_id, session=session)
 
     # ------------------------------------------------------------------ #
-    # Recording orchestration                                              #
+    # Sub-service Delegates                                                #
     # ------------------------------------------------------------------ #
 
     async def _start_recording(
         self, session_id: str, page: Any, runtime: MeetingRuntime
     ) -> None:
-        """Initialize and start the audio recorder.
-
-        Failures are fully isolated — a recording failure never prevents
-        the meeting from continuing or running normally.
-        """
-        try:
-            recorder = MeetingRecorder(storage=self._recording_storage)
-            runtime.recorder = recorder
-            await recorder.initialize(page, session_id, meeting_id=session_id)
-            await recorder.start()
-
-            session = self._session_manager.get(session_id)
-            if session:
-                session.recording_status = "recording"
-
-            log.info("recording.started", session_id=session_id)
-
-        except Exception as exc:
-            log.error(
-                "recording.start_failed",
-                session_id=session_id,
-                error=str(exc),
-                error_type=type(exc).__name__,
-            )
-            session = self._session_manager.get(session_id)
-            if session:
-                session.recording_status = "failed"
-            # Never re-raise — recording failure must not affect the meeting
-
-    # ------------------------------------------------------------------ #
-    # Intelligence orchestration                                           #
-    # ------------------------------------------------------------------ #
+        """Delegate recording start to RecordingService."""
+        session = self._session_manager.get(session_id)
+        recorder = await self._recording_service.start_recording(session_id, page, session)
+        runtime.recorder = recorder
 
     async def _start_intelligence(
         self, session_id: str, page: Any, runtime: MeetingRuntime
     ) -> None:
-        """Create MeetingContext and start all intelligence observers."""
-        event_bus = EventBus()
-        clock = MeetingClock()
-        lifecycle = MeetingLifecycle(session_id)
-        supervisor = ObserverSupervisor()
-
-        ctx = MeetingContext(
-            session_id=session_id,
-            page=page,
-            config=meeting_config,
-            event_bus=event_bus,
-            clock=clock,
-            bot_name=meeting_config.BOT_NAME,
+        """Delegate intelligence start to BotController."""
+        event_bus, clock, lifecycle, supervisor, ctx = await self._bot_controller.start_intelligence(
+            session_id, page, self._make_event_handler(session_id)
         )
 
         runtime.context = ctx
@@ -707,23 +645,13 @@ class MeetingService:
         runtime.event_bus = event_bus
         runtime.lifecycle = lifecycle
 
-        # Subscribe to event bus before starting observers
-        event_bus.subscribe(None, self._make_event_handler(session_id))
-
-        observer_tasks = await supervisor.start_all(ctx)
-        runtime.background_tasks.update(observer_tasks)
-
         session = self._session_manager.get(session_id)
         if session:
             session.intelligence_alive = True
             session.observer_health = supervisor.get_health()
 
         log.info("observers.started", session_id=session_id)
-        # Trigger an initial presence evaluation so the empty-meeting timer can start
-        # if the meeting was already empty before intelligence started.
         if runtime.event_bus:
-            from app.meeting.intelligence.models import MeetingEvent, EventType, EventCategory
-            import asyncio
             asyncio.create_task(runtime.event_bus.emit(MeetingEvent(
                 type=EventType.PARTICIPANT_UPDATED,
                 category=EventCategory.PARTICIPANT,
@@ -738,11 +666,7 @@ class MeetingService:
         return _handler
 
     async def _on_intelligence_event(self, session_id: str, event: MeetingEvent) -> None:
-        """Bridge EventBus events -> MeetingSession state.
-
-        This is the ONLY place that writes intelligence data to MeetingSession.
-        Observers only read from session; they never write to it.
-        """
+        """Bridge EventBus events -> MeetingSession state."""
         log.info("meeting_service.event_received", event=event.type.value)
         session = self._session_manager.get(session_id)
         runtime = self._runtimes.get(session_id)
@@ -752,8 +676,8 @@ class MeetingService:
         et = event.type
 
         if et in (
-            EventType.PARTICIPANT_JOINED, 
-            EventType.PARTICIPANT_LEFT, 
+            EventType.PARTICIPANT_JOINED,
+            EventType.PARTICIPANT_LEFT,
             EventType.PARTICIPANT_UPDATED
         ):
             participants = self.get_participants(session_id)
@@ -772,7 +696,7 @@ class MeetingService:
                 p.is_present and not p.is_bot
                 for p in participants
             )
-            
+
             existing_timer = runtime.background_tasks.get("empty_timer")
             timer_exists = existing_timer is not None and not existing_timer.done()
 
@@ -780,13 +704,6 @@ class MeetingService:
                 if not timer_exists:
                     log.info(
                         "meeting.empty_detected",
-                        session_id=session_id,
-                        participant_count=present_count,
-                        has_human_participants=has_human_participants,
-                        runtime_state=runtime.state.value,
-                    )
-                    log.info(
-                        "meeting.empty_timer_started",
                         session_id=session_id,
                         participant_count=present_count,
                         has_human_participants=has_human_participants,
@@ -807,23 +724,11 @@ class MeetingService:
                         has_human_participants=has_human_participants,
                         runtime_state=runtime.state.value,
                     )
-                    log.info(
-                        "meeting.auto_leave_cancelled",
-                        session_id=session_id,
-                        participant_count=present_count,
-                        has_human_participants=has_human_participants,
-                        runtime_state=runtime.state.value,
-                    )
 
         elif et == EventType.HOST_JOINED:
             participant_name = event.payload.get("participant", {}).get("display_name", "")
             if participant_name and runtime.lifecycle:
                 runtime.lifecycle.record_host(participant_name)
-                log.info(
-                    "meeting.host_joined",
-                    session_id=session_id,
-                    host=participant_name,
-                )
 
         elif et == EventType.SPEAKER_CHANGED:
             session.active_speaker = runtime.supervisor.speaker_detector.get_active_speaker()
@@ -842,11 +747,6 @@ class MeetingService:
                 session.meeting_started_at = event.timestamp
                 if runtime.lifecycle:
                     runtime.lifecycle.record_start(event.timestamp)
-                log.info(
-                    "meeting.started",
-                    session_id=session_id,
-                    elapsed=event.payload.get("elapsed_seconds"),
-                )
             elif et == EventType.MEETING_ENDED:
                 session.meeting_ended_at = event.timestamp
                 if runtime.lifecycle:
@@ -854,56 +754,30 @@ class MeetingService:
                 elapsed = event.payload.get("elapsed_seconds")
                 if elapsed is not None:
                     session.meeting_duration = elapsed
-                log.info(
-                    "meeting.ended",
-                    session_id=session_id,
-                    duration=session.meeting_duration,
-                    meeting_state=new_state,
-                )
                 runtime.request_shutdown(f"meeting_ended_{new_state}")
-            elif et == EventType.NETWORK_LOST:
-                log.warning(
-                    "meeting.network_lost",
-                    session_id=session_id,
-                    meeting_state=new_state,
-                )
 
         elif et == EventType.OBSERVER_RESTARTED:
             session.observer_health = runtime.supervisor.get_health()
-            log.info(
-                "meeting.observer_restarted",
-                session_id=session_id,
-                observer=event.payload.get("observer"),
-                restart_count=event.payload.get("restart_count"),
-            )
 
     async def _empty_meeting_countdown(self, session_id: str, runtime: MeetingRuntime) -> None:
         """Countdown when no humans are present, requesting shutdown if it expires."""
         try:
             await asyncio.sleep(10)
-            log.info(
-                "meeting.empty_timer_expired",
-                session_id=session_id,
-                participant_count=0,
-                has_human_participants=False,
-                runtime_state=runtime.state.value,
-            )
-            
-            # Revalidate
+
             if not runtime.supervisor:
                 return
-                
+
             participants = self.get_participants(session_id)
             present_count = sum(1 for p in participants if p.is_present)
             has_human_participants = any(p.is_present and not p.is_bot for p in participants)
-            
+
             # Direct Playwright DOM fallback check
             if runtime.context and getattr(runtime.context, "page", None):
                 try:
                     from app.meeting.intelligence.dom.participant_dom import ParticipantDOM
                     from app.meeting.intelligence.dom.meeting_dom import MeetingDOM
                     from app.meeting.intelligence.models import MeetingState
-                    
+
                     dom_participants = await ParticipantDOM().get_raw_participants(runtime.context.page)
                     human_dom_participants = [p for p in dom_participants if not p.get("is_self")]
                     if len(human_dom_participants) > 0:
@@ -914,44 +788,14 @@ class MeetingService:
                             has_human_participants = False
                 except Exception:
                     pass
-            
-            log.info(
-                "meeting.empty_revalidated",
-                session_id=session_id,
-                participant_count=present_count,
-                has_human_participants=has_human_participants,
-                runtime_state=runtime.state.value,
-            )
-            
+
             if not has_human_participants:
                 if runtime._cleanup_event.is_set():
                     return
                 if runtime.state in (RuntimeState.CLEANING_UP, RuntimeState.CLOSED, RuntimeState.LEAVING):
                     return
-                    
-                log.info(
-                    "meeting.empty_timeout",
-                    session_id=session_id,
-                    participant_count=present_count,
-                    has_human_participants=has_human_participants,
-                    runtime_state=runtime.state.value,
-                )
-                log.info(
-                    "meeting.auto_leave_requested",
-                    session_id=session_id,
-                    participant_count=present_count,
-                    has_human_participants=has_human_participants,
-                    runtime_state=runtime.state.value,
-                )
+
                 runtime.request_shutdown("empty_meeting_timeout")
-            else:
-                log.info(
-                    "meeting.auto_leave_cancelled",
-                    session_id=session_id,
-                    participant_count=present_count,
-                    has_human_participants=has_human_participants,
-                    runtime_state=runtime.state.value,
-                )
         except asyncio.CancelledError:
             pass
         finally:
@@ -959,4 +803,3 @@ class MeetingService:
             stored = runtime.background_tasks.get("empty_timer")
             if stored == current_task:
                 runtime.background_tasks.pop("empty_timer", None)
-

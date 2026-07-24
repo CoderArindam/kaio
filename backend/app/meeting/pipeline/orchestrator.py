@@ -19,8 +19,10 @@ from app.meeting.pipeline.stages import ALL_STAGES
 
 # Import artifacts used for discovery
 from app.meeting.artifacts.recording import MeetingRecording
+from app.meeting.artifacts.retention import ArtifactRetentionManager
 
 log = get_logger("pipeline.orchestrator")
+
 
 
 class MeetingPipelineOrchestrator:
@@ -36,6 +38,15 @@ class MeetingPipelineOrchestrator:
             self.session_dir.mkdir(parents=True, exist_ok=True)
             
         meta = metadata or {}
+        
+        # Load DOM speakers if available
+        dom_speakers_path = self.session_dir / "dom_speakers.json"
+        if dom_speakers_path.exists():
+            try:
+                meta["dom_speakers"] = json.loads(dom_speakers_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                log.warning("pipeline.orchestrator.load_dom_speakers_failed", error=str(e))
+
         self.context = PipelineContext(
             meeting_id=meeting_id,
             session_directory=self.session_dir,
@@ -291,4 +302,24 @@ class MeetingPipelineOrchestrator:
         self._generate_manifest()
         self._generate_report()
         
+        if pipeline_success:
+            try:
+                from app.meeting.services.storage_service import StorageService
+                storage_svc = StorageService()
+                await storage_svc.upload_pipeline_artifacts(
+                    session_id=self.meeting_id,
+                    session_dir=self.session_dir
+                )
+            except Exception as exc:
+                log.error("pipeline.storage_upload_failed", meeting_id=self.meeting_id, error=str(exc))
+
+            ArtifactRetentionManager.apply_retention_policy(
+                meeting_id=self.meeting_id,
+                recording_dir=Path(meeting_config.RECORDING_OUTPUT_DIR) / self.meeting_id,
+                processing_dir=self.session_dir,
+            )
+        else:
+            log.info("retention.skipped_pipeline_failed", meeting_id=self.meeting_id)
+
         return pipeline_success
+

@@ -35,6 +35,7 @@ from .attribution_debug import (
     AttributionDebugArtifact,
     AttributionTimelineArtifact,
 )
+from .retention import ArtifactRetentionPolicy, ArtifactRetentionManager
 
 __all__ = [
     "MeetingArtifact",
@@ -73,5 +74,9 @@ __all__ = [
     "AttributionTimelineItem",
     "AttributionDebugArtifact",
     "AttributionTimelineArtifact",
+    # Retention Policy
+    "ArtifactRetentionPolicy",
+    "ArtifactRetentionManager",
 ]
+
 

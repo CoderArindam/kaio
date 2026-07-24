@@ -1,0 +1,30 @@
+# Git & Version Control
+.git
+.gitignore
+
+# Virtual Environments & Python Cache (Ensures local backend/venv is NOT copied into Linux container)
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Frontend (handled separately in production build or proxy)
+frontend/
+
+# Local databases & logs
+*.log
+*.sqlite3
+
+# Temporary & debug storage
+tmp/
+temp/
+.agents/
+backend/storage/meeting/recordings/*
+backend/storage/meeting/processed_audio/*
+backend/storage/meeting/debug/*

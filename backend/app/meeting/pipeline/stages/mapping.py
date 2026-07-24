@@ -46,8 +46,8 @@ class SpeakerMappingStage(PipelineStage):
         
         try:
             mapping = await service.build(timeline, roster)
-            if not mapping or not mapping.entries:
-                context.warnings.append("Speaker mapping failed: empty mapping")
+            if mapping is None:
+                context.warnings.append("Speaker mapping failed: no mapping object produced")
                 return StageStatus.FAILED
                 
             context.artifacts.register(mapping)

@@ -22,6 +22,10 @@ class MeetingRecording(MeetingArtifact):
     recording_end_time: str         # ISO 8601
     recording_status: str           # "completed", "partial", "failed"
 
+    @property
+    def duration_ms(self) -> int:
+        return int(self.duration_seconds * 1000)
+
 
 
 class ProcessedAudio(MeetingArtifact):

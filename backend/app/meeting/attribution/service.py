@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
-from typing import List, Optional,Tuple
+from typing import List, Optional,Tuple, Dict, Any
 
 from app.meeting.artifacts.speaker import (
     ParticipantAttributedSegment,
@@ -53,6 +53,8 @@ class SpeakerAttributionService:
         mapping: Optional[SpeakerMapping] = None,
         roster: Optional[ParticipantRoster] = None,
         presence_timeline: Optional[ParticipantPresenceTimeline] = None,
+        dom_speakers: Optional[List[Dict[str, Any]]] = None,
+        recording_start_time: Optional[str] = None,
     ) -> Tuple[ParticipantAttributedTranscript, AttributionDebugArtifact, AttributionTimelineArtifact]:
         """Perform dynamic per-turn attribution and return transcript with debug artifacts."""
         log.info(
@@ -94,6 +96,7 @@ class SpeakerAttributionService:
                 participants=participants,
                 mapping=mapping,
                 presence_timeline=presence_timeline,
+                dom_speakers=dom_speakers,
                 meeting_id=attributed.meeting_id,
             )
             unresolved = sum(1 for s in resolved_segments if s.participant_id is None)

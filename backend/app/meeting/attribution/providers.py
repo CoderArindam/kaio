@@ -7,7 +7,7 @@ No language-specific keyword dictionaries. Punctuation is treated as a weak seco
 from __future__ import annotations
 
 import re
-from typing import List, Dict, Tuple, Optional, Set
+from typing import List, Dict, Tuple, Optional, Set, Any
 from abc import ABC, abstractmethod
 
 from app.meeting.artifacts.speaker import SpeakerAttributedSegment, MeetingParticipant, SpeakerMapping
@@ -148,6 +148,61 @@ class VocativeEvidenceProvider(EvidenceProvider):
             details="No vocative target"
         )
 
+
+class ActiveSpeakerProvider(EvidenceProvider):
+    """Uses the visual DOM speaking indicator from Google Meet as absolute truth."""
+
+    def __init__(self, dom_speakers: Optional[List[Dict[str, Any]]] = None):
+        self.dom_speakers = dom_speakers or []
+
+    @property
+    def provider_name(self) -> str:
+        return "ActiveSpeakerDOM"
+
+    def evaluate(
+        self,
+        segment: SpeakerAttributedSegment,
+        participant: MeetingParticipant,
+        state: ConversationState,
+        presence_window: Tuple[float, float],
+        static_map: Dict[str, Tuple[str, str, float]],
+        all_participants: List[MeetingParticipant],
+    ) -> Tuple[float, RuleTrace]:
+        pid = participant.participant_id
+        pname = participant.display_name.lower().strip()
+        
+        # Segment start/end are relative to recording start (in seconds)
+        seg_midpoint = (segment.start_time + segment.end_time) / 2.0
+        
+        # Check if the segment overlaps with a DOM speaker event
+        for spk in self.dom_speakers:
+            # dom_speakers is a list of dicts from SpeakerSlot
+            slot_name = spk.get("display_name", "").lower().strip()
+            
+            # Since timestamps might be absolute ISO strings, we need to convert them to relative seconds if possible, 
+            # or rely on the pipeline having converted them.
+            # Wait, the SpeakerSlot timestamps are absolute ISO strings.
+            # But we don't have rec_start here. Wait! We can extract rec_start from presence_timeline in dynamic_engine!
+            # Let's pass dom_speakers already converted to relative seconds!
+            start_sec = spk.get("_relative_start", -1.0)
+            end_sec = spk.get("_relative_end", 999999.0)
+            
+            if start_sec <= seg_midpoint <= end_sec:
+                if slot_name and (slot_name in pname or pname in slot_name):
+                    score = 100.0
+                    return score, RuleTrace(
+                        rule_name=self.provider_name,
+                        status="PASS",
+                        contribution=score,
+                        details=f"DOM visual speaking indicator matched: {slot_name}"
+                    )
+
+        return 0.0, RuleTrace(
+            rule_name=self.provider_name,
+            status="FAIL",
+            contribution=0.0,
+            details="No DOM speaking indicator overlap"
+        )
 
 class TemporalContinuityProvider(EvidenceProvider):
     """Weak stabilizer encouraging continuity when no stronger evidence exists."""
@@ -415,7 +470,7 @@ class DeepgramPriorProvider(EvidenceProvider):
         if segment.speaker_label and segment.speaker_label in static_map:
             mapped_pid, _, map_conf = static_map[segment.speaker_label]
             if pid == mapped_pid:
-                score = 3.0
+                score = 6.0
                 return score, RuleTrace(
                     rule_name=self.provider_name,
                     status="PASS",

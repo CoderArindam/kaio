@@ -55,6 +55,10 @@ class ParticipantResolutionStage(PipelineStage):
         roster = context.artifacts.get(ParticipantRoster)
         presence_timeline = context.artifacts.get(ParticipantPresenceTimeline)
         
+        from app.meeting.artifacts.recording import MeetingRecording
+        recording = context.artifacts.get(MeetingRecording)
+        rec_start_time = recording.recording_start_time if recording else None
+
         if not attributed:
             return StageStatus.FAILED
             
@@ -66,6 +70,8 @@ class ParticipantResolutionStage(PipelineStage):
                 mapping=mapping,
                 roster=roster,
                 presence_timeline=presence_timeline,
+                dom_speakers=context.metadata.get("dom_speakers"),
+                recording_start_time=rec_start_time,
             )
             context.artifacts.register(participant_attributed)
             context.artifacts.register(debug_art)

@@ -93,22 +93,44 @@ class EligibleApproverResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+def _parse_date_str(v):
+    if v is None:
+        return ""
+    return str(v)
+
+
+def _parse_float_val(v):
+    if v is None:
+        return 0.0
+    return float(v)
+
+
 class TimesheetOrgSummaryResponse(BaseModel):
     org_id: UUID
     week_start_date: str
-    total_members_who_submitted: int
-    total_timesheets_submitted: int
-    total_timesheets_approved: int
-    total_timesheets_rejected: int
-    total_timesheets_pending: int
-    total_hours_logged: float
-    avg_hours_per_member: float
-    compliance_rate: float
+    total_members_who_submitted: int = 0
+    total_timesheets_submitted: int = 0
+    total_timesheets_approved: int = 0
+    total_timesheets_rejected: int = 0
+    total_timesheets_pending: int = 0
+    total_hours_logged: float = 0.0
+    avg_hours_per_member: float = 0.0
+    compliance_rate: float = 0.0
 
     @field_validator('org_id', mode='before')
     @classmethod
     def parse_uuids(cls, v):
         return _parse_uuid_val(v)
+
+    @field_validator('week_start_date', mode='before')
+    @classmethod
+    def parse_dates(cls, v):
+        return _parse_date_str(v)
+
+    @field_validator('total_hours_logged', 'avg_hours_per_member', 'compliance_rate', mode='before')
+    @classmethod
+    def parse_floats(cls, v):
+        return _parse_float_val(v)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -118,13 +140,23 @@ class TimesheetBoardHoursResponse(BaseModel):
     board_name: str
     org_id: UUID
     week_start_date: str
-    total_hours_logged: float
-    member_count: int
+    total_hours_logged: float = 0.0
+    member_count: int = 0
 
     @field_validator('board_id', 'org_id', mode='before')
     @classmethod
     def parse_uuids(cls, v):
         return _parse_uuid_val(v)
+
+    @field_validator('week_start_date', mode='before')
+    @classmethod
+    def parse_dates(cls, v):
+        return _parse_date_str(v)
+
+    @field_validator('total_hours_logged', mode='before')
+    @classmethod
+    def parse_floats(cls, v):
+        return _parse_float_val(v)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,13 +168,23 @@ class TimesheetMemberSummaryResponse(BaseModel):
     email: str
     week_start_date: str
     status: str
-    total_hours: float
-    is_on_time: bool
+    total_hours: float = 0.0
+    is_on_time: bool = True
 
     @field_validator('user_id', 'org_id', mode='before')
     @classmethod
     def parse_uuids(cls, v):
         return _parse_uuid_val(v)
+
+    @field_validator('week_start_date', mode='before')
+    @classmethod
+    def parse_dates(cls, v):
+        return _parse_date_str(v)
+
+    @field_validator('total_hours', mode='before')
+    @classmethod
+    def parse_floats(cls, v):
+        return _parse_float_val(v)
 
     model_config = ConfigDict(from_attributes=True)
 

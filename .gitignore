@@ -127,3 +127,7 @@ coverage/
 /experiments
 /backend/requirements.lock.after
 D:\kanban-project\backend\requirements.lock.after.txt
+
+# Debug and Integration Scripts
+backend/debug_dshow.py
+backend/test_recording_integration.py

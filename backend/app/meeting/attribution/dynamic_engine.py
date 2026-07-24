@@ -98,6 +98,49 @@ def _build_presence_intervals(
     return intervals
 
 
+def _convert_dom_speakers_to_relative(
+    dom_speakers: List[Dict[str, Any]],
+    presence_timeline: Optional[ParticipantPresenceTimeline] = None,
+    recording_start_time: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    rec_start = None
+    if recording_start_time:
+        try:
+            rec_start = datetime.fromisoformat(recording_start_time.replace("Z", "+00:00"))
+        except Exception:
+            pass
+
+    if not rec_start and presence_timeline and presence_timeline.events:
+        for ev in presence_timeline.events:
+            try:
+                dt = datetime.fromisoformat(ev.timestamp.replace("Z", "+00:00"))
+                if rec_start is None or dt < rec_start:
+                    rec_start = dt
+            except Exception:
+                continue
+
+    if not rec_start:
+        return dom_speakers
+
+    for spk in dom_speakers:
+        try:
+            start_dt = datetime.fromisoformat(spk["start_time"].replace("Z", "+00:00"))
+            spk["_relative_start"] = max(0.0, (start_dt - rec_start).total_seconds())
+        except Exception:
+            spk["_relative_start"] = 0.0
+
+        if spk.get("end_time"):
+            try:
+                end_dt = datetime.fromisoformat(spk["end_time"].replace("Z", "+00:00"))
+                spk["_relative_end"] = (end_dt - rec_start).total_seconds()
+            except Exception:
+                spk["_relative_end"] = 999999.0
+        else:
+            spk["_relative_end"] = 999999.0
+
+    return dom_speakers
+
+
 class DynamicAttributionEngine:
     """Phase 2.6 Conversation State Attribution Engine."""
 
@@ -120,6 +163,8 @@ class DynamicAttributionEngine:
         participants: List[MeetingParticipant],
         mapping: Optional[SpeakerMapping] = None,
         presence_timeline: Optional[ParticipantPresenceTimeline] = None,
+        dom_speakers: Optional[List[Dict[str, Any]]] = None,
+        recording_start_time: Optional[str] = None,
         meeting_id: str = "unknown",
         parent_transcript_id: str = "unknown",
     ) -> Tuple[List[ParticipantAttributedSegment], AttributionDebugArtifact, AttributionTimelineArtifact]:
@@ -166,6 +211,15 @@ class DynamicAttributionEngine:
             return resolved, debug_art, timeline_art
 
         presence_intervals = _build_presence_intervals(participants, presence_timeline)
+        
+        # Instantiate ActiveSpeakerProvider dynamically with converted timestamps
+        run_providers = list(self.providers)
+        # Prepare DOM Speakers if available
+        rel_dom_speakers = []
+        if dom_speakers:
+            rel_dom_speakers = _convert_dom_speakers_to_relative(dom_speakers, presence_timeline, recording_start_time)
+            from app.meeting.attribution.providers import ActiveSpeakerProvider
+            run_providers.append(ActiveSpeakerProvider(dom_speakers=rel_dom_speakers))
 
         static_map: Dict[str, Tuple[str, str, float]] = {}
         if mapping:
@@ -211,7 +265,7 @@ class DynamicAttributionEngine:
                 rule_traces: List[RuleTrace] = []
                 total_cand_score = 0.0
 
-                for prov in self.providers:
+                for prov in run_providers:
                     sc, trace = prov.evaluate(
                         segment=seg,
                         participant=p,
@@ -295,6 +349,8 @@ class DynamicAttributionEngine:
                     win_reason = "temporal_continuity"
                 else:
                     winner_candidate = top_candidate
+                    if any(t.rule_name == "ActiveSpeakerDOM" and t.status == "PASS" for t in winner_candidate.rule_traces):
+                        win_reason = "active_speaker_dom"
 
                 winner_pid = winner_candidate.participant_id
                 winner_pname = winner_candidate.participant_name

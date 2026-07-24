@@ -3,13 +3,15 @@
 # KAIO Meeting Bot — VPS Health Check & Audio Diagnostics Script
 # ==============================================================================
 # Performs empirical verification of Xvfb, PulseAudio/PipeWire, virtual sink,
-# FFmpeg pulse input, and Playwright Chromium availability on Linux VPS.
+# FFmpeg pulse input, Playwright Chromium, and FastAPI /health endpoint.
+# Supports --auto-recover to automatically restart kaio-meeting-bot on failure.
 # ==============================================================================
 
 set -euo pipefail
 
 DISPLAY_NUM="${DISPLAY_NUM:-:99}"
 SINK_NAME="${SINK_NAME:-kaio_sink}"
+AUTO_RECOVER="${1:-}"
 ERRORS=0
 
 # Check if running under Windows / Git Bash
@@ -37,16 +39,15 @@ echo "======================================================================"
 echo " KAIO Meeting Bot — Health Check & Audio Diagnostics"
 echo "======================================================================"
 
-# Helper function for reporting status
 report_status() {
     local check_name="$1"
     local status="$2"
     local message="$3"
     
     if [ "$status" -eq 0 ]; then
-        echo -e " [PASS] $check_name: $message"
+        echo " [PASS] $check_name: $message"
     else
-        echo -e " [FAIL] $check_name: $message"
+        echo " [FAIL] $check_name: $message"
         ERRORS=$((ERRORS + 1))
     fi
 }
@@ -141,24 +142,36 @@ else
     report_status "Playwright Module" 1 "Python runtime not found"
 fi
 
-if command -v chromium-browser &> /dev/null || command -v chromium &> /dev/null; then
-    CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium)
-    report_status "Chromium Binary" 0 "Chromium binary present at $CHROMIUM_BIN"
+# ------------------------------------------------------------------------------
+# Check 7: FastAPI /health Container Endpoint
+# ------------------------------------------------------------------------------
+if command -v curl &> /dev/null; then
+    if curl -sf http://127.0.0.1:8000/health > /dev/null 2>&1; then
+        report_status "FastAPI Endpoint" 0 "Backend API endpoint http://127.0.0.1:8000/health is healthy"
+    else
+        report_status "FastAPI Endpoint" 1 "Backend API endpoint http://127.0.0.1:8000/health is unreachable"
+    fi
 else
-    report_status "Chromium Binary" 0 "Using Playwright standalone Chromium binary"
+    report_status "FastAPI Endpoint" 1 "'curl' utility not found"
 fi
 
 # ------------------------------------------------------------------------------
-# Summary & Exit Code
+# Summary & Auto-Recovery Trigger
 # ------------------------------------------------------------------------------
 echo "======================================================================"
 if [ "$ERRORS" -eq 0 ]; then
-    echo " HEALTH CHECK RESULT: OK — All 6 health checks passed!"
+    echo " HEALTH CHECK RESULT: OK — All health checks passed!"
     echo "======================================================================"
     exit 0
 else
     echo " HEALTH CHECK RESULT: FAILED — $ERRORS check(s) failed."
-    echo " Run 'bash deploy/vps/start_meeting_bot_env.sh' to initialize the environment."
+    if [ "$AUTO_RECOVER" = "--auto-recover" ]; then
+        echo "[!] Auto-recovery triggered: restarting kaio-meeting-bot systemd service..."
+        if command -v systemctl &> /dev/null; then
+            systemctl restart kaio-meeting-bot.service || true
+            echo "[✓] Restart command issued."
+        fi
+    fi
     echo "======================================================================"
     exit 1
 fi

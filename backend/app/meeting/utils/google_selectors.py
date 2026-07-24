@@ -100,6 +100,9 @@ MEET_SELECTORS: dict[str, str] = {
     # Name label within any video tile
     "video_tile_name":              '[data-display-name], [jsname="displayName"]',
 
+    # Side panel speaker animation equalizer (3 bars)
+    "side_panel_speaking_indicator": '[jsname="QgSmzd"], [role="listitem"] div:has(> div:nth-child(1):empty):has(> div:nth-child(3):last-child:empty)',
+
     # ── Connection / state banners (MeetingDOM) ───────────────────────
     "reconnecting_dialog":          'text="Trying to reconnect"',
     "network_lost_banner":          'text="Your internet connection is unstable"',

@@ -1,6 +1,6 @@
 [Unit]
 Description=KAIO Meeting Bot Subsystem & FastAPI Backend Service
-After=network.target sound.target
+After=network.target sound.target postgresql.service
 Wants=sound.target
 
 [Service]
@@ -12,22 +12,35 @@ Environment="PATH=/opt/kaio/backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr
 Environment="DISPLAY=:99"
 Environment="PULSE_SERVER=unix:/run/user/1000/pulse/native"
 Environment="RECORDING_PULSE_SOURCE=kaio_sink.monitor"
+Environment="MEETING_RECORDING_PULSE_SOURCE=kaio_sink.monitor"
 Environment="MEETING_HEADLESS=true"
-EnvironmentFile=/opt/kaio/backend/.env
+Environment="MEETING_FFMPEG_PATH=ffmpeg"
+Environment="MEETING_FFPROBE_PATH=ffprobe"
+EnvironmentFile=-/opt/kaio/backend/.env
 
 # Environment preparation before main backend service launch
 ExecStartPre=/bin/bash /opt/kaio/deploy/vps/start_meeting_bot_env.sh
 
-# Run FastAPI / Uvicorn server hosting meeting runtime manager
-ExecStart=/opt/kaio/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+# Run FastAPI / Uvicorn server bound to localhost for Nginx reverse proxying
+ExecStart=/opt/kaio/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
 
 # Environment cleanup after service termination
 ExecStopPost=/bin/bash /opt/kaio/deploy/vps/stop_meeting_bot_env.sh
 
+# Automatic restart & crash recovery
 Restart=always
-RestartSec=5s
+RestartSec=3s
+
+# Process management & graceful shutdown (SIGTERM sent first, 30s timeout before SIGKILL)
 KillMode=mixed
 TimeoutStopSec=30s
+SendSIGKILL=yes
+
+# Resource Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=4G
+MemoryHigh=3.5G
 
 [Install]
 WantedBy=multi-user.target

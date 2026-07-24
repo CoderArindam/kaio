@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kaio-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:Password%40123@postgres:5432/kanban_test_db}
+      - JWT_SECRET=${JWT_SECRET:-kaio_production_jwt_secret_change_me}
+      - PORT=8000
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      - MEETING_HEADLESS=true
+      - MEETING_FFMPEG_PATH=ffmpeg
+      - MEETING_FFPROBE_PATH=ffprobe
+      - MEETING_RECORDING_PULSE_SOURCE=kaio_sink.monitor
+      - DISPLAY=:99
+      - AI_ENABLED=${AI_ENABLED:-true}
+      - MEETING_SPEECH_PROVIDER=${MEETING_SPEECH_PROVIDER:-deepgram}
+      - MEETING_DEEPGRAM_API_KEY=${MEETING_DEEPGRAM_API_KEY:-}
+      - MEETING_DEEPGRAM_MODEL=${MEETING_DEEPGRAM_MODEL:-nova-3}
+    env_file:
+      - path: ./backend/.env
+        required: false
+    volumes:
+      - kaio_storage:/app/storage
+      - kaio_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Password@123}
+      POSTGRES_DB: ${POSTGRES_DB:-kanban_test_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - kaio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kanban_test_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  kaio_storage:
+    driver: local
+  kaio_uploads:
+    driver: local
+  kaio_pgdata:
+    driver: local

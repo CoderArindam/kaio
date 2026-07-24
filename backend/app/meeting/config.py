@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from app.meeting.artifacts.retention import ArtifactRetentionPolicy
 
 
 class MeetingSettings(BaseSettings):
@@ -76,10 +77,12 @@ class MeetingSettings(BaseSettings):
     SPEECH_PROVIDER: str = "deepgram"       # active speech engine
     INTELLIGENCE_PROVIDER: str = "gemini"
     PIPELINE_MAX_RETRIES: int = 3
+    ARTIFACT_RETENTION_POLICY: ArtifactRetentionPolicy = ArtifactRetentionPolicy.KEEP_TRANSCRIPT_ONLY
     ARTIFACT_RETENTION_DAYS: int = 30
     EXTRACTION_MAX_RETRIES: int = 3
     EXTRACTION_CHUNK_TOKEN_LIMIT: int = 4000
     EXTRACTION_MIN_TRANSCRIPT_WORDS: int = 20
+
 
 
     # ------------------------------------------------------------------ #
@@ -91,7 +94,8 @@ class MeetingSettings(BaseSettings):
     RECORDING_MAX_DURATION: int = 14400      # seconds — 4 hours hard cap
     RECORDING_BUFFER_SIZE: int = 10_485_760  # bytes  — 10 MB in-memory buffer
     RECORDING_PULSE_SOURCE: str = "default"  # PulseAudio/PipeWire source name
-    RECORDING_WIN_AUDIO_DEVICE: str = ""    # DirectShow audio device name on Windows
+    RECORDING_WIN_AUDIO_DEVICE: str = ""    # DirectShow system audio device on Windows
+    RECORDING_WIN_MIC_DEVICE: str = ""      # DirectShow mic audio device on Windows
 
 
     # ------------------------------------------------------------------ #
@@ -188,5 +192,17 @@ class MeetingSettings(BaseSettings):
     EXTENSION_API_KEY_HASH: str = ""
     EXTENSION_ENABLED: bool = True
     EXTENSION_DIRECTORY: str = "../extension"
+
+    # ------------------------------------------------------------------ #
+    # Production Storage & Cloudflare R2                                  #
+    # ------------------------------------------------------------------ #
+    STORAGE_PROVIDER: str = "local"         # "local" | "r2" | "cloudflare_r2"
+    R2_BUCKET_NAME: str = ""
+    R2_ACCOUNT_ID: str = ""
+    R2_ENDPOINT_URL: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_PUBLIC_URL_PREFIX: str = ""
+
 
 meeting_config = MeetingSettings()
