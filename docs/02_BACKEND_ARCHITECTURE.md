@@ -87,7 +87,7 @@ backend/
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py
-│   ├── schemas/                    # Pydantic request/response DTO schemas (one file per domain, including timesheets)
+│   ├── schemas/                    # 20 Pydantic request/response DTO schema files (activity, admin, ai, auth, board, comments, dashboard, envelope, invitations, my_work, notifications, organization, preferences, task, task_proposal, timesheet_admin, timesheet_approvals, timesheets, users)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py

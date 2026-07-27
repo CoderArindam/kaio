@@ -48,7 +48,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **47** sequential `.sql` migration files | `001_extensions.sql` … `047_fix_rejected_timesheet_status.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **48** SQL migration files (versions 001–047) | `001_extensions.sql` … `047_fix_rejected_timesheet_status.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -102,17 +102,17 @@ python database/scripts/rebuild.py --reset
 |---|---|
 | `README.md` | Documentation index and AI agent onboarding instructions |
 | `01_PROJECT_OVERVIEW.md` | Business objectives, USP, system architecture, phase roadmap |
-| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 18 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
-| `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand, Tailwind v4, feature structure, component tree, route guards |
-| `04_DATABASE_ARCHITECTURE.md` | 37 migrations, ERD, canonical views, stored functions catalog |
+| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 21 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
+| `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand, Tailwind v4, feature structure, component tree, route guards, 21 API services |
+| `04_DATABASE_ARCHITECTURE.md` | 48 SQL migration files (versions 001–047), ERD, canonical views, stored functions catalog |
 | `05_MEETING_PIPELINE.md` | Bot join → WebM → FFmpeg → Deepgram → Attribution → Task Extraction pipeline |
 | `06_AI_ARCHITECTURE.md` | Deepgram speech tier, Puter/Gemini LLM tier, KAI agent, extraction pipeline |
-| `07_API_REFERENCE.md` | All 20 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, etc. |
+| `07_API_REFERENCE.md` | All 23 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, timesheets, etc. |
 | `08_COMPONENT_REFERENCE.md` | Frontend component catalog — paths, props, purpose |
 | `09_FOLDER_REFERENCE.md` | This document — full directory dictionary |
-| `10_CODE_EXECUTION_FLOW.md` | Sequence diagrams for all key flows |
+| `10_CODE_EXECUTION_FLOW.md` | Sequence diagrams for key flows (11 Mermaid sequence diagrams) |
 | `11_CONFIGURATION_REFERENCE.md` | Environment variables and config settings |
 | `12_GLOSSARY.md` | Domain terminology definitions |
 | `13_CHROME_EXTENSION_ARCHITECTURE.md` | Chrome extension DOM observer and presence dispatch |
+| `14_VPS_MEETING_BOT_DEPLOYMENT.md` | Linux VPS deployment guide for meeting bot: Playwright, PulseAudio sink, Xvfb, systemd |
 | `USER_CREDENTIALS.md` | Seeded organization login credentials for development |
-| `KAIO_Timesheet_Phases_and_Prompts.md` | Detailed phase-by-phase development plan and AI prompt suite |

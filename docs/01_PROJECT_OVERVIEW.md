@@ -103,7 +103,7 @@ graph TD
 - Bot automation using Playwright Chromium with non-interactive headless profiles.
 
 ### 4.3 Database Engine (`database/`)
-- Pure PostgreSQL schema managed via **47 versioned migration scripts** (`001_*.sql` → `047_fix_rejected_timesheet_status.sql`).
+- Pure PostgreSQL schema managed via **48 SQL migration files** across 47 version numbers (`001_*.sql` → `047_fix_rejected_timesheet_status.sql`).
 - Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, and canonical views.
 - Rebuild script: `database/scripts/rebuild.py` — supports incremental apply (`python rebuild.py`) or full reset (`python rebuild.py --reset`).
 

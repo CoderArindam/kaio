@@ -218,7 +218,7 @@ export const RequireRole: React.FC<{ allowedRoles: string[] }> = ({ allowedRoles
 All HTTP communication passes through an **Axios client instance** configured in `src/lib/`:
 - **Cookie-based Auth**: No manual `Authorization` header attachment — cookies are sent automatically with every request (`withCredentials: true`).
 - **Response Interceptor**: Intercepts `401 Unauthorized` responses and triggers `authStore.logout({ forced: true })` to clear local state and show session-expired toast.
-- **17 service files**: `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `commentsApi.ts`, `notificationsApi.ts`, `invitationsApi.ts`, `dashboardApi.ts`, `adminApi.ts`, `myWorkApi.ts`, `preferencesApi.ts`, `organizationApi.ts`, `activityApi.ts`, `meetingApi.ts`, `taskProposals.ts`, `projectSettingsApi.ts`, `attachmentsApi.ts`, `usersApi.ts`.
+- **21 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
 
 ```mermaid
 sequenceDiagram
