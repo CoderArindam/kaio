@@ -24,14 +24,34 @@ class PipelineService:
 
         try:
             from app.meeting.pipeline.orchestrator import MeetingPipelineOrchestrator
+            from app.database.connection import db
+            from app.services.notification_service import NotificationService
             org_id = getattr(session, "org_id", 1) if session else 1
             session_meta = getattr(session, "metadata", {}) if session else {}
             merged_meta = {"org_id": org_id, **(session_meta or {}), **(metadata or {})}
 
             log.info("pipeline.starting", session_id=session_id, org_id=org_id)
-            orchestrator = MeetingPipelineOrchestrator(meeting_id=session_id, metadata=merged_meta)
+
+            async def _run_and_notify():
+                orchestrator = MeetingPipelineOrchestrator(meeting_id=session_id, metadata=merged_meta)
+                success = False
+                try:
+                    success = await orchestrator.execute_pipeline()
+                except Exception as exc:
+                    log.error("pipeline.execution_error", session_id=session_id, error=str(exc))
+                    success = False
+
+                if not success:
+                    try:
+                        if db.pool:
+                            async with db.pool.acquire() as conn:
+                                notif_svc = NotificationService(conn)
+                                await notif_svc.notify_pipeline_failed(session_id, org_id)
+                    except Exception as notif_exc:
+                        log.error("pipeline.notify_failed_error", session_id=session_id, error=str(notif_exc))
+
             task = asyncio.create_task(
-                orchestrator.execute_pipeline(),
+                _run_and_notify(),
                 name=f"pipeline-{session_id[:8]}",
             )
             return task

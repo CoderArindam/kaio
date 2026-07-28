@@ -19,6 +19,7 @@ The `Settings` class uses `pydantic-settings` with `SettingsConfigDict(env_file=
 | `SMTP_EMAIL` | `str \| None` | `None` | SMTP sender email address for invitation and notification emails. If `None`, email dispatch is skipped. |
 | `SMTP_PASSWORD` | `str \| None` | `None` | SMTP sender account password. |
 | `FRONTEND_ORIGINS` | `str` | `"http://localhost:5173,http://localhost:3000"` | Comma-separated list of allowed CORS origins. |
+| `COOKIE_SECURE` | `bool` | `False` | Controls `secure` flag on httpOnly auth cookies. Set `True` in HTTPS production. |
 
 **Example `.env` file**:
 ```env
@@ -29,21 +30,22 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 SMTP_EMAIL=noreply@yourapp.com
 SMTP_PASSWORD=your-smtp-password
 FRONTEND_ORIGINS=http://localhost:5173,http://localhost:3000
+COOKIE_SECURE=false
 ```
 
 ---
 
 ## 3. Cookie Auth Configuration (`backend/app/routers/auth.py`)
 
-These are hardcoded in the `set_auth_cookies()` helper and not environment-driven:
+Configured via `set_auth_cookies()` using `COOKIE_SECURE` environment setting:
 
-| Cookie | Max Age | Scope | httpOnly | SameSite |
-|---|---|---|---|---|
-| `access_token` | 15 minutes (900s) | `/` | `true` | `lax` |
-| `refresh_token` | 7 days (604800s) | `/api/v1/auth` | `true` | `lax` |
+| Cookie | Max Age | Scope | httpOnly | SameSite | Secure |
+|---|---|---|---|---|---|
+| `access_token` | 15 minutes (900s) | `/` | `true` | `lax` | `settings.COOKIE_SECURE` |
+| `refresh_token` | 7 days (604800s) | `/api/v1/auth` | `true` | `lax` | `settings.COOKIE_SECURE` |
 
-> [!CAUTION]
-> `secure=False` is hardcoded for local development. In production with HTTPS, this MUST be set to `True`.
+> [!NOTE]
+> `COOKIE_SECURE` defaults to `False` for local HTTP development. In production HTTPS environments, set `COOKIE_SECURE=true`.
 
 ---
 

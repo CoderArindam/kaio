@@ -26,6 +26,7 @@ from app.middleware import (
     RequestSizeLimitMiddleware,
     RateLimitMiddleware,
     ProductionLoggingMiddleware,
+    CSRFMiddleware,
 )
 from app.routers import (
     auth, boards, tasks, users, comments, attachments, activity,
@@ -84,6 +85,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(CSRFMiddleware)
 
 # Register API Routers
 app.include_router(auth.router, prefix="/api/v1")

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { type Board } from '../../../../services/boardsApi';
 import { type Task } from '../../../../services/tasksApi';
 import { type TimesheetEntry } from '../../../../services/timesheetService';
@@ -35,8 +35,8 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   onClose,
   entry,
   accessibleBoards,
-  boardTasksMap,
-  loadingTasks,
+  boardTasksMap: _boardTasksMap,
+  loadingTasks: _loadingTasks,
   onLoadTasks,
   weekDates,
   onSave,
@@ -94,8 +94,6 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
       onClose();
     }
   };
-
-  const tasksForBoard = boardTasksMap[boardId] || [];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Time Entry">

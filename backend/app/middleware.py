@@ -59,8 +59,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/health"):
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "127.0.0.1"
         now = time.time()
+
+        # Evict IP entries whose most recent timestamp is older than the rate limit window
+        stale_ips = [
+            ip for ip, timestamps in self.client_requests.items()
+            if not timestamps or (now - timestamps[-1]) >= self.window
+        ]
+        for ip in stale_ips:
+            del self.client_requests[ip]
+
+        client_ip = request.client.host if request.client else "127.0.0.1"
 
         # Clean old requests from window
         timestamps = [ts for ts in self.client_requests[client_ip] if now - ts < self.window]
@@ -83,6 +92,35 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Limit"] = str(self.requests_per_minute)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         return response
+
+
+class CSRFMiddleware(BaseHTTPMiddleware):
+    """Enforces X-Requested-With header check on state-modifying HTTP requests."""
+
+    EXEMPT_PATHS = {
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/auth/refresh",
+        "/api/v1/invitations/accept",
+    }
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            path = request.url.path
+            is_exempt = (
+                path in self.EXEMPT_PATHS
+                or path.startswith("/health")
+                or path.startswith("/api/v1/invitations/verify/")
+            )
+            if not is_exempt:
+                header_val = request.headers.get("x-requested-with")
+                if header_val != "XMLHttpRequest":
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "CSRF validation failed"}
+                    )
+
+        return await call_next(request)
 
 
 class ProductionLoggingMiddleware(BaseHTTPMiddleware):

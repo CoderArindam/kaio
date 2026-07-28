@@ -59,3 +59,16 @@ export const adminAssignUser = async (boardId: number, userId: number, permissio
 export const adminRemoveUser = async (boardId: number, userId: number): Promise<void> => {
   await axiosInstance.delete(`/admin/boards/${boardId}/members/${userId}`);
 };
+
+export const adminExportAuditLog = async (fromDate?: string, toDate?: string): Promise<Blob> => {
+  const params: Record<string, string> = { format: 'csv' };
+  if (fromDate) params.from_date = fromDate;
+  if (toDate) params.to_date = toDate;
+
+  const response = await axiosInstance.get('/admin/audit-log/export', {
+    params,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+

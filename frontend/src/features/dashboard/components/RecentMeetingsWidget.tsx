@@ -5,6 +5,7 @@ import {
   Trash2,
   Sparkles,
   Plus,
+  RotateCw,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -20,6 +21,7 @@ interface RecentMeetingsWidgetProps {
   onDeleteSession: (sessionId: string) => void;
   onOpenJoinModal: () => void;
   onOpenProposalsModal: () => void;
+  onRerunPipeline?: (sessionId: string) => void;
 }
 
 export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
@@ -31,6 +33,7 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
   onDeleteSession,
   onOpenJoinModal,
   onOpenProposalsModal,
+  onRerunPipeline,
 }) => {
   return (
     <Card variant="default" padding="md" className="space-y-4">
@@ -91,9 +94,9 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
               session.meeting_url?.trim() ||
               `Meeting (${(session.session_id || session.id || '').substring(0, 8)})`;
             const targetUrl = session.meeting_url?.trim() || '#';
-            const isCompleted = ['completed', 'finished', 'proposals_ready'].includes(
-              (session.status || '').toLowerCase()
-            );
+            const statusUpper = (session.status || '').toUpperCase();
+            const isCompleted = ['COMPLETED', 'FINISHED', 'PROPOSALS_READY'].includes(statusUpper);
+            const isFailed = statusUpper === 'FAILED';
 
             return (
               <div
@@ -155,6 +158,16 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
                     <Sparkles className="w-3 h-3 text-emerald-400" /> Proposals Ready — Review Queue ({pendingPropsCount})
                   </button>
                 )}
+
+                {/* Re-run Pipeline Button for Failed Sessions */}
+                {isFailed && onRerunPipeline && (
+                  <button
+                    onClick={() => onRerunPipeline(session.session_id || session.id)}
+                    className="w-full mt-1 py-1 px-2 text-[11px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus:ring-1 focus:ring-amber-400"
+                  >
+                    <RotateCw className="w-3 h-3 text-amber-400" /> Re-run Pipeline
+                  </button>
+                )}
               </div>
             );
           })}
@@ -163,3 +176,4 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
     </Card>
   );
 };
+

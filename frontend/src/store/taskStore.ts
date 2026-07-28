@@ -259,6 +259,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const prevTask = get().getTaskById(taskId);
     if (!prevTask) return;
 
+    // Deep snapshot of current tasks and columns state before optimistic update
+    const snapshotTasks = structuredClone(get().entities.tasks);
+    const snapshotColumns = structuredClone(get().entities.columns);
+
     // Optimistic update
     get()._updateTaskEntity(taskId, () => ({ column_id: newColumnId }));
     
@@ -277,7 +281,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       useActivityStore.getState().fetchActivity(taskId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to move task");
-      get()._updateTaskEntity(taskId, () => prevTask); // rollback
+      // Restore snapshot to store on failure
+      set((state) => ({
+        entities: {
+          ...state.entities,
+          tasks: snapshotTasks,
+          columns: snapshotColumns,
+        },
+      }));
     }
   },
 

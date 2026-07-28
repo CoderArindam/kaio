@@ -1,5 +1,4 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 import { type Board } from '../../../../services/boardsApi';
 import { type Task } from '../../../../services/tasksApi';
 import { ENTRY_TYPE_OPTIONS } from '../../shared/types';
@@ -35,8 +34,8 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
   onClose,
   weekDates,
   accessibleBoards,
-  boardTasksMap,
-  loadingTasks,
+  boardTasksMap: _boardTasksMap,
+  loadingTasks: _loadingTasks,
   boardId,
   onBoardChange,
   entryType,

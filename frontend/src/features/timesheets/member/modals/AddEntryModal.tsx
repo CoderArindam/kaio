@@ -1,5 +1,4 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 import { type Task } from '../../../../services/tasksApi';
 import { ENTRY_TYPE_OPTIONS } from '../../shared/types';
 import { Button } from '../../../../components/ui/Button';
@@ -25,8 +24,8 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
   onEntryTypeChange,
   selectedTaskId,
   onTaskChange,
-  boardTasks,
-  loadingTasks,
+  boardTasks: _boardTasks,
+  loadingTasks: _loadingTasks,
   onConfirm,
 }) => (
   <Modal isOpen onClose={onClose} title={`Add Entry to ${boardName}`}>

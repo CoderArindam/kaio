@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 import asyncpg
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, status, Query
 
 from app.meeting.logger import get_logger
 from app.meeting.schemas.meeting import (
@@ -245,6 +245,72 @@ async def delete_meeting_session(
         log.error("Failed to delete meeting session", session_id=session_id, error=str(exc))
 
     return DataEnvelope(data={"message": "Meeting session deleted successfully", "session_id": session_id})
+
+
+@router.post("/{session_id}/rerun")
+async def rerun_meeting_pipeline(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(require_meeting_initiation_access),
+    conn: asyncpg.Connection = Depends(get_db_connection),
+):
+    """Re-run processing pipeline for a failed or proposals_ready meeting session."""
+    org_id = current_user["organization_id"]
+
+    # Verify session exists and belongs to current user's org
+    session_row = await conn.fetchrow(
+        """
+        SELECT * FROM v_meeting_sessions_canonical
+        WHERE (session_id = $1 OR id::text = $1)
+          AND org_id = $2
+        """,
+        session_id,
+        org_id,
+    )
+
+    if not session_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Meeting session '{session_id}' not found in your organization",
+        )
+
+    # Verify status is FAILED or PROPOSALS_READY
+    current_status = (session_row["status"] or "").upper()
+    if current_status not in ("FAILED", "PROPOSALS_READY"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only FAILED or PROPOSALS_READY meeting sessions can be re-run (current status: {current_status})",
+        )
+
+    # Reset session status to PROCESSING via stored function fn_reset_meeting_session_status
+    actual_session_id = session_row["session_id"] or str(session_row["id"])
+    await conn.execute(
+        "SELECT fn_reset_meeting_session_status($1)",
+        actual_session_id,
+    )
+
+    # Trigger MeetingPipelineOrchestrator.execute_pipeline as a background task
+    async def _run_pipeline():
+        try:
+            from app.meeting.pipeline.orchestrator import MeetingPipelineOrchestrator
+            orchestrator = MeetingPipelineOrchestrator(
+                meeting_id=actual_session_id,
+                metadata={"org_id": org_id},
+            )
+            await orchestrator.execute_pipeline()
+        except Exception as exc:
+            log.error("rerun_pipeline background task error", session_id=actual_session_id, error=str(exc))
+
+    background_tasks.add_task(_run_pipeline)
+
+    return DataEnvelope(
+        data={
+            "message": "Meeting pipeline re-run triggered successfully",
+            "session_id": actual_session_id,
+            "status": "PROCESSING",
+        }
+    )
+
 
 
 

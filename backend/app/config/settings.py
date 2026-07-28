@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
 
     FRONTEND_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    COOKIE_SECURE: bool = False
 
     # Production Hardening Controls
     MAX_REQUEST_SIZE_BYTES: int = 52_428_800  # 50 MB

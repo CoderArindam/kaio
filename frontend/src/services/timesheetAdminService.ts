@@ -68,3 +68,21 @@ export const assignApprover = async (data: {
 export const removeApprover = async (assignmentId: string): Promise<void> => {
   await api.delete(`/timesheets/approvers/${assignmentId}`);
 };
+
+export interface TimesheetExportOptions {
+  week_start_date?: string;
+  from_date?: string;
+  to_date?: string;
+  period?: string;
+  user_id?: string;
+}
+
+export const exportTimesheetsCsv = async (options: TimesheetExportOptions): Promise<Blob> => {
+  const response = await api.get('/timesheets/reports/export', {
+    params: { ...options, format: 'csv' },
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+

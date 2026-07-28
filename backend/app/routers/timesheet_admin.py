@@ -1,9 +1,13 @@
+import csv
+import io
 import logging
 import re
 import uuid
-from typing import List
+from datetime import date, datetime, timedelta
+from typing import List, Optional
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse
 
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
@@ -18,7 +22,6 @@ from app.schemas.timesheet_admin import (
     TimesheetPolicyResponse,
     TimesheetPolicyUpdateRequest,
 )
-from fastapi import Query
 
 
 logger = logging.getLogger(__name__)
@@ -486,4 +489,188 @@ async def get_member_compliance_report(
     )
 
     return [TimesheetMemberSummaryResponse.model_validate(dict(r)) for r in rows]
+
+
+@router.get("/reports/export")
+async def export_timesheets_csv(
+    week_start_date: Optional[date] = Query(None, description="Target week start date (YYYY-MM-DD)"),
+    from_date: Optional[date] = Query(None, description="Start date filter (YYYY-MM-DD)"),
+    to_date: Optional[date] = Query(None, description="End date filter (YYYY-MM-DD)"),
+    period: Optional[str] = Query(None, description="Preset period: 1m, 3m, 6m, 1y"),
+    user_id: Optional[str] = Query(None, description="Single employee user_id or all"),
+    format: str = Query("csv", description="Export format (csv)"),
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection),
+):
+    """Export timesheets for an employee, date range, or preset period as a CSV file. Requires Manager or Superadmin role."""
+    _check_superadmin_or_manager(current_user)
+    org_id = _parse_uuid(current_user.get("organization_id"))
+
+    s_org_id = str(org_id)
+    today = date.today()
+
+    calc_from_date = from_date
+    calc_to_date = to_date
+
+    if period:
+        p = period.lower()
+        if p in ("1m", "1month"):
+            calc_from_date = today - timedelta(days=30)
+            calc_to_date = today
+        elif p in ("3m", "3month"):
+            calc_from_date = today - timedelta(days=90)
+            calc_to_date = today
+        elif p in ("6m", "6month"):
+            calc_from_date = today - timedelta(days=180)
+            calc_to_date = today
+        elif p in ("1y", "1year", "year"):
+            calc_from_date = today - timedelta(days=365)
+            calc_to_date = today
+
+    args = [s_org_id]
+    where_clauses = ["(vt.org_id::text = $1::text OR vt.org_id::text = LTRIM(RIGHT($1::text, 12), '0'))"]
+
+    if user_id and user_id.lower() != "all":
+        parsed_uid = str(_parse_uuid(user_id)) if user_id else None
+        if parsed_uid:
+            args.append(parsed_uid)
+            where_clauses.append(f"(vt.user_id::text = ${len(args)}::text OR vt.user_id::text = LTRIM(RIGHT(${len(args)}::text, 12), '0'))")
+
+    if calc_from_date:
+        args.append(calc_from_date)
+        where_clauses.append(f"ve.entry_date >= ${len(args)}::date")
+
+    if calc_to_date:
+        args.append(calc_to_date)
+        where_clauses.append(f"ve.entry_date <= ${len(args)}::date")
+
+    if week_start_date and not (calc_from_date or calc_to_date):
+        args.append(week_start_date)
+        where_clauses.append(f"vt.week_start_date = ${len(args)}::date")
+
+    where_sql = " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT 
+            vt.week_start_date,
+            vt.week_end_date,
+            vt.submitter_name,
+            vt.submitter_email,
+            ve.board_name,
+            ve.task_title,
+            ve.entry_type,
+            ve.entry_date,
+            ve.description,
+            ve.hours,
+            ve.is_overtime,
+            vt.status,
+            vt.submitted_at,
+            vt.approver_name
+        FROM v_timesheet_entries_canonical ve
+        JOIN v_timesheets_canonical vt ON ve.timesheet_id = vt.id
+        WHERE {where_sql}
+        ORDER BY vt.week_start_date DESC, vt.submitter_name ASC, ve.entry_date ASC, ve.created_at ASC
+    """
+
+    rows = await conn.fetch(query, *args)
+    total_logged_hours = sum(float(r["hours"] or 0) for r in rows)
+
+    def generate():
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # 1. Enterprise Report Header Summary Block
+        writer.writerow(["KAIO Enterprise Timesheet Export Report"])
+        writer.writerow(["Organization", "TechInnovators India"])
+        
+        period_label = "Custom Range"
+        if period:
+            period_map = {"1m": "Last 1 Month", "3m": "Last 3 Months", "6m": "Last 6 Months", "1y": "Last 1 Year"}
+            period_label = period_map.get(period.lower(), period)
+        elif calc_from_date and calc_to_date:
+            period_label = f"{calc_from_date} to {calc_to_date}"
+        elif week_start_date:
+            period_label = f"Week of {week_start_date}"
+
+        writer.writerow(["Report Period", period_label])
+        writer.writerow(["Generated At", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")])
+        writer.writerow(["Total Entries", len(rows)])
+        writer.writerow(["Total Hours Logged", f"{total_logged_hours:.2f}"])
+        writer.writerow([]) # Empty row separator
+
+        # 2. Main Data Table Column Headers
+        writer.writerow([
+            "Timesheet Week",
+            "Member Name",
+            "Email",
+            "Day Name",
+            "Entry Date",
+            "Project / Board",
+            "Task Title",
+            "Entry Type",
+            "Work Description / Notes",
+            "Hours Logged",
+            "Is Overtime",
+            "Timesheet Status",
+            "Submitted At",
+            "Reviewed By"
+        ])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # 3. Data Rows
+        for r in rows:
+            week_label = f"Week of {r['week_start_date']}" if r.get("week_start_date") else ""
+            day_name = r["entry_date"].strftime("%A") if r.get("entry_date") else ""
+            entry_date_str = str(r["entry_date"]) if r.get("entry_date") else ""
+            
+            submitted_at_str = (
+                r["submitted_at"].strftime("%Y-%m-%d %H:%M:%S")
+                if r.get("submitted_at") is not None
+                else ""
+            )
+            entry_type_str = str(r["entry_type"] or "").replace("_", " ").title()
+            status_str = str(r["status"] or "").replace("_", " ").title()
+            hours_str = f"{float(r['hours']):.2f}" if r["hours"] is not None else "0.00"
+            is_overtime_str = "Yes" if r.get("is_overtime") else "No"
+
+            writer.writerow([
+                week_label,
+                r["submitter_name"] or "",
+                r["submitter_email"] or "",
+                day_name,
+                entry_date_str,
+                r["board_name"] or "General Work",
+                r["task_title"] or "",
+                entry_type_str,
+                r["description"] or "",
+                hours_str,
+                is_overtime_str,
+                status_str,
+                submitted_at_str,
+                r["approver_name"] or "",
+            ])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    filename_parts = ["timesheets"]
+    if user_id and user_id.lower() != "all":
+        filename_parts.append(f"emp_{str(user_id)[:8]}")
+    if period:
+        filename_parts.append(period)
+    elif calc_from_date and calc_to_date:
+        filename_parts.append(f"{calc_from_date}_to_{calc_to_date}")
+    elif week_start_date:
+        filename_parts.append(str(week_start_date))
+
+    filename = "_".join(filename_parts) + ".csv"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 

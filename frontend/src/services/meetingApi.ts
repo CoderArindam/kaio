@@ -39,3 +39,8 @@ export const listRecentMeetingSessions = async (limit?: number): Promise<Meeting
 export const deleteMeetingSession = async (sessionId: string): Promise<void> => {
   await api.delete(`/meeting/session/${sessionId}`);
 };
+
+export const rerunMeetingPipeline = async (sessionId: string): Promise<void> => {
+  await api.post(`/meeting/${sessionId}/rerun`);
+};
+

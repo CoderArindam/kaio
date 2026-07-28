@@ -177,149 +177,167 @@ class MeetingPipelineOrchestrator:
         report_path = self.context.session_directory / "pipeline_report.json"
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
+    async def _mark_session_failed(self) -> None:
+        """Mark meeting session as FAILED via stored function fn_fail_meeting_session."""
+        try:
+            from app.database.connection import db
+            if db.pool:
+                async with db.pool.acquire() as conn:
+                    await conn.execute("SELECT fn_fail_meeting_session($1)", self.meeting_id)
+                    log.info("pipeline.session_marked_failed", meeting_id=self.meeting_id)
+        except Exception as exc:
+            log.error("pipeline.mark_session_failed_error", meeting_id=self.meeting_id, error=str(exc))
+
     async def execute_pipeline(self) -> bool:
         """Run the full pipeline."""
-        self._emit(PipelineStarted(meeting_id=self.meeting_id))
-        
-        # Setup initial state
-        self._ensure_initial_recording()
-        
-        pipeline_success = True
-        
-        for stage in self.stages:
-            stage_info = {
-                "stage_name": stage.stage_name,
-                "execution_order": stage.execution_order,
-                "started_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "completed_at": None,
-                "duration_ms": 0,
-                "status": None,
-                "error": None,
-                "retry_count": 0
-            }
+        try:
+            self._emit(PipelineStarted(meeting_id=self.meeting_id))
             
-            # Check if we can skip (resumability)
-            can_skip = stage.skippable
-            if can_skip:
-                for gen_art in stage.generated_artifacts:
-                    if not self.context.artifacts.exists(gen_art):
-                        can_skip = False
-                        break
-                    
-            if can_skip and stage.generated_artifacts:
-                stage_info["status"] = StageStatus.SKIPPED.value
-                self.stage_timings.append(stage_info)
-                self.context.skipped_stages.append(stage.stage_name)
-                self._emit(StageSkipped(meeting_id=self.meeting_id, stage_name=stage.stage_name))
-                continue
-
-            self._emit(StageStarted(meeting_id=self.meeting_id, stage_name=stage.stage_name))
+            # Setup initial state
+            self._ensure_initial_recording()
             
-            # Validate inputs
-            try:
-                stage.validate_inputs(self.context)
-            except Exception as e:
-                stage_info["status"] = StageStatus.FAILED.value
-                stage_info["error"] = f"Input validation failed: {str(e)}"
-                self.stage_timings.append(stage_info)
-                self.context.failed_stage = stage.stage_name
-                self._emit(StageFailed(
-                    meeting_id=self.meeting_id, 
-                    stage_name=stage.stage_name, 
-                    error=stage_info["error"], 
-                    will_continue=False
-                ))
-                pipeline_success = False
-                break
+            pipeline_success = True
+            
+            for stage in self.stages:
+                stage_info = {
+                    "stage_name": stage.stage_name,
+                    "execution_order": stage.execution_order,
+                    "started_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "completed_at": None,
+                    "duration_ms": 0,
+                    "status": None,
+                    "error": None,
+                    "retry_count": 0
+                }
                 
-            # Execute
-            t0 = time.monotonic()
-            retries = 1 if stage.retryable else 0
-            status = StageStatus.FAILED
-            
-            for attempt in range(retries + 1):
-                try:
-                    status = await stage.execute(self.context)
-                    if status == StageStatus.SUCCESS:
-                        break
-                except Exception as e:
-                    stage_info["error"] = str(e)
-                    if attempt < retries:
-                        stage_info["retry_count"] += 1
-                        time.sleep(1) # simple backoff
+                # Check if we can skip (resumability)
+                can_skip = stage.skippable
+                if can_skip:
+                    for gen_art in stage.generated_artifacts:
+                        if not self.context.artifacts.exists(gen_art):
+                            can_skip = False
+                            break
                         
-            # Validate outputs
-            if status == StageStatus.SUCCESS:
-                try:
-                    stage.validate_outputs(self.context)
-                except Exception as e:
-                    status = StageStatus.FAILED
-                    stage_info["error"] = f"Output validation failed: {str(e)}"
+                if can_skip and stage.generated_artifacts:
+                    stage_info["status"] = StageStatus.SKIPPED.value
+                    self.stage_timings.append(stage_info)
+                    self.context.skipped_stages.append(stage.stage_name)
+                    self._emit(StageSkipped(meeting_id=self.meeting_id, stage_name=stage.stage_name))
+                    continue
 
-            duration = int((time.monotonic() - t0) * 1000)
-            stage_info["completed_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            stage_info["duration_ms"] = duration
-            stage_info["status"] = status.value
-            self.stage_timings.append(stage_info)
-            
-            if status == StageStatus.SUCCESS:
-                self.context.completed_stages.append(stage.stage_name)
+                self._emit(StageStarted(meeting_id=self.meeting_id, stage_name=stage.stage_name))
                 
-                # Capture hashes/versions of outputs
-                generated_info = {}
-                for art_type in stage.generated_artifacts:
-                    art = self.context.artifacts.get(art_type)
-                    if art:
-                        generated_info[art_type.__name__] = getattr(art, "id", "unknown")
-                        
-                self._emit(StageCompleted(
-                    meeting_id=self.meeting_id, 
-                    stage_name=stage.stage_name, 
-                    duration_ms=duration,
-                    generated_artifacts=generated_info
-                ))
-            else:
-                self.context.failed_stage = stage.stage_name
-                self._emit(StageFailed(
-                    meeting_id=self.meeting_id, 
-                    stage_name=stage.stage_name, 
-                    error=stage_info["error"] or "Stage returned FAILED", 
-                    will_continue=stage.continue_on_failure
-                ))
-                
-                if not stage.continue_on_failure:
+                # Validate inputs
+                try:
+                    stage.validate_inputs(self.context)
+                except Exception as e:
+                    stage_info["status"] = StageStatus.FAILED.value
+                    stage_info["error"] = f"Input validation failed: {str(e)}"
+                    self.stage_timings.append(stage_info)
+                    self.context.failed_stage = stage.stage_name
+                    self._emit(StageFailed(
+                        meeting_id=self.meeting_id, 
+                        stage_name=stage.stage_name, 
+                        error=stage_info["error"], 
+                        will_continue=False
+                    ))
                     pipeline_success = False
                     break
                     
-        self.context.completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        
-        if pipeline_success:
-            self._emit(PipelineCompleted(
-                meeting_id=self.meeting_id, 
-                total_duration_ms=sum(s["duration_ms"] for s in self.stage_timings)
-            ))
+                # Execute
+                t0 = time.monotonic()
+                retries = 1 if stage.retryable else 0
+                status = StageStatus.FAILED
+                
+                for attempt in range(retries + 1):
+                    try:
+                        status = await stage.execute(self.context)
+                        if status == StageStatus.SUCCESS:
+                            break
+                    except Exception as e:
+                        stage_info["error"] = str(e)
+                        if attempt < retries:
+                            stage_info["retry_count"] += 1
+                            time.sleep(1) # simple backoff
+                            
+                # Validate outputs
+                if status == StageStatus.SUCCESS:
+                    try:
+                        stage.validate_outputs(self.context)
+                    except Exception as e:
+                        status = StageStatus.FAILED
+                        stage_info["error"] = f"Output validation failed: {str(e)}"
+
+                duration = int((time.monotonic() - t0) * 1000)
+                stage_info["completed_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                stage_info["duration_ms"] = duration
+                stage_info["status"] = status.value
+                self.stage_timings.append(stage_info)
+                
+                if status == StageStatus.SUCCESS:
+                    self.context.completed_stages.append(stage.stage_name)
+                    
+                    # Capture hashes/versions of outputs
+                    generated_info = {}
+                    for art_type in stage.generated_artifacts:
+                        art = self.context.artifacts.get(art_type)
+                        if art:
+                            generated_info[art_type.__name__] = getattr(art, "id", "unknown")
+                            
+                    self._emit(StageCompleted(
+                        meeting_id=self.meeting_id, 
+                        stage_name=stage.stage_name, 
+                        duration_ms=duration,
+                        generated_artifacts=generated_info
+                    ))
+                else:
+                    self.context.failed_stage = stage.stage_name
+                    self._emit(StageFailed(
+                        meeting_id=self.meeting_id, 
+                        stage_name=stage.stage_name, 
+                        error=stage_info["error"] or "Stage returned FAILED", 
+                        will_continue=stage.continue_on_failure
+                    ))
+                    
+                    if not stage.continue_on_failure:
+                        pipeline_success = False
+                        break
+                        
+            self.context.completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             
-        self._generate_manifest()
-        self._generate_report()
-        
-        if pipeline_success:
-            try:
-                from app.meeting.services.storage_service import StorageService
-                storage_svc = StorageService()
-                await storage_svc.upload_pipeline_artifacts(
-                    session_id=self.meeting_id,
-                    session_dir=self.session_dir
+            if pipeline_success:
+                self._emit(PipelineCompleted(
+                    meeting_id=self.meeting_id, 
+                    total_duration_ms=sum(s["duration_ms"] for s in self.stage_timings)
+                ))
+                
+            self._generate_manifest()
+            self._generate_report()
+            
+            if pipeline_success:
+                try:
+                    from app.meeting.services.storage_service import StorageService
+                    storage_svc = StorageService()
+                    await storage_svc.upload_pipeline_artifacts(
+                        session_id=self.meeting_id,
+                        session_dir=self.session_dir
+                    )
+                except Exception as exc:
+                    log.error("pipeline.storage_upload_failed", meeting_id=self.meeting_id, error=str(exc))
+
+                ArtifactRetentionManager.apply_retention_policy(
+                    meeting_id=self.meeting_id,
+                    recording_dir=Path(meeting_config.RECORDING_OUTPUT_DIR) / self.meeting_id,
+                    processing_dir=self.session_dir,
                 )
-            except Exception as exc:
-                log.error("pipeline.storage_upload_failed", meeting_id=self.meeting_id, error=str(exc))
+            else:
+                log.info("retention.skipped_pipeline_failed", meeting_id=self.meeting_id)
+                await self._mark_session_failed()
 
-            ArtifactRetentionManager.apply_retention_policy(
-                meeting_id=self.meeting_id,
-                recording_dir=Path(meeting_config.RECORDING_OUTPUT_DIR) / self.meeting_id,
-                processing_dir=self.session_dir,
-            )
-        else:
-            log.info("retention.skipped_pipeline_failed", meeting_id=self.meeting_id)
+            return pipeline_success
 
-        return pipeline_success
+        except Exception as exc:
+            log.error("pipeline.execution_failed_exception", meeting_id=self.meeting_id, error=str(exc), exc_info=True)
+            await self._mark_session_failed()
+            return False
 

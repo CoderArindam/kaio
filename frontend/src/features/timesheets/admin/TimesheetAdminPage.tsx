@@ -1,17 +1,46 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Settings, Sliders, Users, BarChart3, Clock, Eye } from 'lucide-react';
+import { Settings, Sliders, Users, BarChart3, Clock, Eye, Download, Calendar, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../../../store/authStore';
 import { isSuperAdmin } from '../../../lib/rbac';
 import TimesheetPolicyForm from './TimesheetPolicyForm';
 import ApproverAssignmentManager from './ApproverAssignmentManager';
 import { Card, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
+import { exportTimesheetsCsv } from '../../../services/timesheetAdminService';
+import { getUsers, type User } from '../../../services/usersApi';
 
 type TabType = 'all' | 'policy' | 'approvers' | 'reports';
+type DateMode = 'week' | 'preset' | 'range';
+type PresetPeriod = '1m' | '3m' | '6m' | '1y';
+
+const getMondayOfCurrentWeek = (): string => {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d.setDate(diff));
+  return monday.toISOString().split('T')[0];
+};
 
 export const TimesheetAdminPage: React.FC = () => {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  
+  // Filter state
+  const [employees, setEmployees] = useState<User[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [dateMode, setDateMode] = useState<DateMode>('week');
+  const [exportDate, setExportDate] = useState<string>(getMondayOfCurrentWeek());
+  const [selectedPreset, setSelectedPreset] = useState<PresetPeriod>('1m');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  useEffect(() => {
+    getUsers()
+      .then((data) => setEmployees(data || []))
+      .catch((err) => console.error('Failed to load users for timesheet export:', err));
+  }, []);
 
   // Route guard: Only Superadmin can access Timesheet Policy
   if (!user || !isSuperAdmin(user)) {
@@ -19,6 +48,43 @@ export const TimesheetAdminPage: React.FC = () => {
   }
 
   const superAdmin = isSuperAdmin(user);
+
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const options: any = {
+        user_id: selectedEmployee,
+      };
+
+      if (dateMode === 'week') {
+        options.week_start_date = exportDate;
+      } else if (dateMode === 'preset') {
+        options.period = selectedPreset;
+      } else if (dateMode === 'range') {
+        if (fromDate) options.from_date = fromDate;
+        if (toDate) options.to_date = toDate;
+      }
+
+      const blob = await exportTimesheetsCsv(options);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const empLabel = selectedEmployee === 'all' ? 'all' : `user_${selectedEmployee}`;
+      const dateLabel = dateMode === 'week' ? exportDate : dateMode === 'preset' ? selectedPreset : `${fromDate}_to_${toDate}`;
+      a.download = `timesheets_${empLabel}_${dateLabel}.csv`;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Timesheet report exported successfully');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to export timesheet CSV');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
@@ -96,17 +162,160 @@ export const TimesheetAdminPage: React.FC = () => {
 
       {/* Main Content Area */}
       {activeTab === 'reports' ? (
-        <Card variant="glass" className="py-16 text-center shadow-lg border-brand-border/60">
-          <CardContent className="space-y-3">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary border border-brand-primary/20 flex items-center justify-center">
-              <BarChart3 size={24} />
-            </div>
-            <CardTitle className="text-xl font-bold text-brand-text">Timesheet Reports</CardTitle>
-            <CardDescription className="text-sm text-brand-text-muted max-w-md mx-auto">
-              Advanced analytics, audit logs, and compliance report exports are coming soon.
-            </CardDescription>
-          </CardContent>
-        </Card>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <Card variant="glass" className="p-6 shadow-lg border-brand-border/60">
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-3 border-b border-brand-border/60 pb-4">
+                <div className="p-3 rounded-2xl bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
+                  <BarChart3 size={24} />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-brand-text">Timesheet Report Exporter</CardTitle>
+                  <CardDescription className="text-sm text-brand-text-muted">
+                    Filter by employee and date range or preset period, then export complete timesheets as a formatted CSV file.
+                  </CardDescription>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                {/* 1. Employee Filter */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-brand-text flex items-center gap-1.5">
+                    <Filter size={13} className="text-brand-primary" /> Employee Filter
+                  </label>
+                  <select
+                    value={selectedEmployee}
+                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-border bg-brand-bg text-brand-text text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                  >
+                    <option value="all">All Employees (Organization Wide)</option>
+                    {employees.map((u) => {
+                      const name = u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.email;
+                      return (
+                        <option key={u.id} value={String(u.id)}>
+                          {name} ({u.email})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* 2. Date Filter Mode Selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-brand-text flex items-center gap-1.5">
+                    <Calendar size={13} className="text-brand-primary" /> Date Filter Mode
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 p-1 bg-brand-surface-low border border-brand-border/60 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setDateMode('week')}
+                      className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                        dateMode === 'week'
+                          ? 'bg-brand-primary text-white shadow-xs'
+                          : 'text-brand-text-muted hover:text-brand-text'
+                      }`}
+                    >
+                      Single Week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDateMode('preset')}
+                      className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                        dateMode === 'preset'
+                          ? 'bg-brand-primary text-white shadow-xs'
+                          : 'text-brand-text-muted hover:text-brand-text'
+                      }`}
+                    >
+                      Preset Period
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDateMode('range')}
+                      className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                        dateMode === 'range'
+                          ? 'bg-brand-primary text-white shadow-xs'
+                          : 'text-brand-text-muted hover:text-brand-text'
+                      }`}
+                    >
+                      Custom Date Range
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Dynamic Inputs based on Date Mode */}
+                {dateMode === 'week' ? (
+                  <div className="space-y-1.5 bg-brand-surface-low/50 p-4 rounded-xl border border-brand-border/60">
+                    <label className="text-xs font-semibold text-brand-text block">Week Start Date</label>
+                    <input
+                      type="date"
+                      value={exportDate}
+                      onChange={(e) => setExportDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-bg text-brand-text text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                    />
+                  </div>
+                ) : dateMode === 'preset' ? (
+                  <div className="space-y-1.5 bg-brand-surface-low/50 p-4 rounded-xl border border-brand-border/60">
+                    <label className="text-xs font-semibold text-brand-text block">Select Timeframe Preset</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: '1m', label: 'Last 1 Month' },
+                        { id: '3m', label: 'Last 3 Months' },
+                        { id: '6m', label: 'Last 6 Months' },
+                        { id: '1y', label: 'Last 1 Year' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedPreset(item.id as PresetPeriod)}
+                          className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all ${
+                            selectedPreset === item.id
+                              ? 'bg-brand-primary/10 border-brand-primary text-brand-primary font-bold'
+                              : 'bg-brand-bg border-brand-border text-brand-text-muted hover:text-brand-text'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-brand-surface-low/50 p-4 rounded-xl border border-brand-border/60">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-brand-text block">From Date</label>
+                      <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-bg text-brand-text text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-brand-text block">To Date</label>
+                      <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-brand-border bg-brand-bg text-brand-text text-sm font-medium focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Export CTA Button */}
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={handleExportCsv}
+                    disabled={isExporting}
+                    className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm h-[42px]"
+                  >
+                    <Download size={15} />
+                    {isExporting ? 'Generating & Exporting CSV...' : 'Export Timesheet CSV'}
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ) : activeTab === 'policy' ? (
         <div className="max-w-3xl mx-auto">
           <TimesheetPolicyForm />

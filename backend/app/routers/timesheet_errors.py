@@ -17,6 +17,7 @@ TIMESHEET_ERROR_MAP: Dict[str, Tuple[int, str]] = {
     'BOARD_ORG_MISMATCH': (403, "The selected board does not belong to your organization."),
     'TIMESHEET_LOCKED': (422, "This timesheet is locked and cannot be modified after submission."),
     'TASK_NOT_ASSIGNED': (422, "Time can only be logged against tasks assigned to you."),
+    'TASK_ASSIGNMENT_CHANGED': (422, "One or more tasks are no longer assigned to you. Please review your entries before submitting."),
     'TASK_NOT_FOUND': (404, "The specified task was not found."),
     'TASK_LINK_REQUIRED': (422, "Task selection is required by your organization's timesheet policy."),
 }

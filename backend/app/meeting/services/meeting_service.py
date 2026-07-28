@@ -236,6 +236,18 @@ class MeetingService:
     def cleanup_finished(self) -> int:
         return self._session_manager.cleanup()
 
+    async def notify_pipeline_failed(self, session_id: str, org_id: int = 1) -> None:
+        """Notify organization managers when meeting pipeline processing fails."""
+        try:
+            from app.database.connection import db
+            from app.services.notification_service import NotificationService
+            if db.pool:
+                async with db.pool.acquire() as conn:
+                    notif_svc = NotificationService(conn)
+                    await notif_svc.notify_pipeline_failed(session_id, org_id)
+        except Exception as exc:
+            log.error("meeting_service.notify_pipeline_failed_error", session_id=session_id, error=str(exc))
+
     # ------------------------------------------------------------------ #
     # Shutdown — called by FastAPI lifespan on exit                        #
     # ------------------------------------------------------------------ #

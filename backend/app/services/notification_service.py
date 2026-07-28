@@ -155,7 +155,11 @@ class NotificationService:
     async def notify_timesheet_recalled(self, timesheet_id, submitter_id, approver_id, week_label, reason: str = None, submitter_name: str = None):
         return await notify_timesheet_recalled(self.conn, timesheet_id, submitter_id, approver_id, week_label, reason, submitter_name)
 
+    async def notify_pipeline_failed(self, session_id: str, org_id: int = 1):
+        return await notify_pipeline_failed(self.conn, session_id, org_id)
 
+
+import json
 from uuid import UUID
 
 def _to_uuid(val) -> UUID | None:
@@ -170,6 +174,38 @@ def _to_uuid(val) -> UUID | None:
         return UUID(s_val)
     except Exception:
         return None
+
+
+async def notify_pipeline_failed(conn: asyncpg.Connection, session_id: str, org_id: int = 1):
+    try:
+        rows = await conn.fetch(
+            "SELECT id FROM v_users_canonical WHERE (organization_id = $1 OR organization_id::text = $1::text) AND LOWER(role::text) IN ('superadmin', 'super_admin', 'manager')",
+            org_id
+        )
+        if not rows:
+            return
+
+        title = f"Meeting processing failed for session {session_id}"
+        body = f"Audio processing failed for meeting session {session_id}."
+
+        for r in rows:
+            user_int_id = r["id"]
+            act_id = await conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'ORGANIZATION', $1, NULL, 'UPDATED', $2::jsonb)
+                RETURNING id
+                """,
+                org_id,
+                json.dumps({"title": title, "body": body, "session_id": session_id})
+            )
+            if act_id:
+                await conn.execute(
+                    "INSERT INTO notifications (user_id, activity_id) VALUES ($1, $2)",
+                    user_int_id, act_id
+                )
+    except Exception as e:
+        logger.error(f"Failed to create pipeline failure notification for session {session_id}: {e}")
 
 
 async def notify_timesheet_submitted(conn: asyncpg.Connection, timesheet_id, submitter_id, approver_id, week_label: str, submitter_name: str = None):

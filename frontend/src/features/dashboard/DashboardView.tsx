@@ -12,9 +12,11 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import EmptyState from '../../components/common/EmptyState';
 import { ProjectCard } from '../../components/common/ProjectCard';
 import JoinMeetingModal from '../meeting/components/JoinMeetingModal';
+import toast from 'react-hot-toast';
 import {
   listRecentMeetingSessions,
   deleteMeetingSession,
+  rerunMeetingPipeline,
   type MeetingSession,
 } from '../../services/meetingApi';
 import GlobalProposalsModal from '../proposals/components/GlobalProposalsModal';
@@ -138,11 +140,25 @@ export const DashboardView: React.FC = () => {
   }, [fetchBoards]);
 
   useEffect(() => {
-    if (canAccessAdminFeatures) {
-      fetchProposalsCount();
+    if (!canAccessAdminFeatures) return;
+
+    fetchProposalsCount();
+    fetchSummaryData();
+    fetchTimesheetSummary();
+
+    const handleFocus = () => {
       fetchSummaryData();
-      fetchTimesheetSummary();
-    }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    const intervalId = setInterval(() => {
+      fetchSummaryData();
+    }, 60000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
   }, [fetchProposalsCount, fetchSummaryData, fetchTimesheetSummary, canAccessAdminFeatures]);
 
   const fetchSessions = React.useCallback(async () => {
@@ -163,6 +179,16 @@ export const DashboardView: React.FC = () => {
       setRecentSessions((prev) => prev.filter((s) => (s.id || s.session_id) !== sessionId));
     } catch (err) {
       console.error('Failed to delete session:', err);
+    }
+  };
+
+  const handleRerunPipeline = async (sessionId: string) => {
+    try {
+      await rerunMeetingPipeline(sessionId);
+      toast.success('Meeting pipeline re-run started');
+      fetchSessions();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to re-run meeting pipeline');
     }
   };
 
@@ -343,6 +369,7 @@ export const DashboardView: React.FC = () => {
                 onDeleteSession={handleDeleteSession}
                 onOpenJoinModal={() => setIsJoinModalOpen(true)}
                 onOpenProposalsModal={() => setIsProposalsModalOpen(true)}
+                onRerunPipeline={handleRerunPipeline}
               />
 
               {/* Recent Activity Widget */}

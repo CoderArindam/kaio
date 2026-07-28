@@ -16,6 +16,7 @@ from app.auth.jwt import create_access_token
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
 from app.services.auth_service import AuthService
+from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False, # Set to True in production with HTTPS
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         max_age=15 * 60 # 15 minutes
     )
@@ -34,7 +35,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         path="/api/v1/auth",
         max_age=7 * 24 * 60 * 60 # 7 days
@@ -138,8 +139,8 @@ async def logout(
     token = request.cookies.get("refresh_token")
     await auth_service.logout(token)
 
-    response.delete_cookie(key="access_token", httponly=True, secure=False, samesite="lax")
-    response.delete_cookie(key="refresh_token", httponly=True, secure=False, samesite="lax", path="/api/v1/auth")
+    response.delete_cookie(key="access_token", httponly=True, secure=settings.COOKIE_SECURE, samesite="lax")
+    response.delete_cookie(key="refresh_token", httponly=True, secure=settings.COOKIE_SECURE, samesite="lax", path="/api/v1/auth")
     
     return {"message": "Logged out successfully"}
 

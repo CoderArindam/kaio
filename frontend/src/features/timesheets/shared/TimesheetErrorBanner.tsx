@@ -93,6 +93,44 @@ export const TimesheetErrorBanner: React.FC<TimesheetErrorBannerProps> = ({
     );
   }
 
+  if (error_code === 'TASK_ASSIGNMENT_CHANGED') {
+    return (
+      <div className="p-4 mb-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/40 dark:border-red-700/50 text-red-900 dark:text-red-200 flex items-start gap-3 shadow-sm transition-all">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+        <div className="flex-1 text-sm font-medium">
+          <div>One or more tasks in your timesheet are no longer assigned to you. Please remove those entries and resubmit.</div>
+          {detail && detail !== "One or more tasks in your timesheet are no longer assigned to you. Please remove those entries and resubmit." && (
+            <div className="text-xs mt-1 text-red-700 dark:text-red-300 font-normal">{detail}</div>
+          )}
+        </div>
+        {onDismiss && (
+          <button onClick={onDismiss} className="text-red-500 hover:text-red-700 dark:hover:text-red-200 p-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (error_code === 'TASK_NOT_ASSIGNED') {
+    return (
+      <div className="p-4 mb-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/40 dark:border-red-700/50 text-red-900 dark:text-red-200 flex items-start gap-3 shadow-sm transition-all">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+        <div className="flex-1 text-sm font-medium">
+          <div>This task is not assigned to you. Only assigned tasks can be logged.</div>
+          {detail && detail !== "This task is not assigned to you. Only assigned tasks can be logged." && (
+            <div className="text-xs mt-1 text-red-700 dark:text-red-300 font-normal">{detail}</div>
+          )}
+        </div>
+        {onDismiss && (
+          <button onClick={onDismiss} className="text-red-500 hover:text-red-700 dark:hover:text-red-200 p-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (error_code === 'NO_APPROVER_CONFIGURED') {
     return (
       <div className="p-4 mb-4 rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-700/50 text-blue-900 dark:text-blue-200 flex items-start gap-3 shadow-sm transition-all">

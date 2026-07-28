@@ -24,8 +24,8 @@ export const TimesheetSummaryBar: React.FC<TimesheetSummaryBarProps> = ({
   onSubmit,
   onRecall,
   isSubmitting,
-  dayTotals = [0, 0, 0, 0, 0, 0, 0],
-  weekDates = [],
+  dayTotals: _dayTotals = [0, 0, 0, 0, 0, 0, 0],
+  weekDates: _weekDates = [],
 }) => {
   const targetHours = policy.standard_hours_per_week || 40;
   const totalHours = timesheet.total_hours || 0;
