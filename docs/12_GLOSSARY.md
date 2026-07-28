@@ -59,11 +59,17 @@ The process executed by `DynamicAttributionEngine` that correlates synthetic spe
 ### Speaker Turn
 A discrete audio segment identified during Deepgram diarization, containing a start timestamp, end timestamp, and a synthetic integer speaker label (e.g., `speaker_0`).
 
+### Meeting Session Rerun Pipeline
+A fault-recovery feature allowing Superadmins or Managers to re-trigger post-processing pipeline execution for a failed meeting session (`POST /api/v1/meeting/{session_id}/rerun`). Resets session status to `PROCESSING` via `fn_reset_meeting_session_status()` and processes existing recorded audio artifacts without re-joining the meeting.
+
 ### Stored Function (fn_*)
 A PostgreSQL PL/pgSQL function named with the `fn_` prefix that encapsulates all data mutation logic. Backend Python code calls these exclusively for writes — never inline SQL.
 
 ### Task Proposal Approval Queue
 The interface (backend: `task_proposals.py` router + DB `task_proposals` table; frontend: proposal drawer components) through which Managers and Superadmins review, edit, approve, or reject AI-extracted task proposals from meeting transcripts.
+
+### TASK_ASSIGNMENT_CHANGED Error Code
+A database validation error code raised during timesheet submission (`fn_submit_timesheet`) if a time entry is linked to a task that has been unassigned or reassigned to another team member. The frontend maps this code in `TimesheetErrorBanner` to prompt user review before resubmitting.
 
 ### Timesheet
 A weekly effort log record (`timesheets` table, `v_timesheets_canonical` view) representing 7 days of time entries for a user starting on an organization-configured `week_start_day`. Has lifecycle statuses: `draft`, `submitted`, `approved`, `rejected`, `recalled`.
@@ -76,6 +82,9 @@ Organization-wide configuration settings (`timesheet_policies` table, `v_timeshe
 
 ### Timesheet Approver Assignment
 A record (`timesheet_approver_assignments` table, `v_timesheet_approver_assignments_canonical` view) designating a Manager or Superadmin as an active timesheet reviewer for submitters within an organization.
+
+### Timesheet Row-Level Locking
+A database concurrency control pattern implemented via `FOR UPDATE` in PL/pgSQL procedures (`fn_submit_timesheet`, `fn_approve_timesheet`, `fn_reject_timesheet`, `fn_recall_timesheet`) to prevent race conditions during timesheet state transitions. Managed in the UI via `TimesheetAdminPage` lock controls (`POST /timesheets/{id}/lock`).
 
 ### Zustand Store
 A lightweight global state container (`zustand` v5) used throughout the KAIO frontend. Replaces React Context for all global state. There are 10 stores: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `uiStore`.

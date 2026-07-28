@@ -138,7 +138,7 @@ npm run dev
 
 ### Database (initial setup)
 ```powershell
-# Apply all 48 SQL migration files (no data loss)
+# Apply all 51 SQL migration files (no data loss)
 python database/scripts/rebuild.py
 
 # Full reset + seed (destroys data)

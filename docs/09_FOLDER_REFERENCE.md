@@ -48,7 +48,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **48** SQL migration files (versions 001–047) | `001_extensions.sql` … `047_fix_rejected_timesheet_status.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **51** SQL migration files (versions 001–050) | `001_extensions.sql` … `050_meeting_session_rerun.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -104,7 +104,7 @@ python database/scripts/rebuild.py --reset
 | `01_PROJECT_OVERVIEW.md` | Business objectives, USP, system architecture, phase roadmap |
 | `02_BACKEND_ARCHITECTURE.md` | FastAPI, 21 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
 | `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand, Tailwind v4, feature structure, component tree, route guards, 21 API services |
-| `04_DATABASE_ARCHITECTURE.md` | 48 SQL migration files (versions 001–047), ERD, canonical views, stored functions catalog |
+| `04_DATABASE_ARCHITECTURE.md` | 51 SQL migration files (versions 001–050), ERD, canonical views, stored functions catalog |
 | `05_MEETING_PIPELINE.md` | Bot join → WebM → FFmpeg → Deepgram → Attribution → Task Extraction pipeline |
 | `06_AI_ARCHITECTURE.md` | Deepgram speech tier, Puter/Gemini LLM tier, KAI agent, extraction pipeline |
 | `07_API_REFERENCE.md` | All 23 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, timesheets, etc. |

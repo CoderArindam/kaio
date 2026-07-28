@@ -130,7 +130,7 @@ This document provides a reference catalog of the primary React UI components wi
 
 ### 7.6 `RecentMeetingsWidget`
 - **Path**: `features/dashboard/components/RecentMeetingsWidget.tsx`
-- **Purpose**: Recent meeting sessions with status badges (RECORDING, PROCESSING, PROPOSALS_READY, COMPLETED).
+- **Purpose**: Recent meeting sessions with status badges (`RECORDING`, `PROCESSING`, `PROPOSALS_READY`, `COMPLETED`, `FAILED`). Includes error summary tooltips and an interactive **Rerun Pipeline** button to trigger background execution recovery for failed sessions.
 
 ### 7.7 `PendingProposalsWidget`
 - **Path**: `features/dashboard/components/PendingProposalsWidget.tsx`
@@ -161,7 +161,7 @@ This document provides a reference catalog of the primary React UI components wi
 
 ### 8.2 `AdminDashboard`
 - **Path**: `features/admin/AdminDashboard.tsx`
-- **Purpose**: Admin panel home with navigation overview.
+- **Purpose**: Admin panel home featuring system health status monitoring metrics (DB connection health, active worker count, background task status), security event log audit viewer, and CSV audit log exporter tool.
 
 ### 8.3 `UsersManagement`
 - **Path**: `features/admin/UsersManagement.tsx`
@@ -272,11 +272,11 @@ Meeting UI components expose joining controls and active session status indicato
 - **`TimesheetReviewModal`** (`approvals/TimesheetReviewModal.tsx`): Deep review modal allowing managers to inspect all entries, daily totals, audit history, and execute `Approve` or `Reject` actions (with mandatory feedback comment).
 
 ### 15.4 Admin & Policy Components (`src/features/timesheets/admin/`)
-- **`TimesheetAdminPage`** (`admin/TimesheetAdminPage.tsx`): Organization-wide timesheet configuration page (Superadmin-gated). Tabbed interface for Overview, Policy, Approvers, and Reports.
+- **`TimesheetAdminPage`** (`admin/TimesheetAdminPage.tsx`): Organization-wide timesheet configuration page (Superadmin-gated). Tabbed interface for Overview, Policy, Approvers, Row Locking Management (lock/unlock timesheet rows), Audit Trail, and Report Export (CSV).
 - **`TimesheetPolicyForm`** (`admin/TimesheetPolicyForm.tsx`): Form for configuring week start day, standard hours/day, max hours/day, overtime policy, deadline days, future entry rules, task link requirements, and recall toggles.
 - **`ApproverAssignmentManager`** (`admin/ApproverAssignmentManager.tsx`): Interface for managing designated organization approvers.
 
 ### 15.5 Shared Helpers (`src/features/timesheets/shared/`)
-- **`TimesheetErrorBanner`** (`shared/TimesheetErrorBanner.tsx`): Standardized error display banner mapping database error codes (`OVERTIME_BLOCKED`, `TASK_NOT_ASSIGNED`, `TASK_LINK_REQUIRED`, etc.) to user-friendly alert banners.
+- **`TimesheetErrorBanner`** (`shared/TimesheetErrorBanner.tsx`): Standardized error display banner mapping database error codes (`OVERTIME_BLOCKED`, `TASK_NOT_ASSIGNED`, `TASK_LINK_REQUIRED`, `TASK_ASSIGNMENT_CHANGED`, etc.) to user-friendly alert banners with recovery guidance.
 - **`TaskSearchSelector`** (`shared/TaskSearchSelector.tsx`): Auto-completing task search dropdown component for linking time entries directly to assigned Kanban tasks.
 

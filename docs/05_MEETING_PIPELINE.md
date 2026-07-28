@@ -92,6 +92,14 @@ sequenceDiagram
 - Updates meeting session status to `PROPOSALS_READY`.
 - Dispatches in-app notifications via `NotificationService` to all **Manager** and **Superadmin** users in the organization.
 
+### Pipeline Failure Handling & Rerun Execution
+If any stage in the pipeline raises an unhandled exception (e.g. transient network timeouts during Deepgram STT or LLM extraction errors):
+1. **Failure Status Update**: The orchestrator catches the exception, logs error details, and executes `fn_fail_meeting_session(session_id)` to set status to `FAILED` and record `failed_at = NOW()`.
+2. **Dashboard UI Alert**: The `RecentMeetingsWidget` displays a red **FAILED** badge along with an error summary tooltip.
+3. **Session Rerun Trigger**: Superadmins or Managers can click the **Rerun Pipeline** button on the UI, which calls `POST /api/v1/meeting/{session_id}/rerun`.
+4. **Status Reset**: The rerun endpoint invokes `fn_reset_meeting_session_status(session_id)`, clearing `failed_at` and setting status back to `PROCESSING`.
+5. **Background Pipeline Execution**: `MeetingPipelineOrchestrator` re-executes all post-processing stages cleanly using existing recorded audio artifacts without re-launching the Playwright bot.
+
 ---
 
 ## 4. Pipeline Artifact Manifest

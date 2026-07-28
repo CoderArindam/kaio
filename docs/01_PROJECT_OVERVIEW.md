@@ -24,7 +24,8 @@ Unlike traditional meeting recording tools that generate static videos or raw tr
 5. **Strict Database Architecture**: PostgreSQL database powered entirely by canonical views (`v_*_canonical`) and stored procedures, guaranteeing zero raw SQL query leaks in backend code.
 6. **Manager/Superadmin Dashboard**: Aggregated org-wide KPI metrics, per-board progress summaries, and recent activity feed gated behind RBAC.
 7. **Invitation Lifecycle Management**: Full workspace invitation system — send, list, verify, accept, and revoke pending invitations.
-8. **Enterprise Timesheet Management**: Comprehensive weekly effort logging against boards/tasks, customizable organization policies, manager approval queues, audit trails, and reporting views.
+8. **Enterprise Timesheet Management**: Comprehensive weekly effort logging against boards/tasks, customizable organization policies, manager approval queues, row-level locking, audit trails, and reporting views.
+9. **Resilient Meeting Pipeline & Admin Operations**: Session rerun pipeline for recovered execution, system health status monitoring, and CSV audit log exports.
 
 ---
 
@@ -103,17 +104,17 @@ graph TD
 - Bot automation using Playwright Chromium with non-interactive headless profiles.
 
 ### 4.3 Database Engine (`database/`)
-- Pure PostgreSQL schema managed via **48 SQL migration files** across 47 version numbers (`001_*.sql` → `047_fix_rejected_timesheet_status.sql`).
-- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, and canonical views.
+- Pure PostgreSQL schema managed via **51 SQL migration files** across 50 version numbers (`001_*.sql` → `050_meeting_session_rerun.sql`).
+- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, row locking, meeting failure/rerun handling, and canonical views.
 - Rebuild script: `database/scripts/rebuild.py` — supports incremental apply (`python rebuild.py`) or full reset (`python rebuild.py --reset`).
 
 ### 4.4 Frontend SPA (`frontend/`)
 - Built with **React 19**, **TypeScript**, **Vite**, and **Tailwind CSS v4**.
 - State managed via **Zustand** stores (10 stores: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `uiStore`).
 - **13 Feature Modules** (`activity`, `admin`, `ai`, `auth`, `boards`, `dashboard`, `meeting`, `my-work`, `notifications`, `projects`, `proposals`, `settings`, `timesheets`).
-- Drag-and-drop powered by **@dnd-kit** (core + sortable).
+- Drag-and-drop powered by **@dnd-kit** (core + sortable) with optimistic rollbacks.
 - Route guards: `ProtectedRoute` (auth check) and `RequireRole` (RBAC role check).
-- Interactive notifications with destination deep-linking, multi-device session management UI, task proposal review queues, and weekly timesheet effort logging grid with manager review modals.
+- Interactive notifications with destination deep-linking, multi-device session management UI, task proposal review queues, weekly timesheet effort logging grid with row locking controls, and admin system status/audit export tools.
 
 ### 4.5 Chrome Extension (`extension/`)
 - Manifest V3 extension monitoring Google Meet DOM changes.
@@ -136,8 +137,9 @@ gantt
     Phase 3.0 (AI Task Extraction & Security):done,    p6, 2026-07-21, 2026-07-21
     Phase 3.5 (Dashboard & Invitations)      :done,    p7, 2026-07-22, 2026-07-22
     Phase 4.0 (Timesheet & Effort Tracking)  :done,    p8, 2026-07-23, 2026-07-24
+    Phase 4.8 (Row Locking, Rerun & Admin Audit):done,  p85, 2026-07-25, 2026-07-28
     section Upcoming
-    Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-07-25, 2026-11-01
+    Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-07-29, 2026-11-01
 ```
 
 | Phase | Name | Description | Status |
@@ -150,4 +152,5 @@ gantt
 | **3.0** | AI Task Extraction & Security | Automated LLM action items, proposal review queue, multi-device sessions & security event logs | **Completed** |
 | **3.5** | Dashboard & Invitations | Manager/Superadmin KPI dashboard, per-board summaries, invitation revocation, cookie-based auth | **Completed** |
 | **4.0** | Enterprise Timesheet System | Weekly grid effort tracking, org policy config, manager approval queue, task assignment enforcement, reporting views | **Completed** |
+| **4.8** | Row Locking & Admin Audit | Timesheet row locking, meeting rerun pipeline, system health monitoring, and audit log exports | **Completed** |
 | **5.0** | Knowledge Graph & Insights | Cross-board relationships, smart meeting analytics & insights | **In Progress** |

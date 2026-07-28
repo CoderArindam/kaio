@@ -68,8 +68,8 @@ frontend/src/
 ├── constants/                  # Application constants, route paths, config
 ├── features/                   # Feature-scoped modules (page + components + hooks)
 │   ├── activity/               # Activity log components
-│   ├── admin/                  # Superadmin panel (user management, board permissions)
-│   │   ├── AdminDashboard.tsx
+│   ├── admin/                  # Superadmin panel (user management, board permissions, system status & audit export)
+│   │   ├── AdminDashboard.tsx  # System health status monitoring, audit log exporter, security logs
 │   │   ├── AdminLayout.tsx
 │   │   ├── BoardPermissions.tsx
 │   │   └── UsersManagement.tsx
@@ -78,7 +78,7 @@ frontend/src/
 │   ├── boards/                 # Kanban board feature
 │   │   ├── BoardPage.tsx       # Board page wrapper
 │   │   ├── components/
-│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop
+│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop (optimistic rollbacks)
 │   │   │   ├── TaskCard.tsx        # Individual task card preview
 │   │   │   ├── AssigneeFilter.tsx  # Board assignee filter bar
 │   │   │   └── DueDateFilter.tsx   # Board due date filter bar
@@ -89,7 +89,7 @@ frontend/src/
 │   │       └── task-details/           # Full task detail modal (comments, attachments)
 │   ├── dashboard/              # Manager/Superadmin dashboard
 │   │   ├── DashboardPage.tsx
-│   │   ├── DashboardView.tsx   # Full dashboard layout, orchestrates widgets
+│   │   ├── DashboardView.tsx   # Full dashboard layout, orchestrates widgets & polling fallback
 │   │   └── components/         # 9 dashboard widgets:
 │   │       ├── KpiCardsRow.tsx             # Org KPI metrics cards
 │   │       ├── BoardsOverviewWidget.tsx    # Board completion progress grid
@@ -98,7 +98,7 @@ frontend/src/
 │   │       ├── PendingProposalsWidget.tsx  # Pending AI proposals count
 │   │       ├── QuickActionsWidget.tsx      # Quick action shortcuts
 │   │       ├── RecentActivityWidget.tsx    # Recent org activity feed
-│   │       ├── RecentMeetingsWidget.tsx    # Recent meeting sessions
+│   │       ├── RecentMeetingsWidget.tsx    # Recent meeting sessions with rerun pipeline button & error preview
 │   │       └── SmartSuggestionsWidget.tsx  # AI-powered smart suggestions
 │   ├── meeting/                # Meeting join controls, active status bar
 │   ├── my-work/                # Personal task aggregation view
@@ -117,10 +117,10 @@ frontend/src/
 │   │   ├── NotificationSettings.tsx
 │   │   └── Organization.tsx        # Org profile, invitations management (invite + revoke)
 │   └── timesheets/             # Enterprise Timesheet Management Module
-│       ├── admin/              # TimesheetAdminPage, TimesheetPolicyForm, ApproverAssignmentManager
+│       ├── admin/              # TimesheetAdminPage (row-level locking, policy, approvers, CSV export), TimesheetPolicyForm, ApproverAssignmentManager
 │       ├── approvals/          # ApprovalQueuePage, ApprovalQueueSummaryCards, TimesheetReviewModal
 │       ├── member/             # MyTimesheetsPage, TimesheetWeekView, TimesheetSummaryBar, TimeEntryRow, Modals
-│       └── shared/             # TimesheetErrorBanner, TaskSearchSelector, utils, hooks
+│       └── shared/             # TimesheetErrorBanner (TASK_ASSIGNMENT_CHANGED mapping), TaskSearchSelector, utils, hooks
 ├── hooks/                      # Custom React hooks
 │   ├── useDebounce.ts
 │   └── usePageTitle.ts

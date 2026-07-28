@@ -185,6 +185,9 @@ erDiagram
 | `045_simplify_timesheet_approvers.sql` | Approver Simplification | Simplified approver lookup and active status resolution (`fn_get_eligible_approvers`). |
 | `046_enforce_task_assignment_timesheets.sql` | Task Assignment Check | Enforces that task-based time logging is restricted to assigned task owners. |
 | `047_fix_rejected_timesheet_status.sql` | Status & Workflow Fix | Fixes status transition rules for rejected/recalled timesheets and resubmission. |
+| `048_timesheet_row_locking.sql` | Row-Level Locking | Implements row locking (`FOR UPDATE`) for timesheet actions and re-validates task owner assignments on submission (`TASK_ASSIGNMENT_CHANGED`). |
+| `049_meeting_session_fail_status.sql` | Meeting Failure Procedure | Adds `failed_at` timestamp column to `meeting_sessions` and `fn_fail_meeting_session` stored procedure. |
+| `050_meeting_session_rerun.sql` | Meeting Rerun Reset | Adds `fn_reset_meeting_session_status` stored procedure to reset failed session status to `PROCESSING` and clear `failed_at`. |
 
 ---
 
@@ -242,6 +245,8 @@ erDiagram
 | `fn_remove_timesheet_approver(...)` | `041_*.sql` | Removes an approver assignment. |
 | `fn_upsert_timesheet_policy(...)` | `041_*.sql` | Updates organization timesheet policy settings. |
 | `fn_check_timesheet_approver_access(user_id, timesheet_id)` | `041_*.sql` | Boolean: does this user have approver rights for this timesheet? |
+| `fn_fail_meeting_session(session_id)` | `049_*.sql` | Updates meeting session status to `FAILED` and sets `failed_at = NOW()`. |
+| `fn_reset_meeting_session_status(session_id)` | `050_*.sql` | Resets meeting session status to `PROCESSING` and clears `failed_at` for pipeline rerun. |
 
 ---
 
@@ -298,6 +303,9 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 045_simplify_timesheet_approvers.sql
 046_enforce_task_assignment_timesheets.sql
 047_fix_rejected_timesheet_status.sql
+048_timesheet_row_locking.sql
+049_meeting_session_fail_status.sql
+050_meeting_session_rerun.sql
 ```
 
 > [!NOTE]

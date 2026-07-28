@@ -140,6 +140,8 @@ All admin endpoints require **Superadmin** role unless noted.
 | `/admin/boards/{board_id}/members` | `POST` | Cookie (Manager+) | Assigns a user to a board. |
 | `/admin/boards/{board_id}/members/{user_id}` | `DELETE` | Cookie (Superadmin) | Removes a user from a board. |
 | `/admin/boards/{board_id}/members` | `GET` | Cookie (Superadmin) | Lists members of a specific board (admin view). |
+| `/admin/system-status` | `GET` | Cookie (Superadmin) | Returns system health metrics, DB connection status, active workers, and pipeline status. |
+| `/admin/audit-logs/export` | `GET` | Cookie (Superadmin) | Exports administrative security events and audit log entries in CSV format. |
 
 ---
 
@@ -211,9 +213,10 @@ Requires **Manager or Superadmin** role (`require_proposal_review_access`).
 |---|---|---|---|
 | `/meeting/join` | `POST` | Cookie (RBAC) | Launches Playwright bot to join Google Meet URL. Requires Superadmin or Manager role. |
 | `/meeting/leave` | `POST` | Cookie | Triggers bot teardown, flushes WebM, and runs pipeline. |
-| `/meeting/status/{session_id}` | `GET` | Cookie | Queries active runtime session state (`JOINING`, `RECORDING`, `PROCESSING`, `PROPOSALS_READY`). |
+| `/meeting/status/{session_id}` | `GET` | Cookie | Queries active runtime session state (`JOINING`, `RECORDING`, `PROCESSING`, `PROPOSALS_READY`, `FAILED`). |
 | `/meeting/transcript/{session_id}` | `GET` | Cookie | Returns completed `participant_attributed_transcript.json`. |
 | `/meeting/sessions` | `GET` | Cookie | Lists meeting sessions for current organization (`v_meeting_sessions_canonical`). Accepts optional `limit` query param. |
+| `/meeting/{session_id}/rerun` | `POST` | Cookie (RBAC) | Resets session status from `FAILED` back to `PROCESSING` and triggers background pipeline rerun using stored audio. |
 
 ---
 
@@ -300,4 +303,6 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
 | `/timesheets/reports/org-summary` | `GET` | Cookie (RBAC) | Weekly org-wide timesheet submission & compliance summary analytics (`v_timesheet_org_summary_canonical`). |
 | `/timesheets/reports/board-hours` | `GET` | Cookie (RBAC) | Board hours breakdown report (`v_timesheet_board_hours_canonical`). |
 | `/timesheets/reports/member-compliance` | `GET` | Cookie (Superadmin) | Member compliance and submission timeliness report (`v_timesheet_member_summary_canonical`). |
+| `/timesheets/{timesheet_id}/lock` | `POST` | Cookie (Superadmin) | Toggles or updates row-level lock status (`locked`, `locked_at`, `locked_by`) for a timesheet. |
+| `/timesheets/export` | `GET` | Cookie (Superadmin) | Exports detailed organization timesheet effort report data in CSV format. |
 

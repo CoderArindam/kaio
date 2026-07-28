@@ -291,6 +291,8 @@ sequenceDiagram
 
     Member->>API: POST /api/v1/timesheets/{id}/submit {member_note, approver_id}
     API->>DB: SELECT * FROM fn_submit_timesheet(...)
+    DB->>DB: Acquire row-level lock (FOR UPDATE)
+    DB->>DB: Re-validate task owner assignments (raise TASK_ASSIGNMENT_CHANGED if unassigned/reassigned)
     DB->>DB: Validate policy rules (deadlines, min hours, overtime lock) & update status to 'submitted'
     DB-->>API: Updated Timesheet Record
     API->>Notif: notify_timesheet_submitted(conn, timesheet_id, submitter_id, approver_id)
@@ -304,10 +306,46 @@ sequenceDiagram
 
     Manager->>API: POST /api/v1/timesheets/{id}/approve {comment}
     API->>DB: SELECT * FROM fn_approve_timesheet(...)
-    DB->>DB: Update status to 'approved', record reviewed_at & approver_id, lock timesheet
+    DB->>DB: Acquire row-level lock (FOR UPDATE), update status to 'approved', record reviewed_at & approver_id
     DB-->>API: Updated Timesheet Record
     API->>Notif: notify_timesheet_approved(conn, timesheet_id, submitter_id, approver_id)
     Notif->>DB: SELECT fn_create_timesheet_notification(...)
     API-->>Manager: 200 OK (TimesheetResponse status='approved')
 ```
+
+---
+
+## 13. Sequence Diagram 12: Meeting Pipeline Failure Recovery & Rerun Execution
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Manager / Superadmin SPA
+    participant Widget as RecentMeetingsWidget
+    participant API as /api/v1/meeting/{id}/rerun
+    participant DB as PostgreSQL DB
+    participant Orchestrator as MeetingPipelineOrchestrator
+
+    note over Orchestrator: Transient error during initial pipeline run (e.g. STT timeout)
+    Orchestrator->>DB: SELECT fn_fail_meeting_session(session_id)
+    DB->>DB: Set status = 'FAILED', failed_at = NOW()
+    Widget->>DB: GET /api/v1/meeting/sessions
+    DB-->>Widget: Session list with status 'FAILED'
+    Widget->>User: Display red FAILED badge & Rerun button
+
+    User->>Widget: Click 'Rerun Pipeline' button
+    Widget->>API: POST /api/v1/meeting/{session_id}/rerun
+    API->>DB: SELECT fn_reset_meeting_session_status(session_id)
+    DB->>DB: Set status = 'PROCESSING', failed_at = NULL
+    API->>Orchestrator: background_tasks.add_task(execute_pipeline, session_id)
+    API-->>Widget: 200 OK {message: "Pipeline rerun initiated", status: "PROCESSING"}
+
+    rect rgb(240, 240, 255)
+        Note over Orchestrator: Background re-execution of audio, STT, attribution & task extraction
+    end
+    Orchestrator->>DB: Update session status to 'PROPOSALS_READY'
+    Widget->>DB: Poll status -> status 'PROPOSALS_READY'
+    Widget-->>User: Display green PROPOSALS_READY badge & view action items
+```
+
 

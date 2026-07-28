@@ -66,7 +66,7 @@ backend/
 │   ├── meeting/                    # Meeting pipeline subsystem (bot, recorder, orchestrator, attribution)
 │   ├── routers/                    # 21 REST API route handlers:
 │   │   ├── activity.py             # GET /activity — audit log history
-│   │   ├── admin.py                # /admin — user/board CRUD (Superadmin-gated)
+│   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
 │   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads & downloads
 │   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, sessions, security events
@@ -83,10 +83,10 @@ backend/
 │   │   ├── tasks.py                # /tasks — CRUD, move, reorder
 │   │   ├── timesheets.py           # /timesheets — draft grid, entry upsert/delete, submit, recall
 │   │   ├── timesheet_approvals.py  # /timesheets/approvals — manager approval queue, approve, reject
-│   │   ├── timesheet_admin.py      # /timesheets/policy, /timesheets/approvers — policy & approver config, reports
-│   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper
+│   │   ├── timesheet_admin.py      # /timesheets/policy, /timesheets/approvers, row locking, export
+│   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
-│   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py
+│   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
 │   ├── schemas/                    # 20 Pydantic request/response DTO schema files (activity, admin, ai, auth, board, comments, dashboard, envelope, invitations, my_work, notifications, organization, preferences, task, task_proposal, timesheet_admin, timesheet_approvals, timesheets, users)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
