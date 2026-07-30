@@ -23,14 +23,17 @@ const PING_INTERVAL_MS = 30_000;
 
 // Module-level singleton socket reference — shared safely via the exported sendWsMessage util
 let _ws: WebSocket | null = null;
+const pendingQueue: object[] = [];
 
 /**
  * Send a message on the shared WebSocket connection.
- * Safe to call from anywhere — no-ops if socket is not open.
+ * Queues message if socket is currently connecting; sends immediately if open.
  */
 export function sendWsMessage(msg: object): void {
   if (_ws?.readyState === WebSocket.OPEN) {
     _ws.send(JSON.stringify(msg));
+  } else if (_ws?.readyState === WebSocket.CONNECTING) {
+    pendingQueue.push(msg);
   }
 }
 
@@ -52,9 +55,12 @@ export function useWebSocket(): { isConnected: boolean } {
   const shouldConnectRef = useRef<boolean>(false);
   const boardIdRef = useRef<number | null>(boardId);
 
-  // Keep boardIdRef in sync so the message handler reads the latest boardId
+  // Keep boardIdRef in sync and send subscription when boardId changes
   useEffect(() => {
     boardIdRef.current = boardId;
+    if (boardId) {
+      sendWsMessage({ type: 'subscribe_board', board_id: boardId });
+    }
   }, [boardId]);
 
   const stopPing = useCallback(() => {
@@ -87,6 +93,19 @@ export function useWebSocket(): { isConnected: boolean } {
       backoffRef.current = MIN_BACKOFF_MS;
       setWsConnected(true);
       startPing();
+
+      // Automatically re-subscribe to current board on socket open/reconnect
+      if (boardIdRef.current) {
+        sendWsMessage({ type: 'subscribe_board', board_id: boardIdRef.current });
+      }
+
+      // Flush queued pending messages
+      while (pendingQueue.length > 0) {
+        const msg = pendingQueue.shift();
+        if (msg && _ws?.readyState === WebSocket.OPEN) {
+          _ws.send(JSON.stringify(msg));
+        }
+      }
     };
 
     ws.onclose = () => {
@@ -116,12 +135,17 @@ export function useWebSocket(): { isConnected: boolean } {
       const type = msg.type as string;
 
       switch (type) {
+        case 'task_created':
+        case 'task_updated':
+        case 'task_moved':
+        case 'task_deleted':
         case 'task.updated': {
           const eventBoardId = msg.board_id as number | undefined;
           const activeBoardId = boardIdRef.current;
           if (eventBoardId && activeBoardId && eventBoardId === activeBoardId) {
             initializeBoard(activeBoardId);
           }
+          fetchNotifications();
           break;
         }
 

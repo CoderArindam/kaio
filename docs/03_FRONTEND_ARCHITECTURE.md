@@ -78,8 +78,15 @@ frontend/src/
 │   ├── boards/                 # Kanban board feature
 │   │   ├── BoardPage.tsx       # Board page wrapper
 │   │   ├── components/
-│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop & multi-select bulk move toolbar
+│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop & multi-select bulk move/delete toolbar
 │   │   │   ├── TaskCard.tsx        # Individual task card preview with selection checkbox
+
+...
+
+### 6.2 Kanban Board Feature (`src/features/boards/`)
+- **`BoardPage`**: Page wrapper — loads board data, renders header and `KanbanBoard`.
+- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Renders column containers, task cards, multi-select checkboxes, and floating toolbar supporting bulk column move and multi-task deletion with confirm dialog.
+
 │   │   │   ├── AssigneeFilter.tsx  # Board assignee filter bar
 │   │   │   └── DueDateFilter.tsx   # Board due date filter bar
 │   │   └── modals/
@@ -127,7 +134,8 @@ frontend/src/
 │       └── shared/             # TimesheetErrorBanner (TASK_ASSIGNMENT_CHANGED mapping), TaskSearchSelector, utils, hooks
 ├── hooks/                      # Custom React hooks
 │   ├── useDebounce.ts
-│   └── usePageTitle.ts
+│   ├── usePageTitle.ts
+│   └── useWebSocket.ts         # Native WebSocket manager (heartbeat, auto-reconnect, board room subscribe/unsubscribe)
 ├── lib/                        # Axios instance configuration
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
@@ -143,7 +151,7 @@ frontend/src/
 │   ├── preferencesStore.ts     # User UI preferences
 │   ├── projectSettingsStore.ts # Board project settings state
 │   ├── activityStore.ts        # Org activity log state
-│   └── uiStore.ts              # Global UI flags (isSearchModalOpen, modal open states, sidebar state)
+│   └── uiStore.ts              # Global UI flags (isSearchModalOpen, modal open states, sidebar state, wsConnected)
 ├── styles/                     # Global CSS & Tailwind v4 customizations
 └── utils/                      # Utility helpers
 ```
@@ -166,7 +174,7 @@ graph TD
     PrefStore[preferencesStore — UI Preferences]
     ProjStore[projectSettingsStore — Board Settings]
     ActStore[activityStore — Activity Log]
-    UIStore[uiStore — Modal/Sidebar & Global Search State]
+    UIStore[uiStore — Modal/Sidebar, Global Search & WS Connection State]
 
     App --> AuthStore
     App --> NotifStore
@@ -180,7 +188,7 @@ graph TD
 2. **`taskStore`**: Task CRUD operations, column state, drag-and-drop position updates, bulk task selection and column migration.
 3. **`notificationStore`**: Notification list, unread badge count, mark-read operations.
 4. **`adminStore`**: Superadmin user list, board list, role update operations.
-5. **`uiStore`**: Global UI flags — open modal IDs, `isSearchModalOpen`, sidebar collapsed state.
+5. **`uiStore`**: Global UI flags — open modal IDs, `isSearchModalOpen`, sidebar collapsed state, `wsConnected` connection indicator state.
 
 ---
 
@@ -297,3 +305,20 @@ Only accessible to **Superadmin** role.
 
 ### 6.6 My Work Feature (`src/features/my-work/`)
 - **`MyWorkPage`**: Aggregates tasks assigned to the current user across all organization boards. Supports filtering by due date and sorting.
+
+---
+
+## 7. Real-Time WebSockets & Task Modal Deep Linking
+
+### 7.1 Real-Time WebSocket Infrastructure (`src/hooks/useWebSocket.ts`)
+- **App Gateway Integration**: Mounted at top-level in `AppLayout.tsx`. Initializes connection to `ws://[host]/api/v1/ws?token=[JWT]`.
+- **State Integration**: Updates `wsConnected` boolean in `uiStore`. Renders visual green pulse indicator in `ApplicationSidebar.tsx`.
+- **Board Subscriptions**: `BoardPage.tsx` sends `{ type: "subscribe_board", board_id }` on mount and `{ type: "unsubscribe_board", board_id }` on unmount.
+- **Live Event Handling**: Automatically processes server broadcasts:
+  - `task_created` / `task_updated` / `task_moved` / `task_deleted` → Triggers taskStore state refresh without full page reload.
+  - `notification` → Pushes new unread notification item and increments badge count in `notificationStore`.
+
+### 7.2 Bidirectional Task Modal Deep Linking (`src/features/boards/modals/task-details/index.tsx`)
+- **URL Parameter Sync**: Synchronizes Zustand modal state (`selectedTaskId`, `isTaskModalOpen`) with URL search parameters (`?taskId=[id]`).
+- **Deep Link Resolution**: Navigating directly to `/boards/[id]?taskId=[taskId]` or opening via notification link automatically opens the corresponding task card modal once board data loads.
+- **Clean Dismissal**: Closing the modal deletes `taskId` from URL query parameters using `setSearchParams({ replace: true })`.

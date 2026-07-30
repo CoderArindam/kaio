@@ -188,6 +188,10 @@ erDiagram
 | `048_timesheet_row_locking.sql` | Row-Level Locking | Implements row locking (`FOR UPDATE`) for timesheet actions and re-validates task owner assignments on submission (`TASK_ASSIGNMENT_CHANGED`). |
 | `049_meeting_session_fail_status.sql` | Meeting Failure Procedure | Adds `failed_at` timestamp column to `meeting_sessions` and `fn_fail_meeting_session` stored procedure. |
 | `050_meeting_session_rerun.sql` | Meeting Rerun Reset | Adds `fn_reset_meeting_session_status` stored procedure to reset failed session status to `PROCESSING` and clear `failed_at`. |
+| `051_global_search_view.sql` | Global Search View | Creates `v_global_search_canonical` indexing tasks, boards, and meetings for full-text search. |
+| `052_bulk_task_operations.sql` | Bulk Task Operations | Adds `fn_bulk_move_tasks` for multi-select task moves across columns and `fn_bulk_delete_tasks` for multi-task atomic soft-deletion. |
+| `053_notification_target_reference_with_title.sql` | Target Reference Titles | Enhances `v_activities_canonical` to format task `target_reference` with project key, sequence ID, and task title (e.g. `ENG-24 Fix Auth Service`), and rebuilds `v_notifications_canonical`. |
+| `054_task_deletion_notifications_cleanup.sql` | Task Deletion & Notification Cleanup | Adds `fn_delete_task` procedure for atomic task soft deletion, comment soft deletion, and notification purging; updates `v_activities_canonical` & `v_notifications_canonical` to exclude soft-deleted tasks/comments. |
 
 ---
 
@@ -201,8 +205,8 @@ erDiagram
 | `v_boards_canonical` | `008_views.sql` | Board details with member counts and task counts. |
 | `v_tasks_canonical` | `008_views.sql` | Task attributes combined with assignee details, comment/attachment counts. |
 | `v_task_proposals_canonical` | `022_task_proposals_view.sql` | Proposal details with confidence scores and source transcript snippets. |
-| `v_notifications_canonical` | `031_*.sql` | Notifications with target entity type and deep-link payload. |
-| `v_activities_canonical` | `030_*.sql` | Org-scoped activity log with actor names and action descriptions. |
+| `v_notifications_canonical` | `031_*.sql` / `054_*.sql` | Notifications with target entity type, deep-link payload, and target title reference (strictly excludes deleted tasks/comments). |
+| `v_activities_canonical` | `030_*.sql` / `054_*.sql` | Org-scoped activity log with actor names, action descriptions, and task titles in `target_reference` (strictly excludes deleted tasks/comments). |
 | `v_user_active_sessions_canonical` | `035_*.sql` | Multi-device active JWT session details (user agent, IP, last active). |
 | `v_user_security_events_canonical` | `034_*.sql` | Security audit log of authentication and authorization events. |
 | `v_dashboard_kpis_canonical` | `036_*.sql` | Org-wide KPIs: total tasks by status, overdue, boards, team size, pending proposals, active meetings. |
@@ -224,6 +228,7 @@ erDiagram
 | `fn_check_board_access(user_id, board_id)` | `005_*.sql` | Boolean: does this user have access to this board? |
 | `fn_create_task(...)` | `006_*.sql` | Atomically creates a task card and records audit log. |
 | `fn_move_task(task_id, new_column_id, new_position)` | `006_*.sql` | Atomically moves task to column and position. |
+| `fn_delete_task(task_id, user_id)` | `054_task_deletion_notifications_cleanup.sql` | Atomically soft-deletes a task and its comments, and purges all associated notifications across all users. |
 | `fn_bulk_update_tasks(task_ids, target_column_id, user_id)` | `052_bulk_task_operations.sql` | Atomically moves multiple selected task cards into a target board column. |
 | `fn_approve_task_proposal(proposal_id, board_id, reviewer_id)` | `023_*.sql` | Converts approved proposal into a Kanban task card. |
 | `fn_reject_task_proposal(proposal_id, reviewer_id)` | `023_*.sql` | Marks proposal status as `rejected`. |
@@ -310,6 +315,8 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 050_meeting_session_rerun.sql
 051_global_search_view.sql
 052_bulk_task_operations.sql
+053_notification_target_reference_with_title.sql
+054_task_deletion_notifications_cleanup.sql
 ```
 
 > [!NOTE]

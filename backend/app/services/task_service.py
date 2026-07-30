@@ -134,18 +134,17 @@ class TaskService:
             raise HTTPException(status_code=403, detail="Only MANAGER or SUPER_ADMIN can delete tasks")
 
         try:
-            has_access = await self.conn.fetchval("SELECT can_edit_task($1, $2)", current_user["id"], task_id)
-            if not has_access:
-                raise HTTPException(status_code=403, detail="Task not found or access denied")
-
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
-                result = await self.conn.execute("UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL", task_id)
-                if result == "UPDATE 0":
-                    raise HTTPException(status_code=404, detail="Task not found")
+                await self.conn.execute("SELECT fn_delete_task($1, $2)", task_id, current_user["id"])
         except HTTPException:
             raise
         except Exception as e:
+            err_msg = str(e)
+            if "Task not found" in err_msg:
+                raise HTTPException(status_code=404, detail="Task not found")
+            elif "Only MANAGER or SUPER_ADMIN" in err_msg or "Access denied" in err_msg:
+                raise HTTPException(status_code=403, detail="Task not found or access denied")
             logger.error(f"Error deleting task: {e}")
             raise HTTPException(status_code=400, detail="An unexpected error occurred")
 
@@ -285,4 +284,23 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error bulk moving tasks: {e}")
             raise HTTPException(status_code=400, detail="Failed to bulk move tasks")
+
+    async def bulk_delete_tasks(self, task_ids: List[int], current_user: dict) -> int:
+        role = current_user.get("role", "MEMBER")
+        if role not in ("MANAGER", "SUPER_ADMIN"):
+            raise HTTPException(status_code=403, detail="Only MANAGER or SUPER_ADMIN can delete tasks")
+
+        try:
+            user_id = current_user["id"]
+            deleted_count = await self.conn.fetchval(
+                "SELECT fn_bulk_delete_tasks($1, $2)",
+                task_ids, user_id
+            )
+            return deleted_count or 0
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error bulk deleting tasks: {e}")
+            raise HTTPException(status_code=400, detail="Failed to bulk delete tasks")
+
 

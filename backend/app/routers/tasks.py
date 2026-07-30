@@ -3,7 +3,7 @@ from typing import Optional, List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
-from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest
+from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest, BulkDeleteTasksRequest
 from app.schemas.envelope import DataEnvelope
 from app.services.notification_service import dispatch_task_email, NotificationService, _dispatch_notification_event
 from app.auth.dependencies import get_current_user
@@ -51,11 +51,11 @@ async def create_task(
     try:
         await connection_manager.send_to_board(
             board_id=task.board_id,
-            message={"type": "task.updated", "board_id": task.board_id, "task_id": task.id, "action": "created"},
-            exclude_user_id=current_user["id"],
+            message={"type": "task_created", "board_id": task.board_id, "task_id": task.id, "action": "created"},
+            exclude_user_id=None,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error sending websocket task_created event: {e}")
     if task.assigned_to and task.assigned_to != current_user["id"]:
         try:
             notif_svc = NotificationService(conn)
@@ -71,6 +71,16 @@ async def create_task(
             logger.error(f"notify_task_assigned failed for task={task.id}: {e}")
     return DataEnvelope(data=task)
 
+
+
+@router.get("/tasks/{task_id}", response_model=DataEnvelope[CanonicalTaskResponse])
+async def get_task(
+    task_id: int,
+    current_user: dict = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    task = await task_service.get_task(task_id, current_user)
+    return DataEnvelope(data=task)
 
 
 @router.get("/boards/{board_id}/tasks", response_model=DataEnvelope[BoardDataResponse])
@@ -103,8 +113,8 @@ async def update_task(
     try:
         await connection_manager.send_to_board(
             board_id=new_task.board_id,
-            message={"type": "task.updated", "board_id": new_task.board_id, "task_id": new_task.id, "action": "updated"},
-            exclude_user_id=current_user["id"],
+            message={"type": "task_updated", "board_id": new_task.board_id, "task_id": new_task.id, "action": "updated"},
+            exclude_user_id=None,
         )
     except Exception:
         pass
@@ -178,8 +188,8 @@ async def delete_task(
         try:
             await connection_manager.send_to_board(
                 board_id=board_id,
-                message={"type": "task.updated", "board_id": board_id, "task_id": task_id, "action": "deleted"},
-                exclude_user_id=current_user["id"],
+                message={"type": "task_deleted", "board_id": board_id, "task_id": task_id, "action": "deleted"},
+                exclude_user_id=None,
             )
         except Exception:
             pass
@@ -269,15 +279,44 @@ async def bulk_move_tasks(
 
     if board_id and moved_count:
         try:
-            for task_id in body.task_ids:
-                await connection_manager.send_to_board(
-                    board_id=board_id,
-                    message={"type": "task.updated", "board_id": board_id, "task_id": task_id, "action": "moved"},
-                    exclude_user_id=current_user["id"],
-                )
+            await connection_manager.send_to_board(
+                board_id=board_id,
+                message={"type": "task_moved", "board_id": board_id, "task_ids": body.task_ids, "action": "moved"},
+                exclude_user_id=None,
+            )
         except Exception:
             pass
 
     return DataEnvelope(data={"moved_count": moved_count, "message": f"Successfully moved {moved_count} tasks"})
+
+
+@router.post("/tasks/bulk-delete", response_model=DataEnvelope[dict])
+async def bulk_delete_tasks(
+    body: BulkDeleteTasksRequest,
+    current_user: dict = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    board_id = None
+    if body.task_ids:
+        try:
+            first_task = await task_service.get_task(body.task_ids[0], current_user)
+            board_id = first_task.board_id
+        except Exception:
+            pass
+
+    deleted_count = await task_service.bulk_delete_tasks(body.task_ids, current_user)
+
+    if board_id and deleted_count:
+        try:
+            await connection_manager.send_to_board(
+                board_id=board_id,
+                message={"type": "task_deleted", "board_id": board_id, "task_ids": body.task_ids, "action": "deleted"},
+                exclude_user_id=None,
+            )
+        except Exception:
+            pass
+
+    return DataEnvelope(data={"deleted_count": deleted_count, "message": f"Successfully deleted {deleted_count} tasks"})
+
 
 

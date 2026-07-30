@@ -374,27 +374,86 @@ sequenceDiagram
 
 ---
 
-## 15. Sequence Diagram 14: Bulk Task Operations Flow (Multi-Select Column Move)
+## 15. Sequence Diagram 14: Bulk Task Operations Flow (Multi-Select Move & Delete)
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant User as React SPA (KanbanBoard)
-    participant Store as taskStore (Zustand)
-    participant API as /api/v1/tasks/bulk-move
+    participant API as FastAPI /tasks Router
     participant DB as PostgreSQL DB
+    participant WS as ConnectionManager (WebSockets)
 
     User->>User: Select multiple task card checkboxes on board
     User->>User: Floating action toolbar appears showing selected count
-    User->>User: Select target destination column ("In Progress") & click Move
-    User->>Store: taskStore.bulkMoveTasks(taskIds, targetColumnId)
-    Store->>Store: Optimistic UI update (update task column IDs in local store)
-    Store->>API: POST /api/v1/tasks/bulk-move {task_ids: [12, 14, 19], column_id: 3}
-    API->>DB: SELECT fn_bulk_update_tasks($1, $2, $3)
-    DB->>DB: UPDATE tasks SET column_id = $2 WHERE id = ANY($1) AND board_id IN (...)
-    DB-->>API: moved_count = 3
-    API-->>Store: 200 OK {data: {moved_count: 3, message: "Successfully moved 3 tasks"}}
-    Store-->>User: Clear selection & display success toast notification
+    alt Bulk Move Flow
+        User->>User: Select target destination column ("In Progress") & click Move
+        User->>API: POST /api/v1/tasks/bulk-move {task_ids: [12, 14, 19], column_id: 3}
+        API->>DB: SELECT fn_bulk_move_tasks($1, $2, $3, $4)
+        DB-->>API: moved_count = 3
+        API->>WS: send_to_board(board_id, {type: "task_moved", task_ids: [...]})
+        API-->>User: 200 OK {data: {moved_count: 3}}
+    else Bulk Delete Flow (Manager / Superadmin)
+        User->>User: Click "Delete (N)" button & confirm prompt modal
+        User->>API: POST /api/v1/tasks/bulk-delete {task_ids: [12, 14, 19]}
+        API->>DB: SELECT fn_bulk_delete_tasks($1, $2)
+        DB->>DB: Soft-delete tasks, comments, and purge associated notifications
+        DB-->>API: deleted_count = 3
+        API->>WS: send_to_board(board_id, {type: "task_deleted", task_ids: [...]})
+        API-->>User: 200 OK {data: {deleted_count: 3}}
+    end
+    User->>User: Clear selection & refresh board state via WebSocket trigger
+```
+
+
+---
+
+## 16. Sequence Diagram 15: Real-Time WebSocket Event & Notification Broadcasting
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant ClientA as React SPA Client A (Board 12)
+    participant ClientB as React SPA Client B (Board 12)
+    participant WS as WebSocket Endpoint (/ws)
+    participant Manager as ConnectionManager
+    participant Router as Tasks API Router
+    participant DB as PostgreSQL DB
+
+    ClientA->>WS: Connect GET /ws?token=JWT
+    WS->>Manager: Register connection for User A
+    ClientA->>WS: Send {"type": "subscribe_board", "board_id": 12}
+    Manager->>Manager: Add User A connection to Board 12 room
+
+    ClientB->>Router: POST /api/v1/tasks (Create Task in Board 12)
+    Router->>DB: SELECT fn_create_task(...)
+    DB-->>Router: Created Task Record
+    Router->>Manager: broadcast_to_board(12, {"type": "task_created", "board_id": 12, "task": ...})
+    Manager->>ClientA: Socket Push JSON Payload {"type": "task_created", ...}
+    ClientA->>ClientA: taskStore updates local state & re-renders board view
+```
+
+---
+
+## 17. Sequence Diagram 16: Task Modal Deep Linking & URL State Sync
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User / Browser
+    participant Board as KanbanBoard / NotificationLink
+    participant Modal as TaskDetailsModal
+    participant Store as uiStore (Zustand)
+
+    User->>Board: Click Task Card or Notification Link (/boards/12?taskId=45)
+    Board->>Store: openTaskModal(45)
+    Store->>Modal: isTaskModalOpen = true, selectedTaskId = 45
+    Modal->>Modal: Sync useEffect checks URL param vs store state
+    Modal->>User: Update URL searchParams to include ?taskId=45 without page reload
+    User->>Modal: User clicks modal backdrop close button
+    Modal->>Store: closeTaskModal()
+    Store->>Modal: isTaskModalOpen = false, selectedTaskId = null
+    Modal->>User: Remove ?taskId parameter from URL via setSearchParams({ replace: true })
 ```
 
 

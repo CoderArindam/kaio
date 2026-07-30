@@ -64,7 +64,11 @@ backend/
 │   ├── database/
 │   │   └── connection.py           # asyncpg pool manager, get_db_connection dependency
 │   ├── meeting/                    # Meeting pipeline subsystem (bot, recorder, orchestrator, attribution)
-│   ├── routers/                    # 22 REST API route handlers:
+│   ├── websockets/                 # WebSocket subsystem:
+│   │   ├── auth.py                 # WebSocket connection JWT query parameter authentication
+│   │   ├── manager.py              # In-memory ConnectionManager (user connections, board room subscriptions, broadcasts)
+│   │   └── router.py               # /ws endpoint handler, message routing (ping/subscribe_board/unsubscribe_board)
+│   ├── routers/                    # 23 REST API & WebSocket route handlers:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
@@ -81,14 +85,14 @@ backend/
 │   │   ├── preferences.py          # /preferences — user UI & notification preferences
 │   │   ├── search.py               # /search — workspace-wide full-text search across tasks, boards, and meetings
 │   │   ├── task_proposals.py       # /proposals — AI proposal review, approve, reject
-│   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move
+│   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move, bulk-delete (broadcasts WS events on mutations)
 │   │   ├── timesheets.py           # /timesheets — draft grid, entry upsert/delete, submit, recall
 │   │   ├── timesheet_approvals.py  # /timesheets/approvals — manager approval queue, approve, reject
 │   │   ├── timesheet_admin.py      # /timesheets/policy, /timesheets/approvers, row locking, export
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 21 Pydantic request/response DTO schema files (activity, admin, ai, auth, board, comments, dashboard, envelope, invitations, my_work, notifications, organization, preferences, search, task, task_proposal, timesheet_admin, timesheet_approvals, timesheets, users)
+│   ├── schemas/                    # 21 Pydantic request/response DTO schema files
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
@@ -101,13 +105,14 @@ backend/
 │       ├── email_templates.py      # HTML email template generators
 │       ├── invitation_service.py   # Full invitation lifecycle (invite → verify → accept → revoke)
 │       ├── my_work_service.py
-│       ├── notification_service.py # Includes timesheet lifecycle notification dispatches
+│       ├── notification_service.py # Dispatches real-time WS notification alerts to connected target users
 │       ├── organization_service.py
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
 │       ├── storage_service.py      # Local disk file storage
-│       ├── task_service.py         # Handles CRUD, reordering, and bulk task move via fn_bulk_update_tasks
+│       ├── task_service.py         # Handles CRUD, reordering, bulk task move, and bulk task deletion via fn_bulk_move_tasks & fn_bulk_delete_tasks
 │       └── user_service.py
+
 └── tests/                          # Pytest automated test suites
 ```
 
@@ -158,6 +163,12 @@ The meeting subsystem is self-contained and modular:
 - **Dashboard Service**: Reads `v_dashboard_kpis_canonical`, `v_dashboard_board_summaries_canonical`, and `v_activities_canonical` in a single request cycle.
 - **Global Search Router**: Queries `v_global_search_canonical` using PostgreSQL full-text search (`plainto_tsquery('english', q)`) and pattern ILIKE matching to return indexed tasks, boards, and meetings filtered by organization scope.
 
+### 4.6 WebSocket Infrastructure & Real-Time Events (`app/websockets/`)
+- `ConnectionManager` (`app/websockets/manager.py`): In-memory connection state registry mapping authenticated `user_id`s to active WebSocket sockets and topic subscriptions (`subscribe_board`, `unsubscribe_board`).
+- **WebSocket Auth** (`app/websockets/auth.py`): Validates incoming WebSocket handshake requests using query parameter `token` (`GET /ws?token=...`), checking JWT validity and DB session revocation status (`fn_is_session_revoked`).
+- **Board Event Broadcaster**: `tasks.py` router triggers `manager.broadcast_to_board(board_id, event_payload)` on task creation, update, move, or deletion to propagate changes to all viewing clients.
+- **Notification Direct Messaging**: `notification_service.py` dispatches `manager.send_personal_message(user_id, notification_payload)` for instant unread alerts.
+
 ---
 
 ## 5. End-to-End Request Execution Flow
@@ -193,6 +204,7 @@ sequenceDiagram
 | `FastAPI` | `app/main.py` | Framework | Top-level ASGI web application controller |
 | `Database` | `app/database/connection.py` | Infrastructure | `asyncpg` pool lifecycle manager |
 | `Settings` | `app/config/settings.py` | Config | pydantic-settings env config (`DATABASE_URL`, `JWT_SECRET`, `JWT_ALGORITHM`, `SMTP_*`, `FRONTEND_ORIGINS`) |
+| `ConnectionManager` | `app/websockets/manager.py` | WebSocket Engine | Maintains user connections, board topic subscriptions, and real-time event broadcasting |
 | `MeetingService` | `app/meeting/services/meeting_service.py` | Service | Global registry and manager of active meeting runtimes |
 | `MeetingRuntime` | `app/meeting/services/meeting_service.py` | Domain | Container for session state, Playwright browser, event bus |
 | `MeetingRecorder` | `app/meeting/bot/recorder/recorder.py` | Bot Engine | PulseAudio audio capture & WebM recording assembly via FFmpeg |
@@ -200,7 +212,7 @@ sequenceDiagram
 | `PipelineContext` | `app/meeting/pipeline/context.py` | Domain Context | State context passed between pipeline stages containing artifacts |
 | `DeepgramSpeechProvider` | `app/meeting/providers/speech/deepgram_provider.py` | Provider | Deepgram Nova-3 API client for STT and atomic diarization |
 | `DynamicAttributionEngine` | `app/meeting/attribution/dynamic_engine.py` | Analytics Engine | Scores and aligns participant presence with speech turns |
-| `NotificationService` | `app/services/notification_service.py` | Service | Generates system notifications for user assignments, comments, & proposals |
+| `NotificationService` | `app/services/notification_service.py` | Service | Generates system notifications for user assignments, comments, & proposals with real-time WS dispatch |
 | `DashboardService` | `app/services/dashboard_service.py` | Service | Aggregates org KPIs, board summaries, and recent activity for Manager dashboard |
 | `InvitationService` | `app/services/invitation_service.py` | Service | Full invitation lifecycle: invite → email → verify token → accept → revoke |
 | `TaskProposalsRouter` | `app/routers/task_proposals.py` | API Router | Manages AI proposal queues, edits, approvals (`fn_approve_task_proposal`), and rejections |

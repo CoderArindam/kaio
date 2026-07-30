@@ -8,16 +8,26 @@ import { useUiStore } from '../../../../store/uiStore';
 import { useAuthStore } from '../../../../store/authStore';
 import Modal from '../../../../components/common/Modal';
 import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const TaskDetailsModal: React.FC = () => {
   const selectedTaskId = useUiStore((state: any) => state.selectedTaskId);
   const isOpen = useUiStore((state: any) => state.isTaskModalOpen);
   const closeTaskModal = useUiStore((state: any) => state.closeTaskModal);
-  const openTaskModal = useUiStore((state: any) => state.openTaskModal);
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isLoadingTask, setIsLoadingTask] = React.useState(false);
   const prevIsOpen = React.useRef(isOpen);
   const prevTaskId = React.useRef(selectedTaskId);
+
+  const { getColumnsList, getBoardMembersList, boardView, initializeBoard, getTaskById, fetchTaskById } = useTaskStore();
+  const columns = getColumnsList();
+  const boardMembers = getBoardMembersList();
+
+  const boardId = boardView.boardId;
+  const { user } = useAuthStore();
+
+  const task = getTaskById(selectedTaskId || 0);
 
   // State -> URL sync (only runs when Zustand state changes, not when URL changes independently)
   React.useEffect(() => {
@@ -40,23 +50,46 @@ const TaskDetailsModal: React.FC = () => {
     }
   }, [isOpen, selectedTaskId, searchParams, setSearchParams]);
 
-  const { getColumnsList, getBoardMembersList, boardView, initializeBoard, getTaskById } = useTaskStore();
-  const columns = getColumnsList();
-  const boardMembers = getBoardMembersList();
+  // Fetch task if missing from store when modal opens (e.g. from deep link, notification, or search)
+  React.useEffect(() => {
+    let isMounted = true;
+    if (isOpen && selectedTaskId && !task) {
+      setIsLoadingTask(true);
+      fetchTaskById(selectedTaskId).then((fetchedTask) => {
+        if (!isMounted) return;
+        setIsLoadingTask(false);
+        if (!fetchedTask) {
+          toast.error('Task has been deleted or is no longer available');
+          closeTaskModal();
+        }
+      });
+    } else {
+      setIsLoadingTask(false);
+    }
+    return () => { isMounted = false; };
+  }, [isOpen, selectedTaskId, task, fetchTaskById, closeTaskModal]);
 
-  const boardId = boardView.boardId;
-  const { user } = useAuthStore();
-
-  const task = getTaskById(selectedTaskId || 0);
-
+  // Lazy load board data if we opened a task from a different context (like My Work)
   React.useEffect(() => {
     if (isOpen && task && task.board_id !== boardId) {
-      // Lazy load board data if we opened a task from a different context (like My Work)
       initializeBoard(task.board_id);
     }
   }, [isOpen, task?.board_id, boardId, initializeBoard]);
 
-  if (!isOpen || !task) return null;
+  if (!isOpen) return null;
+
+  if (isLoadingTask) {
+    return (
+      <Modal isOpen={isOpen} onClose={closeTaskModal} width="max-w-2xl">
+        <div className="flex items-center justify-center p-12 space-x-3 text-brand-text-muted">
+          <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+          <span>Loading task details...</span>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (!task) return null;
 
   const canEdit = user?.role !== "MEMBER" || task.assigned_to === user?.id;
   const createdDate = new Date(task.created_at).toLocaleDateString("en-US", {

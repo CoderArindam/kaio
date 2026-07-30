@@ -76,3 +76,8 @@ class BulkMoveTasksRequest(BaseModel):
     column_id: int
 
 
+class BulkDeleteTasksRequest(BaseModel):
+    task_ids: List[int]
+
+
+

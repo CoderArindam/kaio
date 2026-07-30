@@ -36,11 +36,11 @@ This document provides a reference catalog of the primary React UI components wi
 
 ### 4.1 `AppLayout`
 - **Path**: `components/layout/AppLayout.tsx`
-- **Purpose**: Root application shell. Renders `ApplicationSidebar` + main content `<Outlet />`.
+- **Purpose**: Root application shell. Renders `ApplicationSidebar` + main content `<Outlet />`. Mounts the global `useWebSocket` hook to maintain connection lifecycle.
 
 ### 4.2 `ApplicationSidebar`
 - **Path**: `components/layout/ApplicationSidebar.tsx`
-- **Purpose**: Left navigation sidebar. Renders workspace logo, nav links (Dashboard, Boards, My Work, Meetings, Settings, Admin), notification bell, and active meeting status indicator. Collapses to icon-only mode.
+- **Purpose**: Left navigation sidebar. Renders workspace logo, nav links (Dashboard, Boards, My Work, Meetings, Settings, Admin), notification bell, active meeting status indicator, and real-time WebSocket connection status pulse indicator (`wsConnected`). Collapses to icon-only mode.
 
 ### 4.3 `SettingsLayout`
 - **Path**: `components/layout/SettingsLayout.tsx`
@@ -67,12 +67,13 @@ This document provides a reference catalog of the primary React UI components wi
 
 ### 6.1 `BoardPage`
 - **Path**: `features/boards/BoardPage.tsx`
-- **Purpose**: Page-level wrapper. Reads `boardId` from route params, fetches board data, renders `KanbanBoard` and header.
+- **Purpose**: Page-level wrapper. Reads `boardId` from route params, fetches board data, handles real-time WebSocket board subscriptions (`subscribe_board`/`unsubscribe_board`), renders `KanbanBoard` and header.
 
 ### 6.2 `KanbanBoard`
 - **Path**: `features/boards/components/KanbanBoard.tsx`
-- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` for task card reordering across columns. Manages column rendering, filter state (assignee, due date), and optimistic UI updates.
-- **Child Components**: Column containers (inline), `TaskCard`, filter bars.
+- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` for task card reordering across columns. Manages column rendering, filter state (assignee, due date), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
+- **Child Components**: Column containers (inline), `TaskCard`, filter bars, `ConfirmDialog`.
+
 
 ### 6.3 `TaskCard`
 - **Path**: `features/boards/components/TaskCard.tsx`
@@ -99,7 +100,7 @@ This document provides a reference catalog of the primary React UI components wi
 - **Purpose**: Confirmation dialog for archiving (soft-deleting) a board project.
 
 ### 6.9 Task Detail Modals (`features/boards/modals/task-details/`)
-- **Purpose**: Full task detail view. Displays and edits all task fields (title, description in Markdown, status, assignee, priority, due date), renders comment thread with replies, and shows file attachments.
+- **Purpose**: Full task detail view. Displays and edits all task fields (title, description in Markdown, status, assignee, priority, due date), renders comment thread with replies, and shows file attachments. Performs bidirectional synchronization between modal state (`selectedTaskId`) and URL search parameters (`?taskId=...`) for deep linking.
 
 ---
 

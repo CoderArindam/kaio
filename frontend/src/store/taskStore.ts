@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getBoardTasks, createTask, updateTaskStatus, deleteTask, updateTaskAssignee, updateTask, type Task, type Column } from '../services/tasksApi';
+import { getBoardTasks, getTask, createTask, updateTaskStatus, deleteTask, updateTaskAssignee, updateTask, type Task, type Column } from '../services/tasksApi';
 import { useActivityStore } from './activityStore';
 import { getUsers, getBoardMembers, type User, type BoardMember } from '../services/usersApi';
 import toast from 'react-hot-toast';
@@ -40,6 +40,7 @@ interface TaskState {
   setSelectedAssigneeId: (boardId: number, val: number | null) => void;
   initializeBoard: (boardId: number) => Promise<void>;
   loadMyTasks: (params?: any) => Promise<void>;
+  fetchTaskById: (taskId: number) => Promise<Task | null>;
   
   createNewTask: (taskData: Partial<Task>) => Promise<void>;
   moveTask: (taskId: number, newColumnId: number) => Promise<void>;
@@ -217,7 +218,30 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     } catch (error) {
       console.error('Failed to load my tasks', error);
       toast.error('Failed to load your tasks');
-      set((state) => ({ myWorkView: { ...state.myWorkView, isFetching: false } }));
+      set((state) => ({
+        myWorkView: { ...state.myWorkView, isFetching: false }
+      }));
+    }
+  },
+
+  fetchTaskById: async (taskId: number) => {
+    const existing = get().entities.tasks[taskId];
+    if (existing) return existing;
+
+    try {
+      const task = await getTask(taskId);
+      set((state) => ({
+        entities: {
+          ...state.entities,
+          tasks: {
+            ...state.entities.tasks,
+            [task.id]: task,
+          },
+        },
+      }));
+      return task;
+    } catch {
+      return null;
     }
   },
 

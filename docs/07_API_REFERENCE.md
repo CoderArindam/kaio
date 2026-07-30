@@ -70,8 +70,10 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/tasks/{id}` | `GET` | Cookie | Fetches detailed task information (`v_tasks_canonical`). |
 | `/tasks/{id}` | `PUT` | Cookie | Updates task title, description, assignee, priority, or due date. |
 | `/tasks/{id}/move` | `POST` | Cookie | Atomically moves task to a new column and position (`fn_move_task`). |
-| `/tasks/bulk-move` | `POST` | Cookie | Atomically moves multiple tasks into a target column (`fn_bulk_update_tasks`). Body: `{task_ids: number[], column_id: number}`. |
-| `/tasks/{id}` | `DELETE` | Cookie | Soft-deletes a task card. |
+| `/tasks/bulk-move` | `POST` | Cookie | Atomically moves multiple tasks into a target column (`fn_bulk_move_tasks`). Body: `{task_ids: number[], column_id: number}`. |
+| `/tasks/bulk-delete` | `POST` | Cookie (Manager+) | Atomically soft-deletes multiple tasks, task comments, and associated notifications (`fn_bulk_delete_tasks`). Body: `{task_ids: number[]}`. |
+| `/tasks/{id}` | `DELETE` | Cookie | Soft-deletes a task card (`fn_delete_task`). |
+
 | `/tasks/{id}/attachments` | `POST` | Cookie | Uploads a file attachment to a task. Stored on local disk at `uploads/`. |
 
 ---
@@ -315,5 +317,50 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
 | `/search` | `GET` | Cookie | Workspace-wide full-text and title search querying `v_global_search_canonical`. Params: `q` (query string), `limit` (max results, default 10, max 50). Returns matching tasks, boards, and meetings for active organization. |
+
+---
+
+## 25. WebSocket Connection Endpoint (`/api/v1/ws`)
+
+| Endpoint | Protocol | Auth | Description |
+|---|---|---|---|
+| `/ws` | `WebSocket` | Query Token (`?token=...`) | Bidirectional real-time event socket for board updates and unread notification alerts. |
+
+### Message Protocols:
+
+#### Client Outgoing Messages:
+- **Board Room Subscription**:
+  ```json
+  { "type": "subscribe_board", "board_id": 12 }
+  ```
+- **Board Room Unsubscription**:
+  ```json
+  { "type": "unsubscribe_board", "board_id": 12 }
+  ```
+- **Connection Heartbeat**:
+  ```json
+  { "type": "ping" }
+  ```
+
+#### Server Incoming Events:
+- **Board Task Mutations**:
+  ```json
+  {
+    "type": "task_created" | "task_updated" | "task_moved" | "task_deleted",
+    "board_id": 12,
+    "task": { "id": 105, "title": "Implement WebSockets", "column_id": 3, "position": 1000 }
+  }
+  ```
+- **Direct Notification Push**:
+  ```json
+  {
+    "type": "notification",
+    "notification": { "id": 88, "activity_type": "TASK_ASSIGNED", "activity_target_reference": "ENG-24 Fix Auth Service" }
+  }
+  ```
+- **Connection Response**:
+  ```json
+  { "type": "pong" }
+  ```
 
 

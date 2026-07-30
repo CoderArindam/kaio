@@ -51,6 +51,11 @@ export const getBoardTasks = async (boardId: number | string): Promise<BoardData
 };
 
 
+export const getTask = async (taskId: number): Promise<Task> => {
+  const response = await api.get(`/tasks/${taskId}`);
+  return response.data.data;
+};
+
 export const createTask = async (taskData: Partial<Task>): Promise<Task> => {
   const response = await api.post('/tasks', taskData);
   return response.data.data;
@@ -100,6 +105,12 @@ export const bulkMoveTasks = async (data: { task_ids: number[]; column_id: numbe
   const response = await api.post('/tasks/bulk-move', data);
   return response.data.data;
 };
+
+export const bulkDeleteTasks = async (data: { task_ids: number[] }): Promise<{ deleted_count: number }> => {
+  const response = await api.post('/tasks/bulk-delete', data);
+  return response.data.data;
+};
+
 
 
 

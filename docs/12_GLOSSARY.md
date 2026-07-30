@@ -92,11 +92,21 @@ A lightweight global state container (`zustand` v5) used throughout the KAIO fro
 ### Global Search Index (v_global_search_canonical)
 A full-text and pattern search view (`051_global_search_view.sql`) combining active tasks, boards, and meeting sessions for an organization into a single searchable tsvector stream queried via `GET /api/v1/search`.
 
-### Bulk Task Operations (fn_bulk_update_tasks)
-A database stored procedure (`052_bulk_task_operations.sql`) and frontend multi-select toolbar pattern enabling users to select multiple task cards on a Kanban board and move them atomically into a target column.
+### Bulk Task Operations (fn_bulk_move_tasks & fn_bulk_delete_tasks)
+Database stored procedures (`052_bulk_task_operations.sql`) and frontend multi-select toolbar pattern enabling users to select multiple task cards on a Kanban board and perform batch operations atomically (batch column move or multi-task deletion with comment and notification cleanup).
+
 
 ### Navigation Catalog (navigationCatalog.ts)
 A static frontend registry (`src/features/search/navigationCatalog.ts`) mapping workspace routes and settings pages for instant keyboard jump destination filtering inside `SearchModal`.
+
+### WebSocket Connection Manager (ConnectionManager)
+An in-memory backend manager (`backend/app/websockets/manager.py`) tracking active client WebSocket connections, user authentication, and topic room subscriptions (`subscribe_board`, `unsubscribe_board`) for low-latency event broadcasting.
+
+### Board Event Broadcasting
+An asynchronous server push pattern where backend task mutation endpoints (`tasks.py`) broadcast event payloads (`task_created`, `task_updated`, `task_moved`, `task_deleted`) over WebSockets to all clients currently viewing the affected Kanban board.
+
+### Bidirectional Task Deep Linking
+A frontend pattern in `TaskDetailsModal` that synchronizes Zustand modal state (`selectedTaskId`) with browser URL query parameters (`?taskId=...`), allowing direct navigation, sharing, and notification deep linking to specific task modals.
 
 ### Interactive Transcript Editor (TranscriptEditor.tsx)
 A post-meeting React component (`src/features/meeting/TranscriptEditor.tsx`) enabling users to manually edit speech-to-text utterance text and reassign speaker turn attributions post-meeting.

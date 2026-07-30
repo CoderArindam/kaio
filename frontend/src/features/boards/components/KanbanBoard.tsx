@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Plus, UserPlus, CheckSquare } from 'lucide-react';
+import { Loader2, Plus, UserPlus, CheckSquare, Trash2 } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -22,7 +22,8 @@ import CreateTaskModal from '../modals/CreateTaskModal';
 import AddMemberModal from '../modals/AddMemberModal';
 import AssigneeFilter from './AssigneeFilter';
 import DueDateFilter, { type DueDateFilterOption } from './DueDateFilter';
-import { type Column, type Task, bulkMoveTasks } from '../../../services/tasksApi';
+import { type Column, type Task, bulkMoveTasks, bulkDeleteTasks } from '../../../services/tasksApi';
+
 import { type User } from '../../../services/usersApi';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 
@@ -141,6 +142,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const [bulkTargetColumnId, setBulkTargetColumnId] = useState<number | ''>('');
   const [isBulkMoving, setIsBulkMoving] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const toggleTaskSelection = (taskId: number) => {
     setSelectedTaskIds((prev) =>
@@ -166,6 +169,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
       setIsBulkMoving(false);
     }
   };
+
+  const handleBulkDelete = async () => {
+    if (selectedTaskIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      await bulkDeleteTasks({
+        task_ids: selectedTaskIds,
+      });
+      setSelectedTaskIds([]);
+      setShowBulkDeleteConfirm(false);
+      setIsMultiSelect(false);
+      await initializeBoard(boardId);
+    } catch (err) {
+      console.error('Failed to bulk delete tasks:', err);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -452,13 +474,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
               ))}
             </select>
             <button
-              disabled={!bulkTargetColumnId || isBulkMoving}
+              disabled={!bulkTargetColumnId || isBulkMoving || isBulkDeleting}
               onClick={handleBulkMove}
               className="bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {isBulkMoving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Move
             </button>
+
+            {user?.role !== "MEMBER" && (
+              <button
+                disabled={isBulkDeleting || isBulkMoving}
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="bg-brand-error hover:bg-red-700 disabled:opacity-50 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {isBulkDeleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                Delete ({selectedTaskIds.length})
+              </button>
+            )}
+
             <button
               onClick={() => setSelectedTaskIds([])}
               className="text-brand-text-muted hover:text-brand-text text-xs px-2 py-1 transition-colors cursor-pointer"
@@ -467,6 +505,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
             </button>
           </div>
         )}
+
+        <ConfirmDialog
+          isOpen={showBulkDeleteConfirm}
+          onClose={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkDelete}
+          title="Delete Multiple Tasks"
+          description={`Are you sure you want to delete ${selectedTaskIds.length} selected task${selectedTaskIds.length !== 1 ? 's' : ''}? This action will soft-delete the tasks and clean up associated notifications.`}
+          confirmText="Delete Tasks"
+          isDestructive={true}
+          isLoading={isBulkDeleting}
+        />
+
 
         {/* Floating Create Bar */}
         {user?.role !== "MEMBER" && !isMultiSelect && (

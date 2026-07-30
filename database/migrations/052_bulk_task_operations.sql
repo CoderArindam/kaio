@@ -62,3 +62,41 @@ BEGIN
     RETURN v_moved_count;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION fn_bulk_delete_tasks(
+    p_task_ids INT[],
+    p_user_id INT
+) RETURNS INTEGER AS $$
+DECLARE
+    v_task_id INT;
+    v_deleted_count INT := 0;
+    v_user_role VARCHAR;
+BEGIN
+    IF p_task_ids IS NULL OR array_length(p_task_ids, 1) IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    -- Verify user permission (Must be MANAGER or SUPER_ADMIN in users table)
+    SELECT role INTO v_user_role
+    FROM users
+    WHERE id = p_user_id AND deleted_at IS NULL;
+
+    IF v_user_role NOT IN ('MANAGER', 'SUPER_ADMIN') THEN
+        RAISE EXCEPTION 'Only MANAGER or SUPER_ADMIN can delete tasks' USING ERRCODE = '42501';
+    END IF;
+
+    FOREACH v_task_id IN ARRAY p_task_ids LOOP
+        BEGIN
+            PERFORM fn_delete_task(v_task_id, p_user_id);
+            v_deleted_count := v_deleted_count + 1;
+        EXCEPTION WHEN OTHERS THEN
+            -- Skip tasks that fail (e.g. already deleted or invalid)
+            NULL;
+        END;
+    END LOOP;
+
+    RETURN v_deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+

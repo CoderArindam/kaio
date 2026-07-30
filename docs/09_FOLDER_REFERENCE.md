@@ -34,7 +34,8 @@ This directory dictionary maps every major folder across the repository, explain
 | `backend/app/meeting/bot/` | Playwright browser automation + JS injection | `recorder/recorder.py`, `recorder/capture_script.py` | Playwright Chromium |
 | `backend/app/meeting/pipeline/` | Sequential post-processing stage engine + task extraction | `orchestrator.py`, `stages/`, `context.py` | Deepgram, FFmpeg, LLM |
 | `backend/app/meeting/providers/` | Speech (Deepgram) and presence providers | `speech/deepgram_provider.py`, `participant_presence/` | Deepgram SDK, asyncpg |
-| `backend/app/routers/` | **22** REST API endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, `timesheet_approvals.py`, `timesheet_admin.py`, `timesheet_errors.py`, etc. | FastAPI, Pydantic |
+| `backend/app/websockets/` | WebSocket connection subsystem | `auth.py`, `manager.py`, `router.py` | FastAPI WebSockets, PyJWT |
+| `backend/app/routers/` | **23** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, `timesheet_approvals.py`, `timesheet_admin.py`, `timesheet_errors.py`, etc. | FastAPI, Pydantic |
 | `backend/app/schemas/` | **21** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, `timesheet_approvals.py`, `timesheet_admin.py`, etc. | Pydantic v2 |
 | `backend/app/services/` | Business logic services (one per domain) | `auth_service.py`, `board_service.py`, `task_service.py`, `dashboard_service.py`, `invitation_service.py`, `notification_service.py`, `email_service.py`, etc. | asyncpg, httpx |
 | `backend/storage/` | Local disk file storage for meeting artifacts | `meeting/recordings/`, `meeting/processed_audio/` | OS filesystem |
@@ -48,7 +49,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **53** SQL migration files (versions 001–052) | `001_extensions.sql` … `052_bulk_task_operations.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **55** SQL migration files (versions 001–054) | `001_extensions.sql` … `054_task_deletion_notifications_cleanup.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -74,7 +75,7 @@ python database/scripts/rebuild.py --reset
 | `frontend/src/components/ui/` | Low-level primitive UI components | `Button.tsx`, `Card.tsx`, `Skeleton.tsx`, `WidgetError.tsx` | Tailwind CSS v4 |
 | `frontend/src/constants/` | Application constants, route path definitions | `routes.ts`, `config.ts` | — |
 | `frontend/src/features/` | Feature-scoped page modules (14 features) | `auth/`, `boards/`, `dashboard/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
-| `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts` | React 19 |
+| `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts`, `useWebSocket.ts` | React 19 |
 | `frontend/src/lib/` | Axios instance configuration with interceptors | `axios.ts` or similar | Axios v1 |
 | `frontend/src/routes/` | React Router route guard components | `ProtectedRoute.tsx`, `RequireRole.tsx` | React Router DOM v7, Zustand |
 | `frontend/src/services/` | API call functions (22 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, `timesheetApprovalService.ts`, `timesheetAdminService.ts`, `timesheetReportsApi.ts`, etc. | Axios v1 |
