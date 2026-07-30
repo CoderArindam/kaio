@@ -269,7 +269,13 @@ class MeetingService:
             tasks_to_await.append(runtime.wait_for_cleanup())
 
         if tasks_to_await:
-            await asyncio.gather(*tasks_to_await, return_exceptions=True)
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*tasks_to_await, return_exceptions=True),
+                    timeout=10.0,
+                )
+            except asyncio.TimeoutError:
+                log.warning("shutdown.timeout", active_sessions=len(tasks_to_await))
 
         self._bot_controller._monitor.stop_all()
         log.info("shutdown.completed")

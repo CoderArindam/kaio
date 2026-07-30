@@ -11,6 +11,18 @@ from app.services.task_service import TaskService
 from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate
 from app.ai.schemas.planning import RiskLevel
 from app.ai.tools.fuzzy import resolve_board, resolve_user, resolve_column
+from app.websockets.manager import connection_manager
+
+
+async def _broadcast_task_event(board_id: int, task_id: int, action: str) -> None:
+    """Notify all board subscribers of a task mutation (mirrors tasks.py router)."""
+    try:
+        await connection_manager.send_to_board(
+            board_id=board_id,
+            message={"type": "task.updated", "board_id": board_id, "task_id": task_id, "action": action},
+        )
+    except Exception:
+        pass
 
 def _serialize(data: Any) -> Any:
     from datetime import datetime, date
@@ -209,6 +221,18 @@ class CreateTaskTool(BaseTool):
         )
         
         result = await task_service.create_task(task_in, current_user)
+        await _broadcast_task_event(board_id, result.id, "created")
+        if assigned_to and assigned_to != current_user.get("id"):
+            notif_svc = services.get("notification_service")
+            if notif_svc:
+                await notif_svc.notify_task_assigned(
+                    task_id=result.id,
+                    task_title=result.title,
+                    board_name=result.board_name or str(board_id),
+                    assignee_id=assigned_to,
+                    actor_id=current_user["id"],
+                    org_id=current_user["org_id"],
+                )
         return {
             "status": "success",
             "action": "created",
@@ -279,7 +303,8 @@ class UpdateTaskTool(BaseTool):
             )
         
         result, old_dict, new_dict = await task_service.update_task(real_task_id, task_update, current_user)
-        
+        await _broadcast_task_event(result.board_id, real_task_id, "updated")
+
         # Build descriptive message
         changes = []
         if params.title:
@@ -295,9 +320,9 @@ class UpdateTaskTool(BaseTool):
             changes.append(f"due date set to '{new_dict.get('due_date')}'")
         if params.description:
             changes.append("description updated")
-        
+
         change_desc = ", ".join(changes) if changes else "updated"
-        
+
         return {
             "status": "success",
             "action": "updated",
@@ -328,7 +353,16 @@ class DeleteTaskTool(BaseTool):
     async def execute(self, params: DeleteTaskParams, current_user: dict, services: Dict[str, Any]) -> Any:
         task_service = services["task_service"]
         real_task_id = await resolve_task_id(params, current_user, services)
+        # Read board_id before deletion so we can broadcast the WS event
+        board_id = None
+        try:
+            task_row = await task_service.get_task(real_task_id, current_user)
+            board_id = task_row.board_id
+        except Exception:
+            pass
         await task_service.delete_task(real_task_id, current_user)
+        if board_id:
+            await _broadcast_task_event(board_id, real_task_id, "deleted")
         return {
             "status": "success",
             "action": "deleted",

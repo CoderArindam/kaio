@@ -9,6 +9,7 @@ import { ProjectIdentity } from '../../components/common/ProjectIdentity';
 import EmptyState from '../../components/common/EmptyState';
 
 import BoardProposalsBadge from '../proposals/components/BoardProposalsBadge';
+import { sendWsMessage } from '../../hooks/useWebSocket';
 
 export const Board: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,15 @@ export const Board: React.FC = () => {
 
   const boardId = id ? parseInt(id, 10) : 0;
   const board = boards.find((b: any) => b.id === boardId);
+
+  // Subscribe to real-time board events via the shared WebSocket connection
+  useEffect(() => {
+    if (!boardId) return;
+    sendWsMessage({ type: 'subscribe_board', board_id: boardId });
+    return () => {
+      sendWsMessage({ type: 'unsubscribe_board', board_id: boardId });
+    };
+  }, [boardId]);
 
   usePageTitle(board ? `${board.icon || ''} ${board.name}`.trim() : "Board");
 

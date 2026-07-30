@@ -27,7 +27,7 @@ import { useUiStore } from '../../store/uiStore';
 import { searchApi, type SearchResultItem } from '../../services/searchApi';
 import { getUsers, type User } from '../../services/usersApi';
 import { useDebounce } from '../../hooks/useDebounce';
-import { SYSTEM_NAVIGATION_ITEMS, type NavigationSearchItem } from './navigationCatalog';
+import { SYSTEM_NAVIGATION_ITEMS } from './navigationCatalog';
 
 export interface UnifiedSearchResult {
   id: string;

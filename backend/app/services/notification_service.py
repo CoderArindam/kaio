@@ -1,3 +1,4 @@
+import json
 from app.services.email_service import send_email
 from app.services.email_templates import (
     task_assigned_template,
@@ -67,6 +68,7 @@ from fastapi import HTTPException
 from typing import List, Optional
 from app.schemas.notifications import MarkBatchReadRequest, CanonicalNotificationResponse
 from app.schemas.envelope import MetaResponse
+from app.websockets.manager import connection_manager
 
 class NotificationService:
     def __init__(self, conn: asyncpg.Connection):
@@ -158,8 +160,46 @@ class NotificationService:
     async def notify_pipeline_failed(self, session_id: str, org_id: int = 1):
         return await notify_pipeline_failed(self.conn, session_id, org_id)
 
+    async def notify_task_assigned(
+        self,
+        task_id: int,
+        task_title: str,
+        board_name: str,
+        assignee_id: int,
+        actor_id: int,
+        org_id: int,
+    ) -> None:
+        """
+        Create an in-app notification for a user who has been assigned a task,
+        and push a real-time WS notification.new event to them.
+        """
+        try:
+            actor_name = await self.conn.fetchval(
+                "SELECT first_name FROM users WHERE id = $1", actor_id
+            ) or "Someone"
+            title = f"{actor_name} assigned you a task: {task_title}"
+            deep_link = f"/boards/{board_name}?task={task_id}"
 
-import json
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'TASK', $2, $3, 'ASSIGNEE_CHANGED', $4::jsonb)
+                RETURNING id
+                """,
+                org_id,
+                task_id,
+                actor_id,
+                {"assigned_to": assignee_id, "title": title, "deep_link": deep_link},
+            )
+            await self.conn.execute(
+                "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                assignee_id, act_id,
+            )
+            await _dispatch_notification_event(self.conn, assignee_id)
+        except Exception as e:
+            logger.error(f"notify_task_assigned failed task={task_id} assignee={assignee_id}: {e}")
+
+
 from uuid import UUID
 
 def _to_uuid(val) -> UUID | None:
@@ -174,6 +214,32 @@ def _to_uuid(val) -> UUID | None:
         return UUID(s_val)
     except Exception:
         return None
+
+
+async def _dispatch_notification_event(conn: asyncpg.Connection, recipient_id) -> None:
+    """Read unread count for recipient and push notification.new WS event. Never raises."""
+    try:
+        from uuid import UUID as _UUID
+        # _to_uuid() packs integer IDs as 00000000-0000-0000-0000-{id:012d}
+        # UUID.node is the last 48 bits, which equals the original int when packed this way
+        if isinstance(recipient_id, _UUID):
+            user_id_int = recipient_id.node
+        elif isinstance(recipient_id, str) and '-' in recipient_id:
+            user_id_int = _UUID(recipient_id).node
+        else:
+            user_id_int = int(recipient_id)
+
+        unread_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM v_notifications_canonical WHERE user_id = $1 AND is_read = FALSE",
+            user_id_int
+        )
+        await connection_manager.send_to_user(
+            user_id=user_id_int,
+            message={"type": "notification.new", "user_id": user_id_int, "unread_count": int(unread_count or 0)},
+        )
+    except Exception as e:
+        logger.debug(f"WS notification.new dispatch failed for {recipient_id}: {e}")
+
 
 
 async def notify_pipeline_failed(conn: asyncpg.Connection, session_id: str, org_id: int = 1):
@@ -236,6 +302,7 @@ async def notify_timesheet_submitted(conn: asyncpg.Connection, timesheet_id, sub
                 "SELECT fn_create_timesheet_notification($1, $2, $3, $4, $5, $6, $7)",
                 target_id, sub_uuid, title, None, deep_link, ts_uuid, "CREATED"
             )
+            await _dispatch_notification_event(conn, target_id)
         except Exception as e:
             logger.error(f"Failed to create timesheet submitted notification for target {target_id}: {e}")
 
@@ -249,10 +316,12 @@ async def notify_timesheet_approved(conn: asyncpg.Connection, timesheet_id, subm
     title = f"Your timesheet for {week_label} was approved"
     deep_link = f"/timesheets?id={timesheet_id}"
     try:
-        return await conn.fetchval(
+        result = await conn.fetchval(
             "SELECT fn_create_timesheet_notification($1, $2, $3, $4, $5, $6, $7)",
             sub_uuid, app_uuid, title, None, deep_link, ts_uuid, "STATUS_CHANGED"
         )
+        await _dispatch_notification_event(conn, sub_uuid)
+        return result
     except Exception as e:
         logger.error(f"Failed to create timesheet approved notification: {e}")
         return None
@@ -267,10 +336,12 @@ async def notify_timesheet_rejected(conn: asyncpg.Connection, timesheet_id, subm
     body = comment[:120] if comment else None
     deep_link = f"/timesheets?id={timesheet_id}"
     try:
-        return await conn.fetchval(
+        result = await conn.fetchval(
             "SELECT fn_create_timesheet_notification($1, $2, $3, $4, $5, $6, $7)",
             sub_uuid, app_uuid, title, body, deep_link, ts_uuid, "STATUS_CHANGED"
         )
+        await _dispatch_notification_event(conn, sub_uuid)
+        return result
     except Exception as e:
         logger.error(f"Failed to create timesheet rejected notification: {e}")
         return None
@@ -286,10 +357,12 @@ async def notify_timesheet_recalled(conn: asyncpg.Connection, timesheet_id, subm
     body = reason[:120] if reason else None
     deep_link = "/timesheets/approvals"
     try:
-        return await conn.fetchval(
+        result = await conn.fetchval(
             "SELECT fn_create_timesheet_notification($1, $2, $3, $4, $5, $6, $7)",
             app_uuid, sub_uuid, title, body, deep_link, ts_uuid, "STATUS_CHANGED"
         )
+        await _dispatch_notification_event(conn, app_uuid)
+        return result
     except Exception as e:
         logger.error(f"Failed to create timesheet recalled notification: {e}")
         return None

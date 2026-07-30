@@ -74,7 +74,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         <p className="text-sm text-brand-text mb-1">{formatted.description}</p>
 
         {notification.activity_target_reference && (
-          <p className="text-xs font-medium text-brand-text-muted truncate mb-2">
+          <p className="text-xs font-medium text-brand-text-muted mb-2 line-clamp-2">
             on{" "}
             <span className="text-brand-text-primary font-semibold">
               {notification.activity_target_reference}

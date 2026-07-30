@@ -7,11 +7,38 @@ import { useTaskStore } from '../../../../store/taskStore';
 import { useUiStore } from '../../../../store/uiStore';
 import { useAuthStore } from '../../../../store/authStore';
 import Modal from '../../../../components/common/Modal';
+import { useSearchParams } from 'react-router-dom';
 
 const TaskDetailsModal: React.FC = () => {
   const selectedTaskId = useUiStore((state: any) => state.selectedTaskId);
   const isOpen = useUiStore((state: any) => state.isTaskModalOpen);
   const closeTaskModal = useUiStore((state: any) => state.closeTaskModal);
+  const openTaskModal = useUiStore((state: any) => state.openTaskModal);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const prevIsOpen = React.useRef(isOpen);
+  const prevTaskId = React.useRef(selectedTaskId);
+
+  // State -> URL sync (only runs when Zustand state changes, not when URL changes independently)
+  React.useEffect(() => {
+    if (prevIsOpen.current !== isOpen || prevTaskId.current !== selectedTaskId) {
+      if (isOpen && selectedTaskId) {
+        if (searchParams.get('taskId') !== String(selectedTaskId)) {
+          const next = new URLSearchParams(searchParams);
+          next.set('taskId', String(selectedTaskId));
+          setSearchParams(next, { replace: true });
+        }
+      } else if (!isOpen) {
+        if (searchParams.has('taskId')) {
+          const next = new URLSearchParams(searchParams);
+          next.delete('taskId');
+          setSearchParams(next, { replace: true });
+        }
+      }
+      prevIsOpen.current = isOpen;
+      prevTaskId.current = selectedTaskId;
+    }
+  }, [isOpen, selectedTaskId, searchParams, setSearchParams]);
 
   const { getColumnsList, getBoardMembersList, boardView, initializeBoard, getTaskById } = useTaskStore();
   const columns = getColumnsList();

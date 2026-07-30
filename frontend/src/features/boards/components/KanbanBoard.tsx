@@ -173,19 +173,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    initializeBoard(boardId);
-  }, [boardId, initializeBoard]);
-
+  // Process deep links ONCE when the board loads
   useEffect(() => {
     const taskIdParam = searchParams.get('taskId');
-    if (taskIdParam && !isFetching) {
+    if (taskIdParam) {
       const taskIdNum = parseInt(taskIdParam, 10);
       if (!isNaN(taskIdNum)) {
         openTaskModal(taskIdNum);
       }
     }
-  }, [searchParams, isFetching, openTaskModal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeBoard(boardId);
+  }, [boardId, initializeBoard]);
 
   const handleDeleteTask = (taskId: number) => {
     setTaskToDelete(taskId);

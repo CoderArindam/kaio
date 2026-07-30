@@ -16,12 +16,16 @@ import { AIPanel } from '../../features/ai/components/AIPanel';
 import CreateProjectModal from '../../features/projects/components/CreateProjectModal';
 import SearchModal from '../../features/search/SearchModal';
 import { Search } from 'lucide-react';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const AppLayout: React.FC = () => {
   
   const { profile, isLoading: isProfileLoading } = useOrganizationStore();
   const { isLoading: isPreferencesLoading } = usePreferencesStore();
   const { pageTitle, openSearchModal, toggleSearchModal } = useUiStore();
+
+  // Mount WebSocket connection for the duration of the authenticated session
+  useWebSocket();
 
   // Cmd+K / Ctrl+K keyboard shortcut for global search
   useEffect(() => {

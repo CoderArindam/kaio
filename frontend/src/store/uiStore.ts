@@ -22,6 +22,8 @@ interface UiState {
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  wsConnected: boolean;
+  setWsConnected: (connected: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -34,6 +36,7 @@ export const useUiStore = create<UiState>((set) => ({
   isSearchModalOpen: false,
   pageTitle: '',
   isSidebarCollapsed: localStorage.getItem('kanban-sidebar-collapsed') === 'true',
+  wsConnected: false,
 
   openTaskModal: (taskId, options) => set({ 
     selectedTaskId: taskId, 
@@ -75,4 +78,6 @@ export const useUiStore = create<UiState>((set) => ({
     localStorage.setItem('kanban-sidebar-collapsed', String(collapsed));
     return { isSidebarCollapsed: collapsed };
   }),
+
+  setWsConnected: (connected) => set({ wsConnected: connected }),
 }));

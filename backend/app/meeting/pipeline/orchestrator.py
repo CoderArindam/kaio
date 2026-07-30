@@ -23,6 +23,8 @@ from app.meeting.artifacts.retention import ArtifactRetentionManager
 
 log = get_logger("pipeline.orchestrator")
 
+from app.websockets.manager import connection_manager
+
 
 
 class MeetingPipelineOrchestrator:
@@ -330,14 +332,82 @@ class MeetingPipelineOrchestrator:
                     recording_dir=Path(meeting_config.RECORDING_OUTPUT_DIR) / self.meeting_id,
                     processing_dir=self.session_dir,
                 )
+
+                # Dispatch proposal.ready + meeting.status_changed PROPOSALS_READY
+                org_id = self.context.metadata.get("org_id", 1)
+                await self._dispatch_pipeline_success_events(int(org_id))
             else:
                 log.info("retention.skipped_pipeline_failed", meeting_id=self.meeting_id)
                 await self._mark_session_failed()
+                # Dispatch meeting.status_changed FAILED
+                try:
+                    org_id = self.context.metadata.get("org_id", 1)
+                    await connection_manager.send_to_org(
+                        org_id=int(org_id),
+                        message={
+                            "type": "meeting.status_changed",
+                            "org_id": int(org_id),
+                            "session_id": self.meeting_id,
+                            "status": "FAILED",
+                        },
+                    )
+                except Exception as ws_err:
+                    log.debug("pipeline.ws_failed_dispatch_error", error=str(ws_err))
 
             return pipeline_success
 
         except Exception as exc:
             log.error("pipeline.execution_failed_exception", meeting_id=self.meeting_id, error=str(exc), exc_info=True)
             await self._mark_session_failed()
+            # Dispatch meeting.status_changed FAILED
+            try:
+                org_id = self.context.metadata.get("org_id", 1)
+                await connection_manager.send_to_org(
+                    org_id=int(org_id),
+                    message={
+                        "type": "meeting.status_changed",
+                        "org_id": int(org_id),
+                        "session_id": self.meeting_id,
+                        "status": "FAILED",
+                    },
+                )
+            except Exception as ws_err:
+                log.debug("pipeline.ws_outer_failed_dispatch_error", error=str(ws_err))
             return False
+
+    async def _dispatch_pipeline_success_events(self, org_id: int) -> None:
+        """Dispatch WS events on successful pipeline completion. Never raises."""
+        try:
+            from app.database.connection import db
+            if not db.pool:
+                return
+            async with db.pool.acquire() as conn:
+                rows = await conn.fetch(
+                    "SELECT id, role FROM v_users_canonical WHERE organization_id = $1 AND deleted_at IS NULL",
+                    org_id
+                )
+            all_users = [{"user_id": r["id"], "role": str(r["role"]).upper()} for r in rows]
+
+            await connection_manager.send_to_org_role(
+                org_id=org_id,
+                message={
+                    "type": "proposal.ready",
+                    "org_id": org_id,
+                    "session_id": self.meeting_id,
+                },
+                roles=["MANAGER", "SUPER_ADMIN"],
+                all_users_with_roles=all_users,
+            )
+            await connection_manager.send_to_org(
+                org_id=org_id,
+                message={
+                    "type": "meeting.status_changed",
+                    "org_id": org_id,
+                    "session_id": self.meeting_id,
+                    "status": "PROPOSALS_READY",
+                },
+            )
+        except Exception as ws_err:
+            log.debug("pipeline.ws_success_dispatch_error", error=str(ws_err))
+
 

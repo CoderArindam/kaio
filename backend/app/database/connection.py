@@ -49,8 +49,13 @@ class Database:
 
     async def disconnect(self):
         if self.pool:
-            await self.pool.close()
-            logger.info("Database pool closed cleanly.")
+            try:
+                await asyncio.wait_for(self.pool.close(), timeout=5.0)
+                logger.info("Database pool closed cleanly.")
+            except asyncio.TimeoutError:
+                logger.warning("Database pool close timed out — forcing termination.")
+                self.pool.terminate()
+
 
 
 db = Database()

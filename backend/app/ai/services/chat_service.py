@@ -42,6 +42,7 @@ from app.services.task_service import TaskService
 from app.services.user_service import UserService
 from app.services.comment_service import CommentService
 from app.services.preferences_service import PreferencesService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -250,6 +251,7 @@ class AIService:
             "user_service": UserService(self.conn),
             "comment_service": CommentService(self.conn),
             "preferences_service": PreferencesService(self.conn),
+            "notification_service": NotificationService(self.conn),
             "recent_entities": recent_entities,
         }
 

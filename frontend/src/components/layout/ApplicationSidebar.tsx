@@ -31,7 +31,7 @@ export const ApplicationSidebar: React.FC = () => {
   const activeBoards = useActiveBoards();
   const { fetchBoards } = useBoardStore();
   const { unreadCount, fetchNotifications } = useNotificationStore();
-  const { isSidebarCollapsed, toggleSidebar } = useUiStore();
+  const { isSidebarCollapsed, toggleSidebar, wsConnected } = useUiStore();
   
   const [projectSearch, setProjectSearch] = useState('');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -212,7 +212,7 @@ export const ApplicationSidebar: React.FC = () => {
             {isNotificationsOpen && (
               <NotificationPanel 
                 onClose={() => setIsNotificationsOpen(false)} 
-                className="left-full bottom-0 ml-2 animate-in fade-in slide-in-from-left-2 duration-150"
+                className="left-full bottom-0 ml-2 w-[calc(100vw-5rem)] sm:w-[410px] max-h-[calc(100vh-4rem)] sm:max-h-[580px] animate-in fade-in slide-in-from-left-2 duration-150"
               />
             )}
           </div>
@@ -227,6 +227,14 @@ export const ApplicationSidebar: React.FC = () => {
               <span className="text-sm font-medium text-sidebar-text truncate">{formatUserName(user)}</span>
               <span className="text-xs text-sidebar-text-muted truncate">{user?.email}</span>
             </div>
+          )}
+          {!isSidebarCollapsed && (
+            <span
+              title={wsConnected ? 'Live updates connected' : 'Live updates disconnected'}
+              className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
+                wsConnected ? 'bg-green-400' : 'bg-sidebar-text-muted/40'
+              }`}
+            />
           )}
         </div>
       </div>
