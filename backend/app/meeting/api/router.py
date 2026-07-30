@@ -14,6 +14,8 @@ All responses are machine-friendly with explicit state and message fields.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Optional
 import asyncpg
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, status, Query
@@ -27,9 +29,11 @@ from app.meeting.schemas.meeting import (
     SessionResponse,
     TimelineEvent,
     TimelineResponse,
+    TranscriptUpdatePayload,
 )
 from app.meeting.services.meeting_service import MeetingService
-from app.auth.dependencies import require_meeting_initiation_access, get_current_user
+from app.meeting.services.storage_service import StorageService
+from app.auth.dependencies import require_meeting_initiation_access, require_proposal_review_access, get_current_user
 from app.database.connection import get_db_connection
 from app.schemas.envelope import DataEnvelope
 
@@ -375,3 +379,109 @@ async def get_timeline(session_id: str):
             for e in events
         ],
     )
+
+
+@router.get("/transcript/{session_id}")
+async def get_meeting_transcript(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """Retrieve participant-attributed transcript JSON for a session."""
+    org_id = current_user["organization_id"]
+
+    # Verify session belongs to caller's org
+    session_row = await conn.fetchrow(
+        """
+        SELECT * FROM v_meeting_sessions_canonical
+        WHERE (session_id = $1 OR id::text = $1)
+          AND org_id = $2
+        """,
+        session_id,
+        org_id
+    )
+
+    if not session_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Meeting session '{session_id}' not found in your organization"
+        )
+
+    actual_session_id = session_row["session_id"] or str(session_row["id"])
+    storage_svc = StorageService()
+    session_dir = storage_svc.get_session_dir(actual_session_id)
+    transcript_file = session_dir / "participant_attributed_transcript.json"
+
+    if not transcript_file.exists():
+        from app.meeting.config import meeting_config
+        fallback_file = Path(meeting_config.PROCESSING_OUTPUT_DIR) / actual_session_id / "participant_attributed_transcript.json"
+        if fallback_file.exists():
+            transcript_file = fallback_file
+
+    if not transcript_file.exists():
+        return DataEnvelope(data={"session_id": actual_session_id, "turns": []})
+
+    try:
+        content = json.loads(transcript_file.read_text(encoding="utf-8"))
+        return DataEnvelope(data=content)
+    except Exception as exc:
+        log.error("Failed to read transcript file", session_id=actual_session_id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to read transcript artifact")
+
+
+@router.put("/{session_id}/transcript")
+async def update_meeting_transcript(
+    session_id: str,
+    payload: TranscriptUpdatePayload,
+    current_user: dict = Depends(require_proposal_review_access),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """Update and overwrite the participant-attributed transcript file on disk."""
+    org_id = current_user["organization_id"]
+
+    # Verify session belongs to caller's org
+    session_row = await conn.fetchrow(
+        """
+        SELECT * FROM v_meeting_sessions_canonical
+        WHERE (session_id = $1 OR id::text = $1)
+          AND org_id = $2
+        """,
+        session_id,
+        org_id
+    )
+
+    if not session_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Meeting session '{session_id}' not found in your organization"
+        )
+
+    actual_session_id = session_row["session_id"] or str(session_row["id"])
+    storage_svc = StorageService()
+    session_dir = storage_svc.get_session_dir(actual_session_id)
+    transcript_file = session_dir / "participant_attributed_transcript.json"
+
+    turns_data = [t.model_dump() for t in payload.turns]
+    transcript_content = {
+        "session_id": actual_session_id,
+        "turns": turns_data
+    }
+
+    try:
+        transcript_file.parent.mkdir(parents=True, exist_ok=True)
+        transcript_file.write_text(json.dumps(transcript_content, indent=2), encoding="utf-8")
+
+        from app.meeting.config import meeting_config
+        processing_file = Path(meeting_config.PROCESSING_OUTPUT_DIR) / actual_session_id / "participant_attributed_transcript.json"
+        if processing_file.parent.exists():
+            processing_file.write_text(json.dumps(transcript_content, indent=2), encoding="utf-8")
+
+        return DataEnvelope(data={
+            "message": "Transcript updated successfully",
+            "session_id": actual_session_id,
+            "turns": turns_data
+        })
+    except Exception as exc:
+        log.error("Failed to write transcript file", session_id=actual_session_id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to save updated transcript artifact")
+

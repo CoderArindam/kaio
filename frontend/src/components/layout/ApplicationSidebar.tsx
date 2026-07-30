@@ -221,7 +221,7 @@ export const ApplicationSidebar: React.FC = () => {
         </div>
         
         <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'px-3 gap-3'}`}>
-          <UserAvatarDropdown isSidebarCollapsed={isSidebarCollapsed} />
+          <UserAvatarDropdown isSidebarCollapsed={isSidebarCollapsed} placement="sidebar" />
           {!isSidebarCollapsed && (
             <div className="flex-1 min-w-0 flex flex-col">
               <span className="text-sm font-medium text-sidebar-text truncate">{formatUserName(user)}</span>

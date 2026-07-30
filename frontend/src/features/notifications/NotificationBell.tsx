@@ -36,17 +36,20 @@ const NotificationBell: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative inline-flex items-center">
       <button 
         onClick={togglePanel}
-        className={`p-2 rounded-full transition-colors relative ${
-          isOpen ? 'bg-brand-surface text-brand-primary' : 'text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-low'
+        className={`p-2 rounded-xl transition-all duration-200 relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/40 ${
+          isOpen 
+            ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20 shadow-xs' 
+            : 'text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-low border border-transparent'
         }`}
         aria-label="Notifications"
+        aria-expanded={isOpen}
       >
-        <Bell size={20} />
+        <Bell size={19} className="transition-transform active:scale-95" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-brand-bg shadow-sm">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-brand-surface shadow-xs animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

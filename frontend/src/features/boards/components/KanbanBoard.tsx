@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Plus, UserPlus } from 'lucide-react';
+import { Loader2, Plus, UserPlus, CheckSquare } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -22,7 +22,7 @@ import CreateTaskModal from '../modals/CreateTaskModal';
 import AddMemberModal from '../modals/AddMemberModal';
 import AssigneeFilter from './AssigneeFilter';
 import DueDateFilter, { type DueDateFilterOption } from './DueDateFilter';
-import { type Column, type Task } from '../../../services/tasksApi';
+import { type Column, type Task, bulkMoveTasks } from '../../../services/tasksApi';
 import { type User } from '../../../services/usersApi';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 
@@ -60,6 +60,9 @@ function DraggableTask({
   onOpen,
   canEdit,
   canReassign,
+  isMultiSelect,
+  isSelected,
+  onToggleSelect,
 }: {
   task: Task;
   columns: Column[];
@@ -70,11 +73,14 @@ function DraggableTask({
   onOpen: () => void;
   canEdit: boolean;
   canReassign: boolean;
+  isMultiSelect?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `task-${task.id}`,
     data: { task },
-    disabled: !canEdit,
+    disabled: !canEdit || isMultiSelect,
   });
 
   return (
@@ -94,6 +100,9 @@ function DraggableTask({
         onOpen={onOpen}
         canEdit={canEdit}
         canReassign={canReassign}
+        isMultiSelect={isMultiSelect}
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
       />
     </div>
   );
@@ -126,6 +135,37 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
+  // Multi-select state
+  const [isMultiSelect, setIsMultiSelect] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [bulkTargetColumnId, setBulkTargetColumnId] = useState<number | ''>('');
+  const [isBulkMoving, setIsBulkMoving] = useState(false);
+
+  const toggleTaskSelection = (taskId: number) => {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const handleBulkMove = async () => {
+    if (!bulkTargetColumnId || selectedTaskIds.length === 0) return;
+    setIsBulkMoving(true);
+    try {
+      await bulkMoveTasks({
+        task_ids: selectedTaskIds,
+        column_id: Number(bulkTargetColumnId),
+      });
+      setSelectedTaskIds([]);
+      setBulkTargetColumnId('');
+      setIsMultiSelect(false);
+      await initializeBoard(boardId);
+    } catch (err) {
+      console.error('Failed to bulk move tasks:', err);
+    } finally {
+      setIsBulkMoving(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -229,6 +269,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
           </h1>
 
           <div className="flex gap-3 items-center">
+            <button
+              onClick={() => {
+                setIsMultiSelect(!isMultiSelect);
+                if (isMultiSelect) setSelectedTaskIds([]);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border ${
+                isMultiSelect
+                  ? 'bg-brand-primary text-white border-brand-primary'
+                  : 'bg-brand-surface text-brand-text border-brand-border hover:bg-brand-surface-low'
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              {isMultiSelect ? 'Exit Select Mode' : 'Select Tasks'}
+            </button>
             {isManager && (
               <button
                 onClick={() => setIsAddMemberModalOpen(true)}
@@ -241,7 +295,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </header>
 
         {/* Filters */}
-        <div className="px-4 md:px-8 flex flex-wrap gap-4">
+        <div className="px-4 md:px-8 flex flex-wrap gap-4 items-center">
           <AssigneeFilter
             users={boardMembers}
             selectedAssigneeId={selectedAssigneeId}
@@ -361,6 +415,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                               onOpen={() => openTaskModal(task.id)}
                               canEdit={canEdit}
                               canReassign={canReassign}
+                              isMultiSelect={isMultiSelect}
+                              isSelected={selectedTaskIds.includes(task.id)}
+                              onToggleSelect={() => toggleTaskSelection(task.id)}
                             />
                           );
                         })
@@ -373,8 +430,44 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
           )}
         </div>
 
+        {/* Floating Bulk Move Action Bar */}
+        {isMultiSelect && selectedTaskIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-brand-surface border border-brand-border shadow-2xl rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-200">
+            <span className="text-xs font-semibold text-brand-text">
+              {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? 's' : ''} selected
+            </span>
+            <div className="h-4 w-[1px] bg-brand-border" />
+            <select
+              value={bulkTargetColumnId}
+              onChange={(e) => setBulkTargetColumnId(e.target.value ? Number(e.target.value) : '')}
+              className="bg-brand-surface-low text-brand-text text-xs border border-brand-border rounded-lg px-3 py-1.5 focus:outline-none"
+            >
+              <option value="">Move to column...</option>
+              {columns.map((col: any) => (
+                <option key={col.id} value={col.id}>
+                  {col.name}
+                </option>
+              ))}
+            </select>
+            <button
+              disabled={!bulkTargetColumnId || isBulkMoving}
+              onClick={handleBulkMove}
+              className="bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              {isBulkMoving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Move
+            </button>
+            <button
+              onClick={() => setSelectedTaskIds([])}
+              className="text-brand-text-muted hover:text-brand-text text-xs px-2 py-1 transition-colors cursor-pointer"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
+
         {/* Floating Create Bar */}
-        {user?.role !== "MEMBER" && (
+        {user?.role !== "MEMBER" && !isMultiSelect && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
             <button
               onClick={openCreateTaskModal}

@@ -16,6 +16,9 @@ interface TaskCardProps {
   canEdit: boolean;
   canReassign: boolean;
   variant?: 'board' | 'list';
+  isMultiSelect?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = React.memo(({
@@ -29,6 +32,9 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
   canEdit,
   canReassign,
   variant = 'board',
+  isMultiSelect = false,
+  isSelected = false,
+  onToggleSelect,
 }) => {
   const assignee = users.find((u) => u.id === task.assigned_to);
 
@@ -124,17 +130,36 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
     );
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isMultiSelect && onToggleSelect) {
+      e.stopPropagation();
+      onToggleSelect();
+    } else {
+      onOpen();
+    }
+  };
+
   return (
     <div
-      className="group bg-brand-surface rounded-3xl border border-brand-border p-5 flex flex-col gap-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition cursor-pointer"
-      onClick={onOpen}
+      className={`group bg-brand-surface rounded-3xl border p-5 flex flex-col gap-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition cursor-pointer relative ${
+        isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30 bg-brand-primary/5' : 'border-brand-border'
+      }`}
+      onClick={handleCardClick}
     >
       <div className="flex justify-between items-start gap-3">
-        <h4 className="text-base font-semibold text-brand-text leading-tight">
+        {isMultiSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+            className="w-4 h-4 text-brand-primary rounded border-brand-border focus:ring-brand-primary cursor-pointer mt-1"
+          />
+        )}
+        <h4 className="text-base font-semibold text-brand-text leading-tight flex-1">
           {task.title}
         </h4>
 
-        {canEdit && (
+        {canEdit && !isMultiSelect && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="opacity-0 group-hover:opacity-100 bg-brand-surface-low text-brand-outline hover:text-brand-error w-8 h-8 rounded-full flex items-center justify-center transition"

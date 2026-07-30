@@ -147,3 +147,16 @@ class TimelineResponse(BaseModel):
     session_id: str
     event_count: int
     events: list[TimelineEvent]
+
+
+class TranscriptTurn(BaseModel):
+    speaker_id: str | None = None
+    speaker_name: str
+    start_time: float | None = 0.0
+    end_time: float | None = 0.0
+    text: str
+
+
+class TranscriptUpdatePayload(BaseModel):
+    turns: list[TranscriptTurn]
+

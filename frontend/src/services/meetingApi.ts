@@ -44,3 +44,25 @@ export const rerunMeetingPipeline = async (sessionId: string): Promise<void> => 
   await api.post(`/meeting/${sessionId}/rerun`);
 };
 
+export interface TranscriptTurn {
+  speaker_id?: string | null;
+  speaker_name: string;
+  start_time?: number | null;
+  end_time?: number | null;
+  text: string;
+}
+
+export interface TranscriptData {
+  session_id: string;
+  turns: TranscriptTurn[];
+}
+
+export const getTranscript = async (sessionId: string): Promise<TranscriptData> => {
+  const response = await api.get(`/meeting/transcript/${sessionId}`);
+  return response.data.data;
+};
+
+export const updateTranscript = async (sessionId: string, turns: TranscriptTurn[]): Promise<void> => {
+  await api.put(`/meeting/${sessionId}/transcript`, { turns });
+};
+

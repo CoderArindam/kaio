@@ -96,4 +96,10 @@ export const searchTasks = async (params: {
   return response.data.data;
 };
 
+export const bulkMoveTasks = async (data: { task_ids: number[]; column_id: number }): Promise<{ moved_count: number }> => {
+  const response = await api.post('/tasks/bulk-move', data);
+  return response.data.data;
+};
+
+
 

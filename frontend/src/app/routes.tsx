@@ -60,6 +60,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="/my-work" element={<MyWorkPage />} />
           <Route path="/timesheets" element={<MyTimesheetsPage />} />
           <Route path="/board/:id" element={<BoardPage />} />
+          <Route path="/boards/:id" element={<BoardPage />} />
 
 
           {/* Role-gated timesheet approvals & proposal review queue routes */}

@@ -268,4 +268,21 @@ class TaskService:
             }
         except Exception as e:
             logger.error(f"Error searching tasks: {e}")
-            raise HTTPException(status_code=400, detail="An unexpected error occurred while searching tasks")
+            raise HTTPException(status_code=400, detail="An unexpected error occurred while searching tasks")
+
+    async def bulk_move_tasks(self, task_ids: List[int], column_id: int, current_user: dict) -> int:
+        try:
+            user_id = current_user["id"]
+            org_id = current_user["organization_id"]
+
+            moved_count = await self.conn.fetchval(
+                "SELECT fn_bulk_move_tasks($1, $2, $3, $4)",
+                task_ids, column_id, user_id, org_id
+            )
+            return moved_count or 0
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error bulk moving tasks: {e}")
+            raise HTTPException(status_code=400, detail="Failed to bulk move tasks")
+

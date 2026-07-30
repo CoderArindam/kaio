@@ -3,7 +3,7 @@ from typing import Optional, List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
-from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse
+from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest
 from app.schemas.envelope import DataEnvelope
 from app.services.notification_service import dispatch_task_email
 from app.auth.dependencies import get_current_user
@@ -175,3 +175,14 @@ async def update_task_assignee(
             )
 
     return DataEnvelope(data=new_task)
+
+
+@router.post("/tasks/bulk-move", response_model=DataEnvelope[dict])
+async def bulk_move_tasks(
+    body: BulkMoveTasksRequest,
+    current_user: dict = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    moved_count = await task_service.bulk_move_tasks(body.task_ids, body.column_id, current_user)
+    return DataEnvelope(data={"moved_count": moved_count, "message": f"Successfully moved {moved_count} tasks"})
+

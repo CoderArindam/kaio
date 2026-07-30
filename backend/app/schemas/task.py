@@ -71,3 +71,8 @@ class TaskSearchResponse(BaseModel):
     page: int
     limit: int
 
+class BulkMoveTasksRequest(BaseModel):
+    task_ids: List[int]
+    column_id: int
+
+

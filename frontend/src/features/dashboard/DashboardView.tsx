@@ -12,6 +12,8 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import EmptyState from '../../components/common/EmptyState';
 import { ProjectCard } from '../../components/common/ProjectCard';
 import JoinMeetingModal from '../meeting/components/JoinMeetingModal';
+import TranscriptEditor from '../meeting/TranscriptEditor';
+import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 import {
   listRecentMeetingSessions,
@@ -64,6 +66,8 @@ export const DashboardView: React.FC = () => {
 
   const [isProposalsModalOpen, setIsProposalsModalOpen] = useState(false);
   const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(4);
+
+  const [transcriptEditorSessionId, setTranscriptEditorSessionId] = useState<string | null>(null);
 
   // Dashboard summary API state
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -370,6 +374,7 @@ export const DashboardView: React.FC = () => {
                 onOpenJoinModal={() => setIsJoinModalOpen(true)}
                 onOpenProposalsModal={() => setIsProposalsModalOpen(true)}
                 onRerunPipeline={handleRerunPipeline}
+                onOpenTranscriptEditor={(id) => setTranscriptEditorSessionId(id)}
               />
 
               {/* Recent Activity Widget */}
@@ -416,6 +421,22 @@ export const DashboardView: React.FC = () => {
           fetchSessions();
         }}
       />
+
+      <Modal
+        isOpen={!!transcriptEditorSessionId}
+        onClose={() => setTranscriptEditorSessionId(null)}
+        width="max-w-3xl"
+        hideCloseButton={true}
+        noPadding={true}
+      >
+        {transcriptEditorSessionId && (
+          <TranscriptEditor
+            sessionId={transcriptEditorSessionId}
+            onClose={() => setTranscriptEditorSessionId(null)}
+            onSaved={() => fetchSessions()}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

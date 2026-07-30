@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotificationStore } from '../../store/notificationStore';
 import NotificationItem from '../notifications/NotificationItem';
-import { Bell, CheckCheck, Loader2, ExternalLink } from 'lucide-react';
+import { Bell, CheckCheck, Loader2, ExternalLink, Sparkles } from 'lucide-react';
 
 interface NotificationPanelProps {
   onClose: () => void;
@@ -76,58 +76,77 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, classNam
     return () => observer.disconnect();
   }, [hasMore, isLoading, fetchNotifications, cursor]);
 
-  // Click outside to close
+  // Click outside & Escape key to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [onClose]);
+
+  const hasUnread = notifications.some(n => !n.is_read);
+  const defaultPosition = 'right-0 top-full mt-2.5 w-[calc(100vw-2rem)] sm:w-[410px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] sm:max-h-[580px] animate-in fade-in slide-in-from-top-2 duration-150';
 
   return (
     <div 
       ref={panelRef}
-      className={`absolute w-96 max-h-[85vh] bg-brand-surface border border-brand-border rounded-xl shadow-2xl flex flex-col z-50 overflow-hidden ${className}`}
+      className={`absolute bg-brand-surface/95 backdrop-blur-xl border border-brand-border/80 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden ring-1 ring-black/5 ${className || defaultPosition}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-brand-border bg-brand-surface-low">
-        <h3 className="font-semibold text-brand-text flex items-center gap-2">
-          <Bell size={18} />
-          Notifications
-        </h3>
-        {notifications.some(n => !n.is_read) && (
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-brand-border/60 bg-brand-surface-low/90 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-brand-primary/10 text-brand-primary">
+            <Bell size={16} />
+          </div>
+          <h3 className="font-semibold text-sm text-brand-text">Notifications</h3>
+          {hasUnread && (
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-brand-primary text-white shadow-2xs">
+              {notifications.filter(n => !n.is_read).length} new
+            </span>
+          )}
+        </div>
+        {hasUnread && (
           <button 
             onClick={() => markAllAsRead()}
-            className="text-xs font-medium text-brand-primary hover:text-brand-primary/80 flex items-center gap-1 transition-colors"
+            className="text-xs font-medium text-brand-primary hover:text-brand-primary/80 flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-brand-primary/10 transition-all cursor-pointer"
           >
             <CheckCheck size={14} />
-            Mark all read
+            <span>Mark all read</span>
           </button>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto divide-y divide-brand-border/30 custom-scrollbar">
         {notifications.length === 0 && !isLoading ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-12 h-12 bg-brand-surface-low rounded-full flex items-center justify-center mb-3">
-              <Bell size={20} className="text-brand-text-muted" />
+          <div className="flex flex-col items-center justify-center p-10 text-center">
+            <div className="w-12 h-12 bg-brand-surface-low rounded-2xl flex items-center justify-center mb-3 text-brand-text-muted border border-brand-border/50">
+              <Sparkles size={22} className="text-brand-primary/70" />
             </div>
-            <p className="text-sm font-medium text-brand-text">All caught up!</p>
-            <p className="text-xs text-brand-text-muted mt-1">No new notifications.</p>
+            <p className="text-sm font-semibold text-brand-text">All caught up!</p>
+            <p className="text-xs text-brand-text-muted mt-1 max-w-[220px]">
+              You have no unread notifications at the moment.
+            </p>
           </div>
         ) : (
           Object.entries(grouped).map(([label, items]) => {
             if (items.length === 0) return null;
             return (
               <div key={label}>
-                <div className="sticky top-0 bg-brand-surface-low/90 backdrop-blur text-xs font-semibold text-brand-text-muted uppercase tracking-wider px-4 py-2 z-10 border-b border-brand-border/50">
+                <div className="sticky top-0 bg-brand-surface-low/95 backdrop-blur-md text-[11px] font-bold text-brand-text-muted uppercase tracking-wider px-4 py-1.5 z-10 border-b border-brand-border/40">
                   {label}
                 </div>
-                <div>
+                <div className="divide-y divide-brand-border/30">
                   {items.map(n => (
                     <NotificationItem 
                       key={n.id} 
@@ -146,20 +165,20 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, classNam
         {/* Loading / End of list */}
         {hasMore && (
           <div ref={observerTarget} className="p-4 flex justify-center">
-            {isLoading ? <Loader2 size={20} className="animate-spin text-brand-text-muted" /> : <div className="h-4" />}
+            {isLoading ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <div className="h-4" />}
           </div>
         )}
       </div>
 
       {/* Footer / View All Link */}
-      <div className="p-3 border-t border-brand-border bg-brand-surface-low text-center">
+      <div className="p-2.5 border-t border-brand-border/60 bg-brand-surface-low/80 shrink-0 text-center">
         <Link 
           to="/settings/notifications" 
           onClick={onClose}
-          className="text-xs font-semibold text-brand-primary hover:text-brand-primary-hover flex items-center justify-center gap-1 py-1 transition-colors"
+          className="text-xs font-medium text-brand-text-muted hover:text-brand-primary flex items-center justify-center gap-1.5 py-1 transition-colors group"
         >
-          View all notifications
-          <ExternalLink size={13} />
+          <span>View all notifications in settings</span>
+          <ExternalLink size={13} className="group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
     </div>

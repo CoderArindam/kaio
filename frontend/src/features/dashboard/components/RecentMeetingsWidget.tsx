@@ -6,6 +6,7 @@ import {
   Sparkles,
   Plus,
   RotateCw,
+  FileText,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -22,6 +23,7 @@ interface RecentMeetingsWidgetProps {
   onOpenJoinModal: () => void;
   onOpenProposalsModal: () => void;
   onRerunPipeline?: (sessionId: string) => void;
+  onOpenTranscriptEditor?: (sessionId: string) => void;
 }
 
 export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
@@ -34,6 +36,7 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
   onOpenJoinModal,
   onOpenProposalsModal,
   onRerunPipeline,
+  onOpenTranscriptEditor,
 }) => {
   return (
     <Card variant="default" padding="md" className="space-y-4">
@@ -156,6 +159,16 @@ export const RecentMeetingsWidget: React.FC<RecentMeetingsWidgetProps> = ({
                     className="w-full mt-1 py-1 px-2 text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus:ring-1 focus:ring-emerald-400"
                   >
                     <Sparkles className="w-3 h-3 text-emerald-400" /> Proposals Ready — Review Queue ({pendingPropsCount})
+                  </button>
+                )}
+
+                {/* Edit Transcript Button for Completed/Proposals Ready Sessions */}
+                {isCompleted && onOpenTranscriptEditor && (
+                  <button
+                    onClick={() => onOpenTranscriptEditor(session.session_id || session.id)}
+                    className="w-full mt-1 py-1 px-2 text-[11px] font-semibold bg-brand-surface-low hover:bg-brand-surface text-brand-text border border-brand-border rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus:ring-1 focus:ring-brand-primary"
+                  >
+                    <FileText className="w-3 h-3 text-brand-primary" /> Edit Transcript
                   </button>
                 )}
 
