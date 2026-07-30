@@ -78,8 +78,8 @@ frontend/src/
 │   ├── boards/                 # Kanban board feature
 │   │   ├── BoardPage.tsx       # Board page wrapper
 │   │   ├── components/
-│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop (optimistic rollbacks)
-│   │   │   ├── TaskCard.tsx        # Individual task card preview
+│   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop & multi-select bulk move toolbar
+│   │   │   ├── TaskCard.tsx        # Individual task card preview with selection checkbox
 │   │   │   ├── AssigneeFilter.tsx  # Board assignee filter bar
 │   │   │   └── DueDateFilter.tsx   # Board due date filter bar
 │   │   └── modals/
@@ -100,7 +100,8 @@ frontend/src/
 │   │       ├── RecentActivityWidget.tsx    # Recent org activity feed
 │   │       ├── RecentMeetingsWidget.tsx    # Recent meeting sessions with rerun pipeline button & error preview
 │   │       └── SmartSuggestionsWidget.tsx  # AI-powered smart suggestions
-│   ├── meeting/                # Meeting join controls, active status bar
+│   ├── meeting/                # Meeting join controls, active status bar, & TranscriptEditor
+│   │   └── TranscriptEditor.tsx # Interactive transcript text & speaker attribution editor
 │   ├── my-work/                # Personal task aggregation view
 │   ├── notifications/          # Notification bell, panel, and item components
 │   │   ├── NotificationBell.tsx    # Header bell icon with unread badge
@@ -110,6 +111,9 @@ frontend/src/
 │   │   ├── ProjectSettingsPage.tsx
 │   │   └── ProjectSettingsLayout.tsx
 │   ├── proposals/              # Task proposal review components
+│   ├── search/                 # Global workspace search (Cmd+K modal)
+│   │   ├── SearchModal.tsx     # Cmd+K global search dialog with navigation catalog & results list
+│   │   └── navigationCatalog.ts # Static catalog of workspace navigation shortcut destinations
 │   ├── settings/               # User & org settings pages
 │   │   ├── MyAccount.tsx           # Profile name, avatar, email settings
 │   │   ├── Security.tsx            # Active sessions, security event log, password change
@@ -128,18 +132,18 @@ frontend/src/
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
 │   └── RequireRole.tsx         # RBAC role guard — redirects unauthorized roles to /dashboard
-├── services/                   # API call functions wrapping Axios (21 service files: auth, boards, tasks, timesheetService, timesheetApprovalService, timesheetAdminService, timesheetReportsApi, etc.)
+├── services/                   # API call functions wrapping Axios (22 service files: auth, boards, tasks, searchApi, timesheetService, timesheetApprovalService, timesheetAdminService, timesheetReportsApi, etc.)
 ├── store/                      # Zustand global state stores
 │   ├── authStore.ts            # isAuthenticated, user, login(), logout(), initAuth()
 │   ├── boardStore.ts           # Active board metadata
-│   ├── taskStore.ts            # Task CRUD, drag-and-drop state
+│   ├── taskStore.ts            # Task CRUD, drag-and-drop state, bulk task selection & move
 │   ├── adminStore.ts           # Admin user/board management state
 │   ├── notificationStore.ts    # Notifications list, unread count
 │   ├── organizationStore.ts    # Active organization profile
 │   ├── preferencesStore.ts     # User UI preferences
 │   ├── projectSettingsStore.ts # Board project settings state
 │   ├── activityStore.ts        # Org activity log state
-│   └── uiStore.ts              # Global UI flags (modals open, sidebar state)
+│   └── uiStore.ts              # Global UI flags (isSearchModalOpen, modal open states, sidebar state)
 ├── styles/                     # Global CSS & Tailwind v4 customizations
 └── utils/                      # Utility helpers
 ```
@@ -162,7 +166,7 @@ graph TD
     PrefStore[preferencesStore — UI Preferences]
     ProjStore[projectSettingsStore — Board Settings]
     ActStore[activityStore — Activity Log]
-    UIStore[uiStore — Modal/Sidebar State]
+    UIStore[uiStore — Modal/Sidebar & Global Search State]
 
     App --> AuthStore
     App --> NotifStore
@@ -173,10 +177,10 @@ graph TD
 
 ### Key Stores:
 1. **`authStore`**: `isAuthenticated`, `isInitializing`, `user` (id, email, role, organization_id), `login()`, `logout()`, `initAuth()`, `updateUserLocally()`.
-2. **`taskStore`**: Task CRUD operations, column state, drag-and-drop position updates, inline editing.
+2. **`taskStore`**: Task CRUD operations, column state, drag-and-drop position updates, bulk task selection and column migration.
 3. **`notificationStore`**: Notification list, unread badge count, mark-read operations.
 4. **`adminStore`**: Superadmin user list, board list, role update operations.
-5. **`uiStore`**: Global UI flags — open modal IDs, sidebar collapsed state.
+5. **`uiStore`**: Global UI flags — open modal IDs, `isSearchModalOpen`, sidebar collapsed state.
 
 ---
 
@@ -218,7 +222,7 @@ export const RequireRole: React.FC<{ allowedRoles: string[] }> = ({ allowedRoles
 All HTTP communication passes through an **Axios client instance** configured in `src/lib/`:
 - **Cookie-based Auth**: No manual `Authorization` header attachment — cookies are sent automatically with every request (`withCredentials: true`).
 - **Response Interceptor**: Intercepts `401 Unauthorized` responses and triggers `authStore.logout({ forced: true })` to clear local state and show session-expired toast.
-- **21 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
+- **22 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
 
 ```mermaid
 sequenceDiagram
@@ -244,15 +248,22 @@ sequenceDiagram
 
 ## 6. Key UI Modules & Layouts
 
-### 6.1 Kanban Board Feature (`src/features/boards/`)
+### 6.1 Global Search & Command Palette (`src/features/search/`)
+- **`SearchModal`**: Modal dialog triggered via `Cmd+K` / `Ctrl+K` or header search button. Displays input field, navigation shortcuts catalog from `navigationCatalog.ts`, and live search results (tasks, boards, meetings) fetched via `searchApi.search(query)`.
+- **`navigationCatalog.ts`**: Static registry of top-level workspace pages and settings routes for instant navigation.
+
+### 6.2 Kanban Board Feature (`src/features/boards/`)
 - **`BoardPage`**: Page wrapper — loads board data, renders header and `KanbanBoard`.
-- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Renders column containers and task cards, handles optimistic reordering.
-- **`TaskCard`**: Individual task card preview — title, assignee avatar, due date, priority badge, comment count. Clicking opens task detail modal.
+- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Renders column containers, task cards, multi-select checkboxes, and floating bulk move toolbar.
+- **`TaskCard`**: Individual task card preview — title, assignee avatar, due date, priority badge, comment count, and multi-select checkbox.
 - **`task-details/`**: Full task detail modal — Markdown description, comment thread, attachment list, inline status/priority/assignee/due date editing.
 - **`AddMemberModal`**: Invite members to a board; supports searching by email and assigning board roles.
 - **`CreateTaskModal`**: Quick task creation form with title, description, assignee, priority, due date.
 
-### 6.2 Dashboard Feature (`src/features/dashboard/`)
+### 6.3 Meeting Subsystem & Transcript Editor (`src/features/meeting/`)
+- **`TranscriptEditor`**: Interactive post-meeting transcript viewer allowing users to edit utterance text, reassign speaker attributions, and save updated transcript turns back to backend.
+
+### 6.4 Dashboard Feature (`src/features/dashboard/`)
 Only accessible to **Manager** and **Superadmin** roles.
 - **`DashboardView`**: Orchestrates all 9 widget components. Fetches from `GET /api/v1/dashboard/summary`.
 - **`KpiCardsRow`**: Displays top-level KPIs: total tasks, tasks by status (todo/in-progress/review/done), overdue tasks, total boards, team size, pending proposals, active meetings.
@@ -265,14 +276,14 @@ Only accessible to **Manager** and **Superadmin** roles.
 - **`QuickActionsWidget`**: Shortcut action buttons for common Manager tasks.
 - **`FocusTasksWidget`**: High-priority or overdue tasks needing immediate attention.
 
-### 6.3 Admin Feature (`src/features/admin/`)
+### 6.5 Admin Feature (`src/features/admin/`)
 Only accessible to **Superadmin** role.
 - **`AdminDashboard`**: Admin panel home with navigation to sub-sections.
 - **`AdminLayout`**: Layout wrapper for all admin pages.
 - **`UsersManagement`**: Full user CRUD — list, create, update role (`MEMBER`/`MANAGER`/`SUPER_ADMIN`), delete.
 - **`BoardPermissions`**: Assign/remove users from boards, manage board member roles.
 
-### 6.4 Notification System (`src/features/notifications/`)
+### 6.6 Notification System (`src/features/notifications/`)
 - **`NotificationBell`**: Header bell icon with live unread badge count.
 - **`NotificationPanel`**: Slide-in panel listing all notifications; includes mark-all-read action.
 - **`NotificationItem`**: Single notification entry with destination deep-linking — resolves to specific task modal, board, or proposal queue.

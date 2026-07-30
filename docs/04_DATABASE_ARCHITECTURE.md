@@ -215,6 +215,7 @@ erDiagram
 | `v_timesheet_org_summary_canonical` | `044_*.sql` | Weekly org-wide timesheet submission & compliance summary analytics. |
 | `v_timesheet_board_hours_canonical` | `044_*.sql` | Board-level hours logging distribution report. |
 | `v_timesheet_member_summary_canonical` | `044_*.sql` | Member-level compliance, logged hours, and submission timeliness metrics. |
+| `v_global_search_canonical` | `051_global_search_view.sql` | Global workspace search index combining tasks, boards, and meetings with full-text search vector and title matching. |
 
 ### 4.2 Authz & Mutation Functions
 
@@ -223,6 +224,7 @@ erDiagram
 | `fn_check_board_access(user_id, board_id)` | `005_*.sql` | Boolean: does this user have access to this board? |
 | `fn_create_task(...)` | `006_*.sql` | Atomically creates a task card and records audit log. |
 | `fn_move_task(task_id, new_column_id, new_position)` | `006_*.sql` | Atomically moves task to column and position. |
+| `fn_bulk_update_tasks(task_ids, target_column_id, user_id)` | `052_bulk_task_operations.sql` | Atomically moves multiple selected task cards into a target board column. |
 | `fn_approve_task_proposal(proposal_id, board_id, reviewer_id)` | `023_*.sql` | Converts approved proposal into a Kanban task card. |
 | `fn_reject_task_proposal(proposal_id, reviewer_id)` | `023_*.sql` | Marks proposal status as `rejected`. |
 | `fn_check_proposal_review_access(user_id, org_id)` | `024_*.sql` | Boolean: is this user a Manager or Superadmin in this org? |
@@ -306,6 +308,8 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 048_timesheet_row_locking.sql
 049_meeting_session_fail_status.sql
 050_meeting_session_rerun.sql
+051_global_search_view.sql
+052_bulk_task_operations.sql
 ```
 
 > [!NOTE]

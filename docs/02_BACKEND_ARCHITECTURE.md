@@ -64,7 +64,7 @@ backend/
 │   ├── database/
 │   │   └── connection.py           # asyncpg pool manager, get_db_connection dependency
 │   ├── meeting/                    # Meeting pipeline subsystem (bot, recorder, orchestrator, attribution)
-│   ├── routers/                    # 21 REST API route handlers:
+│   ├── routers/                    # 22 REST API route handlers:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
@@ -79,15 +79,16 @@ backend/
 │   │   ├── notifications.py        # /notifications — list, mark read, mark all read
 │   │   ├── organization.py         # /organization — org profile & settings
 │   │   ├── preferences.py          # /preferences — user UI & notification preferences
+│   │   ├── search.py               # /search — workspace-wide full-text search across tasks, boards, and meetings
 │   │   ├── task_proposals.py       # /proposals — AI proposal review, approve, reject
-│   │   ├── tasks.py                # /tasks — CRUD, move, reorder
+│   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move
 │   │   ├── timesheets.py           # /timesheets — draft grid, entry upsert/delete, submit, recall
 │   │   ├── timesheet_approvals.py  # /timesheets/approvals — manager approval queue, approve, reject
 │   │   ├── timesheet_admin.py      # /timesheets/policy, /timesheets/approvers, row locking, export
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 20 Pydantic request/response DTO schema files (activity, admin, ai, auth, board, comments, dashboard, envelope, invitations, my_work, notifications, organization, preferences, task, task_proposal, timesheet_admin, timesheet_approvals, timesheets, users)
+│   ├── schemas/                    # 21 Pydantic request/response DTO schema files (activity, admin, ai, auth, board, comments, dashboard, envelope, invitations, my_work, notifications, organization, preferences, search, task, task_proposal, timesheet_admin, timesheet_approvals, timesheets, users)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
@@ -105,7 +106,7 @@ backend/
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
 │       ├── storage_service.py      # Local disk file storage
-│       ├── task_service.py
+│       ├── task_service.py         # Handles CRUD, reordering, and bulk task move via fn_bulk_update_tasks
 │       └── user_service.py
 └── tests/                          # Pytest automated test suites
 ```
@@ -146,18 +147,16 @@ Manages startup and shutdown hooks using `asynccontextmanager`:
 - Security event logging (`fn_log_security_event`) tracking logins, password updates, session revocations, and role changes with IP and User-Agent metadata
 - Configurable organization password policy endpoint (`GET /auth/password-policy`)
 
-### 4.4 Meeting Subsystem (`app/meeting/`)
+### 4.4 Meeting Subsystem & Transcript Editor (`app/meeting/`)
 The meeting subsystem is self-contained and modular:
-- `api/router.py`: Exposes endpoints for managing meeting sessions.
+- `api/router.py`: Exposes endpoints for managing meeting sessions, fetching transcripts, and applying manual transcript text/speaker overrides (`PUT /meeting/sessions/{id}/transcript`).
 - `bot/recorder/recorder.py`: `MeetingRecorder` manages PulseAudio audio capture via an FFmpeg subprocess and WebM stream assembly.
 - `pipeline/orchestrator.py`: `MeetingPipelineOrchestrator` controls sequential execution of meeting stages.
 - `services/meeting_service.py`: `MeetingService` maintains active runtime instances (`MeetingRuntime`) and background tasks.
 
-### 4.5 Dashboard Service (`app/services/dashboard_service.py`)
-Reads three canonical views in a single request cycle:
-1. `v_dashboard_kpis_canonical` — org-wide KPIs (total tasks by status, overdue, boards, team size, pending proposals, active meetings)
-2. `v_dashboard_board_summaries_canonical` — per-board task count, completion %, overdue count, member count
-3. `v_activities_canonical` — last 10 recent activity entries
+### 4.5 Dashboard & Search Services (`app/services/dashboard_service.py`, `app/routers/search.py`)
+- **Dashboard Service**: Reads `v_dashboard_kpis_canonical`, `v_dashboard_board_summaries_canonical`, and `v_activities_canonical` in a single request cycle.
+- **Global Search Router**: Queries `v_global_search_canonical` using PostgreSQL full-text search (`plainto_tsquery('english', q)`) and pattern ILIKE matching to return indexed tasks, boards, and meetings filtered by organization scope.
 
 ---
 

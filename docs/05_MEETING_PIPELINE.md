@@ -92,6 +92,12 @@ sequenceDiagram
 - Updates meeting session status to `PROPOSALS_READY`.
 - Dispatches in-app notifications via `NotificationService` to all **Manager** and **Superadmin** users in the organization.
 
+### Stage 8: Manual Transcript Editing & Speaker Attribution Override (`TranscriptEditor.tsx`)
+- Post-meeting interactive transcript editor (`frontend/src/features/meeting/TranscriptEditor.tsx`).
+- Allows Managers and meeting hosts to manually override speaker assignments, correct STT transcript typos, and re-assign unmapped turns.
+- Saves updated transcript turns via `PUT /api/v1/meeting/sessions/{session_id}/transcript`.
+- Persists modifications directly to `participant_attributed_transcript.json` and updates the session transcript state.
+
 ### Pipeline Failure Handling & Rerun Execution
 If any stage in the pipeline raises an unhandled exception (e.g. transient network timeouts during Deepgram STT or LLM extraction errors):
 1. **Failure Status Update**: The orchestrator catches the exception, logs error details, and executes `fn_fail_meeting_session(session_id)` to set status to `FAILED` and record `failed_at = NOW()`.

@@ -89,3 +89,16 @@ A database concurrency control pattern implemented via `FOR UPDATE` in PL/pgSQL 
 ### Zustand Store
 A lightweight global state container (`zustand` v5) used throughout the KAIO frontend. Replaces React Context for all global state. There are 10 stores: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `uiStore`.
 
+### Global Search Index (v_global_search_canonical)
+A full-text and pattern search view (`051_global_search_view.sql`) combining active tasks, boards, and meeting sessions for an organization into a single searchable tsvector stream queried via `GET /api/v1/search`.
+
+### Bulk Task Operations (fn_bulk_update_tasks)
+A database stored procedure (`052_bulk_task_operations.sql`) and frontend multi-select toolbar pattern enabling users to select multiple task cards on a Kanban board and move them atomically into a target column.
+
+### Navigation Catalog (navigationCatalog.ts)
+A static frontend registry (`src/features/search/navigationCatalog.ts`) mapping workspace routes and settings pages for instant keyboard jump destination filtering inside `SearchModal`.
+
+### Interactive Transcript Editor (TranscriptEditor.tsx)
+A post-meeting React component (`src/features/meeting/TranscriptEditor.tsx`) enabling users to manually edit speech-to-text utterance text and reassign speaker turn attributions post-meeting.
+
+

@@ -348,4 +348,54 @@ sequenceDiagram
     Widget-->>User: Display green PROPOSALS_READY badge & view action items
 ```
 
+---
+
+## 14. Sequence Diagram 13: Global Search Flow (Cmd+K Modal)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as React SPA (AppLayout)
+    participant Modal as SearchModal (Cmd+K)
+    participant API as /api/v1/search
+    participant DB as PostgreSQL DB
+
+    User->>Modal: Press Cmd+K / Ctrl+K key shortcut
+    Modal->>Modal: Open search modal dialog, render static navigationCatalog shortcuts
+    User->>Modal: Type search query string ("pipeline")
+    Modal->>API: GET /api/v1/search?q=pipeline&limit=10 (access_token cookie)
+    API->>DB: SELECT id, title, type, board_id, task_id, org_id FROM v_global_search_canonical WHERE org_id = $1 AND (search_vector @@ plainto_tsquery('english', $2) OR title ILIKE '%' || $2 || '%') LIMIT 10
+    DB-->>API: Search result recordset (matching tasks, boards, meetings)
+    API-->>Modal: 200 OK {data: [SearchResult]}
+    Modal-->>User: Render grouped search results list with keyboard navigation
+    User->>Modal: Select result item (Press Enter or Click)
+    Modal->>User: Close modal and navigate to target page (/boards/1?task=45)
+```
+
+---
+
+## 15. Sequence Diagram 14: Bulk Task Operations Flow (Multi-Select Column Move)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as React SPA (KanbanBoard)
+    participant Store as taskStore (Zustand)
+    participant API as /api/v1/tasks/bulk-move
+    participant DB as PostgreSQL DB
+
+    User->>User: Select multiple task card checkboxes on board
+    User->>User: Floating action toolbar appears showing selected count
+    User->>User: Select target destination column ("In Progress") & click Move
+    User->>Store: taskStore.bulkMoveTasks(taskIds, targetColumnId)
+    Store->>Store: Optimistic UI update (update task column IDs in local store)
+    Store->>API: POST /api/v1/tasks/bulk-move {task_ids: [12, 14, 19], column_id: 3}
+    API->>DB: SELECT fn_bulk_update_tasks($1, $2, $3)
+    DB->>DB: UPDATE tasks SET column_id = $2 WHERE id = ANY($1) AND board_id IN (...)
+    DB-->>API: moved_count = 3
+    API-->>Store: 200 OK {data: {moved_count: 3, message: "Successfully moved 3 tasks"}}
+    Store-->>User: Clear selection & display success toast notification
+```
+
+
 

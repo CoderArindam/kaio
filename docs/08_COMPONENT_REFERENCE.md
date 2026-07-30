@@ -226,39 +226,49 @@ This document provides a reference catalog of the primary React UI components wi
 
 ## 12. Meeting Feature (`src/features/meeting/`)
 
-Meeting UI components expose joining controls and active session status indicators. (See `05_MEETING_PIPELINE.md` for full pipeline details.)
+Meeting UI components expose joining controls, active session status indicators, and post-meeting transcript management:
+- **`TranscriptEditor`** (`features/meeting/TranscriptEditor.tsx`): Interactive post-meeting transcript viewer allowing users to edit utterance text, reassign speaker attributions, and save updated transcript turns back to backend.
 
 ---
 
-## 13. My Work Feature (`src/features/my-work/`)
+## 13. Search Feature (`src/features/search/`)
 
-### 13.1 `MyWorkPage`
+| Component / Utility | Path | Description |
+|---|---|---|
+| `SearchModal` | `features/search/SearchModal.tsx` | Cmd+K workspace-wide global search modal dialog. Queries tasks, boards, and meetings via `searchApi` and displays keyboard-navigable search results. |
+| `navigationCatalog` | `features/search/navigationCatalog.ts` | Static catalog of workspace navigation shortcut destinations for instant page jumping. |
+
+---
+
+## 14. My Work Feature (`src/features/my-work/`)
+
+### 14.1 `MyWorkPage`
 - **Path**: `features/my-work/MyWorkPage.tsx`
 - **Purpose**: Aggregates tasks assigned to the current user across all boards. Supports `due` filter (all/today/week/overdue), `sort` (due/priority/created), and pagination.
 
 ---
 
-## 14. Project Settings Feature (`src/features/projects/`)
+## 15. Project Settings Feature (`src/features/projects/`)
 
-### 14.1 `ProjectSettingsPage`
+### 15.1 `ProjectSettingsPage`
 - **Path**: `features/projects/ProjectSettingsPage.tsx`
 - **Purpose**: Board-level settings page — edit board name, description, project key, icon, color, cover gradient. Archived status toggle. Gated to Manager/Admin roles.
 
-### 14.2 `ProjectSettingsLayout`
+### 15.2 `ProjectSettingsLayout`
 - **Path**: `features/projects/ProjectSettingsLayout.tsx`
 - **Purpose**: Layout wrapper with tabs for General, Members, and Danger Zone board settings sections.
 
 ---
 
-## 15. Timesheets Feature (`src/features/timesheets/`)
+## 16. Timesheets Feature (`src/features/timesheets/`)
 
-### 15.1 Member Timesheet Components (`src/features/timesheets/member/`)
+### 16.1 Member Timesheet Components (`src/features/timesheets/member/`)
 - **`MyTimesheetsPage`** (`member/MyTimesheetsPage.tsx`): Main user timesheet workspace with week navigation bar, recent week tabs, rejection warning banner, and `+ Log Effort` button.
 - **`TimesheetWeekView`** (`member/TimesheetWeekView.tsx`): Core weekly time logging grid. Renders daily column headers, project/task row groups, auto-save state indicators, and summary totals.
 - **`TimesheetSummaryBar`** (`member/TimesheetSummaryBar.tsx`): Bottom sticky status bar displaying status badge, total hours, policy compliance check, and action buttons (`Submit for Approval`, `Recall`).
 - **`TimeEntryRow`** (`member/TimeEntryRow.tsx`): Renders a single row of 7 daily time input cells for a specific task/general work item.
 
-### 15.2 Member Modals (`src/features/timesheets/member/modals/`)
+### 16.2 Member Modals (`src/features/timesheets/member/modals/`)
 - **`AddBoardModal`**: Modal dialog for selecting an accessible project board to add to the timesheet.
 - **`AddEntryModal`**: Modal for selecting work item type (task/general/leave/meeting) and specific task.
 - **`EditEntryModal`**: Modal for editing specific entry date, hours, work item type, and description.
@@ -266,17 +276,18 @@ Meeting UI components expose joining controls and active session status indicato
 - **`SubmitTimesheetModal`**: Submission dialog with optional member note and approver selection dropdown.
 - **`RecallTimesheetModal`**: Confirmation modal to recall a submitted timesheet with mandatory reason input.
 
-### 15.3 Approvals Feature Components (`src/features/timesheets/approvals/`)
+### 16.3 Approvals Feature Components (`src/features/timesheets/approvals/`)
 - **`ApprovalQueuePage`** (`approvals/ApprovalQueuePage.tsx`): Manager/Superadmin approval workspace. Filterable table of submitted timesheets with status, days pending, overdue status, and review actions.
 - **`ApprovalQueueSummaryCards`** (`approvals/ApprovalQueueSummaryCards.tsx`): Summary metrics cards (pending count, approved this week, rejected this week, avg hours approved).
 - **`TimesheetReviewModal`** (`approvals/TimesheetReviewModal.tsx`): Deep review modal allowing managers to inspect all entries, daily totals, audit history, and execute `Approve` or `Reject` actions (with mandatory feedback comment).
 
-### 15.4 Admin & Policy Components (`src/features/timesheets/admin/`)
+### 16.4 Admin & Policy Components (`src/features/timesheets/admin/`)
 - **`TimesheetAdminPage`** (`admin/TimesheetAdminPage.tsx`): Organization-wide timesheet configuration page (Superadmin-gated). Tabbed interface for Overview, Policy, Approvers, Row Locking Management (lock/unlock timesheet rows), Audit Trail, and Report Export (CSV).
 - **`TimesheetPolicyForm`** (`admin/TimesheetPolicyForm.tsx`): Form for configuring week start day, standard hours/day, max hours/day, overtime policy, deadline days, future entry rules, task link requirements, and recall toggles.
 - **`ApproverAssignmentManager`** (`admin/ApproverAssignmentManager.tsx`): Interface for managing designated organization approvers.
 
-### 15.5 Shared Helpers (`src/features/timesheets/shared/`)
+### 16.5 Shared Helpers (`src/features/timesheets/shared/`)
 - **`TimesheetErrorBanner`** (`shared/TimesheetErrorBanner.tsx`): Standardized error display banner mapping database error codes (`OVERTIME_BLOCKED`, `TASK_NOT_ASSIGNED`, `TASK_LINK_REQUIRED`, `TASK_ASSIGNMENT_CHANGED`, etc.) to user-friendly alert banners with recovery guidance.
 - **`TaskSearchSelector`** (`shared/TaskSearchSelector.tsx`): Auto-completing task search dropdown component for linking time entries directly to assigned Kanban tasks.
+
 

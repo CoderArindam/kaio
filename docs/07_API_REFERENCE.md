@@ -70,6 +70,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/tasks/{id}` | `GET` | Cookie | Fetches detailed task information (`v_tasks_canonical`). |
 | `/tasks/{id}` | `PUT` | Cookie | Updates task title, description, assignee, priority, or due date. |
 | `/tasks/{id}/move` | `POST` | Cookie | Atomically moves task to a new column and position (`fn_move_task`). |
+| `/tasks/bulk-move` | `POST` | Cookie | Atomically moves multiple tasks into a target column (`fn_bulk_update_tasks`). Body: `{task_ids: number[], column_id: number}`. |
 | `/tasks/{id}` | `DELETE` | Cookie | Soft-deletes a task card. |
 | `/tasks/{id}/attachments` | `POST` | Cookie | Uploads a file attachment to a task. Stored on local disk at `uploads/`. |
 
@@ -215,6 +216,7 @@ Requires **Manager or Superadmin** role (`require_proposal_review_access`).
 | `/meeting/leave` | `POST` | Cookie | Triggers bot teardown, flushes WebM, and runs pipeline. |
 | `/meeting/status/{session_id}` | `GET` | Cookie | Queries active runtime session state (`JOINING`, `RECORDING`, `PROCESSING`, `PROPOSALS_READY`, `FAILED`). |
 | `/meeting/transcript/{session_id}` | `GET` | Cookie | Returns completed `participant_attributed_transcript.json`. |
+| `/meeting/sessions/{session_id}/transcript` | `PUT` | Cookie (RBAC) | Updates transcript turns and speaker attributions post-meeting. |
 | `/meeting/sessions` | `GET` | Cookie | Lists meeting sessions for current organization (`v_meeting_sessions_canonical`). Accepts optional `limit` query param. |
 | `/meeting/{session_id}/rerun` | `POST` | Cookie (RBAC) | Resets session status from `FAILED` back to `PROCESSING` and triggers background pipeline rerun using stored audio. |
 
@@ -305,4 +307,13 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
 | `/timesheets/reports/member-compliance` | `GET` | Cookie (Superadmin) | Member compliance and submission timeliness report (`v_timesheet_member_summary_canonical`). |
 | `/timesheets/{timesheet_id}/lock` | `POST` | Cookie (Superadmin) | Toggles or updates row-level lock status (`locked`, `locked_at`, `locked_by`) for a timesheet. |
 | `/timesheets/export` | `GET` | Cookie (Superadmin) | Exports detailed organization timesheet effort report data in CSV format. |
+
+---
+
+## 24. Global Search Router (`/api/v1`)
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/search` | `GET` | Cookie | Workspace-wide full-text and title search querying `v_global_search_canonical`. Params: `q` (query string), `limit` (max results, default 10, max 50). Returns matching tasks, boards, and meetings for active organization. |
+
 
