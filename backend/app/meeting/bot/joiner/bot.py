@@ -188,12 +188,25 @@ class GoogleMeetJoiner:
 
     async def _set_display_name(self, page: Any, name: str) -> None:
         """Fill the display name field if visible."""
+        if not name:
+            return
         try:
-            name_input = page.locator(SEL["name_input"])
+            name_input = page.locator(SEL["name_input"]).first
             if await name_input.count() > 0:
-                await name_input.clear()
-                await name_input.fill(name)
-                log.debug("Display name set", name=name)
+                try:
+                    await name_input.click(force=True, timeout=2000)
+                    await name_input.fill(name, timeout=2000)
+                    log.info("Display name set", name=name)
+                    return
+                except Exception:
+                    pass
+
+                # JS evaluation fallback to bypass Playwright actionability timeouts
+                await name_input.evaluate(
+                    "(el, val) => { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }",
+                    name
+                )
+                log.info("Display name set via JS fallback", name=name)
         except Exception as exc:
             log.warning("Could not set display name", error=str(exc))
 
@@ -217,9 +230,9 @@ class GoogleMeetJoiner:
     async def _try_click_join_now(self, page: Any) -> bool:
         for selector_key in ("join_now_btn", "join_now_jsname"):
             try:
-                btn = page.locator(SEL[selector_key])
+                btn = page.locator(SEL[selector_key]).first
                 if await btn.count() > 0:
-                    await btn.first.click()
+                    await btn.click(force=True, timeout=3000)
                     log.info("meeting.join.joining — clicked 'Join now'")
                     return True
             except Exception:
@@ -228,9 +241,9 @@ class GoogleMeetJoiner:
 
     async def _try_click_ask_to_join(self, page: Any) -> bool:
         try:
-            btn = page.locator(SEL["ask_to_join_btn"])
+            btn = page.locator(SEL["ask_to_join_btn"]).first
             if await btn.count() > 0:
-                await btn.first.click()
+                await btn.click(force=True, timeout=3000)
                 log.info("meeting.join.waiting — clicked 'Ask to join'")
                 return True
         except Exception:
