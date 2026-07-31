@@ -29,12 +29,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    samesite_val = "none" if settings.COOKIE_SECURE else "lax"
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite=samesite_val,
         max_age=15 * 60 # 15 minutes
     )
     response.set_cookie(
@@ -42,7 +43,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         value=refresh_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite=samesite_val,
         path="/api/v1/auth",
         max_age=7 * 24 * 60 * 60 # 7 days
     )
@@ -145,8 +146,9 @@ async def logout(
     token = request.cookies.get("refresh_token")
     await auth_service.logout(token)
 
-    response.delete_cookie(key="access_token", httponly=True, secure=settings.COOKIE_SECURE, samesite="lax")
-    response.delete_cookie(key="refresh_token", httponly=True, secure=settings.COOKIE_SECURE, samesite="lax", path="/api/v1/auth")
+    samesite_val = "none" if settings.COOKIE_SECURE else "lax"
+    response.delete_cookie(key="access_token", httponly=True, secure=settings.COOKIE_SECURE, samesite=samesite_val)
+    response.delete_cookie(key="refresh_token", httponly=True, secure=settings.COOKIE_SECURE, samesite=samesite_val, path="/api/v1/auth")
     
     return {"message": "Logged out successfully"}
 
