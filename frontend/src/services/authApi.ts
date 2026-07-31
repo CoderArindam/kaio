@@ -39,3 +39,19 @@ export const getPasswordPolicy = async () => {
   const response = await api.get('/auth/password-policy');
   return response.data;
 };
+
+export const forgotPassword = async (email: string) => {
+  await api.post('/auth/forgot-password', { email });
+};
+
+export const resetPassword = async (token: string, newPassword: string) => {
+  await api.post('/auth/reset-password', { token, new_password: newPassword });
+};
+
+export const sendVerificationEmail = async () => {
+  await api.post('/auth/send-verification-email');
+};
+
+export const verifyEmail = async (token: string) => {
+  await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+};

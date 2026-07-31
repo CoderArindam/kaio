@@ -23,15 +23,15 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 }) => {
   const navigate = useNavigate();
   const { is_read } = notification;
-  const mockActivity = {
+  const activityPayload = {
     activity_type: notification.activity_type,
     actor_first_name: notification.activity_actor_first_name,
     actor_last_name: notification.activity_actor_last_name,
-    actor_email: 'Someone',
+    actor_email: undefined,
     old_value: notification.activity_old_value,
     new_value: notification.activity_new_value,
   } as any;
-  const formatted = formatActivity(mockActivity, notification.user_id);
+  const formatted = formatActivity(activityPayload, notification.user_id);
   const openTaskModal = useUiStore((state) => state.openTaskModal);
 
   const handleClick = () => {

@@ -191,3 +191,67 @@ Thanks,
 
 The Team
 """
+
+
+def generate_password_reset_email(first_name: str, reset_url: str) -> tuple[str, str]:
+    subject = "Reset your KAIO password"
+    body = f"""
+Hi {first_name} 👋
+
+
+You requested a password reset for your KAIO account.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔑 Reset Your Password
+
+Click the link below to set a new password:
+
+{reset_url}
+
+⏰ This link expires in 1 hour.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+🔒 If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+
+
+
+Thanks,
+
+The Team
+"""
+    return subject, body
+
+
+def generate_email_verification_email(first_name: str, verify_url: str) -> tuple[str, str]:
+    subject = "Verify your KAIO email address"
+    body = f"""
+Hi {first_name} 👋
+
+
+Please verify your email address to complete your KAIO account setup.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+✉️ Verify Your Email
+
+Click the link below to verify your email address:
+
+{verify_url}
+
+⏰ This link expires in 24 hours.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+Thanks,
+
+The Team
+"""
+    return subject, body

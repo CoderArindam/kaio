@@ -22,6 +22,10 @@ Welcome to the official, complete technical documentation suite for **KAIO** (Ka
 | **12** | [Glossary](./12_GLOSSARY.md) | Authoritative glossary defining all domain-specific terminology: WebSocket Connection Manager, Board Event Broadcasting, Bidirectional Task Deep Linking, httpOnly cookie auth, Zustand stores, RBAC roles, board columns, canonical views, invitations, security events, meeting session rerun pipeline, global search index, bulk task move, navigation catalog, transcript editor, timesheets, row locking, and more. |
 | **13** | [Chrome Extension Architecture](./13_CHROME_EXTENSION_ARCHITECTURE.md) | Dedicated guide to the Manifest V3 Chrome Extension: DOM observers, MutationObserver, background service worker, and real-time backend presence event dispatch. |
 | **14** | [VPS Meeting Bot Deployment](./14_VPS_MEETING_BOT_DEPLOYMENT.md) | Complete Linux VPS deployment guide for KAIO Meeting Bot: Chromium, Playwright, FFmpeg, PulseAudio/PipeWire virtual audio sink (`kaio_sink`), Xvfb frame buffer, startup/shutdown scripts, systemd unit, and health check diagnostics. |
+| **15** | [SaaS Gap Analysis](./15_SAAS_GAP_ANALYSIS.md) | Comprehensive SaaS gap analysis detailing missing commercial B2B features: Stripe billing & usage metering, enterprise SSO/SAML 2.0, SCIM 2.0, developer API & webhooks engine, calendar & Zoom/Teams sync, GDPR privacy tools, Redis job queue, and 3-phase transformation roadmap. |
+| **16** | [Basic Day-to-Day Feature Gaps](./16_BASIC_FEATURE_GAPS.md) | Detailed analysis of basic end-user product gaps: task tags/labels, list/calendar/timeline board views, custom columns & WIP limits, task dependencies, live stopwatch timer, PTO/leave logging, interactive audio player, rich text editor with @mentions, and light/dark theme switcher. |
+
+
 
 
 ---

@@ -61,7 +61,7 @@ class TaskProposalUpdateIn(BaseModel):
     """Input payload for editing a pending proposal."""
     title: Optional[str] = Field(default=None, min_length=1, description="Updated proposal title")
     description: Optional[str] = Field(default=None, description="Updated proposal description")
-    priority: Optional[str] = Field(default=None, description="Updated priority (LOW, MEDIUM, HIGH, URGENT)")
+    priority: Optional[str] = Field(default=None, description="Updated priority (LOW, MEDIUM, HIGH)")
     due_date: Optional[datetime] = Field(default=None, description="Updated due date")
     suggested_assignee_id: Optional[int] = Field(default=None, description="Updated suggested assignee user ID")
     board_id: Optional[int] = Field(default=None, description="Updated target board ID override")

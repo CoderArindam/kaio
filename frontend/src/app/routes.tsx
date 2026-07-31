@@ -7,6 +7,9 @@ import Login from '../features/auth/Login';
 import Signup from '../features/auth/Signup';
 import LandingPage from '../features/auth/LandingPage';
 import AcceptInvitation from '../features/auth/AcceptInvitation';
+import ForgotPassword from '../features/auth/ForgotPassword';
+import ResetPassword from '../features/auth/ResetPassword';
+import VerifyEmail from '../features/auth/VerifyEmail';
 
 import DashboardView from '../features/dashboard/DashboardView';
 import BoardPage from '../features/boards/BoardPage';
@@ -53,6 +56,9 @@ export const AppRoutes: React.FC = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

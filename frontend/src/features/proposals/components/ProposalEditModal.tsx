@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import Modal from '../../../components/common/Modal';
-import type { TaskProposal } from '../../../services/taskProposals';
-import type { Board } from '../../../services/boardsApi';
-import { getUsers, type User } from '../../../services/usersApi';
-import { Check, Calendar, Flag, User as UserIcon, Layout } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import Modal from "../../../components/common/Modal";
+import type { TaskProposal } from "../../../services/taskProposals";
+import type { Board } from "../../../services/boardsApi";
+import { getUsers, type User } from "../../../services/usersApi";
+import { Check, Calendar, Flag, User as UserIcon, Layout } from "lucide-react";
 
 interface ProposalEditModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ interface ProposalEditModalProps {
       board_id: number | null;
       priority: string | null;
       due_date: string | null;
-    }
+    },
   ) => Promise<void>;
 }
 
@@ -30,12 +30,12 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
   boards,
   onSubmit,
 }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
   const [boardId, setBoardId] = useState<number | null>(null);
-  const [priority, setPriority] = useState<string>('Medium');
-  const [dueDate, setDueDate] = useState<string>('');
+  const [priority, setPriority] = useState<string>("Medium");
+  const [dueDate, setDueDate] = useState<string>("");
   const [users, setUsers] = useState<User[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -46,33 +46,33 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
 
   useEffect(() => {
     if (proposal) {
-      setTitle(proposal.title || '');
-      setDescription(proposal.description || '');
+      setTitle(proposal.title || "");
+      setDescription(proposal.description || "");
       setAssigneeId(proposal.suggested_assignee_id || null);
       setBoardId(proposal.board_id || null);
 
-      // 1. Normalize priority to match select option values ('Low', 'Medium', 'High', 'Urgent')
-      let p = (proposal.priority || 'Medium').trim();
+      // 1. Normalize priority to match select option values ('Low', 'Medium', 'High')
+      let p = (proposal.priority || "Medium").trim();
       if (p) {
         p = p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
       }
-      if (!['Low', 'Medium', 'High', 'Urgent'].includes(p)) {
-        p = 'Medium';
+      if (!["Low", "Medium", "High"].includes(p)) {
+        p = "Medium";
       }
       setPriority(p);
 
       // 2. Format due_date safely as YYYY-MM-DD for HTML5 date input
-      let formattedDate = '';
+      let formattedDate = "";
       if (proposal.due_date) {
         try {
           const d = new Date(proposal.due_date);
           if (!isNaN(d.getTime())) {
-            formattedDate = d.toISOString().split('T')[0];
+            formattedDate = d.toISOString().split("T")[0];
           } else {
-            formattedDate = proposal.due_date.split('T')[0].split(' ')[0];
+            formattedDate = proposal.due_date.split("T")[0].split(" ")[0];
           }
         } catch {
-          formattedDate = (proposal.due_date || '').split('T')[0].split(' ')[0];
+          formattedDate = (proposal.due_date || "").split("T")[0].split(" ")[0];
         }
       }
       setDueDate(formattedDate);
@@ -85,12 +85,12 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
     if (!proposal) return;
 
     if (!title.trim()) {
-      setErrorMessage('Task title is required');
+      setErrorMessage("Task title is required");
       return;
     }
 
     if (!boardId) {
-      setErrorMessage('Target board selection is required');
+      setErrorMessage("Target board selection is required");
       return;
     }
 
@@ -109,7 +109,10 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
       onClose();
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const msg = typeof detail === 'object' && detail?.message ? detail.message : (detail || 'Failed to edit and approve proposal');
+      const msg =
+        typeof detail === "object" && detail?.message
+          ? detail.message
+          : detail || "Failed to edit and approve proposal";
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
@@ -119,7 +122,12 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
   if (!proposal) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit & Approve Proposal" width="max-w-xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit & Approve Proposal"
+      width="max-w-xl"
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {errorMessage && (
           <div className="p-3 text-xs bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
@@ -134,8 +142,10 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
             Target Board <span className="text-red-400">*</span>
           </label>
           <select
-            value={boardId || ''}
-            onChange={(e) => setBoardId(e.target.value ? Number(e.target.value) : null)}
+            value={boardId || ""}
+            onChange={(e) =>
+              setBoardId(e.target.value ? Number(e.target.value) : null)
+            }
             className="w-full px-3 py-2 text-sm bg-brand-surface-low border border-brand-border rounded-lg text-brand-text focus:outline-none focus:border-brand-primary"
             required
           >
@@ -193,7 +203,6 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
-              <option value="Urgent">Urgent</option>
             </select>
           </div>
 
@@ -218,13 +227,17 @@ export const ProposalEditModal: React.FC<ProposalEditModalProps> = ({
               Assignee
             </label>
             <select
-              value={assigneeId || ''}
-              onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : null)}
+              value={assigneeId || ""}
+              onChange={(e) =>
+                setAssigneeId(e.target.value ? Number(e.target.value) : null)
+              }
               className="w-full px-3 py-2 text-sm bg-brand-surface-low border border-brand-border rounded-lg text-brand-text focus:outline-none focus:border-brand-primary"
             >
               <option value="">Unassigned</option>
               {users.map((u) => {
-                const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email;
+                const name =
+                  [u.first_name, u.last_name].filter(Boolean).join(" ") ||
+                  u.email;
                 return (
                   <option key={u.id} value={u.id}>
                     {name}

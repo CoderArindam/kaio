@@ -251,7 +251,7 @@ class UpdateTaskParams(BaseModel):
     title: Optional[str] = Field(None, alias="new_name", description="The NEW title of the task (if you want to rename it)")
     description: Optional[str] = Field(None, description="The NEW description of the task")
     status: Optional[str] = Field(None, description="The NEW status (column) of the task (e.g. To Do, In Progress, Done)")
-    priority: Optional[str] = Field(None, description="Priority of the task (e.g. Low, Medium, High, Urgent)")
+    priority: Optional[str] = Field(None, description="Priority of the task (e.g. Low, Medium, High)")
     assignee_name: Optional[str] = Field(None, alias="assignee", description="The first name, last name, or email of the person to assign the task to")
     due_date: Optional[str] = Field(None, description="ISO format date string for when the task is due")
 

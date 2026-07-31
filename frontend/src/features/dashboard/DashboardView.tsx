@@ -219,9 +219,15 @@ export const DashboardView: React.FC = () => {
             {getGreeting()}, {userName}
           </h1>
           {canAccessAdminFeatures ? (
-            <p className="text-sm text-brand-text-muted mt-1 font-medium">
-              Today: {pendingProposalsCount} new AI recommendations, {summaryBoards.length > 0 ? summaryBoards.filter(b => b.overdue_count === 0).length : Math.max(1, activeBoards.length)} projects on track, and {kpis && kpis.total_tasks > 0 ? Math.round(((kpis.tasks_by_status?.done || 0) / kpis.total_tasks) * 100) : 92}% efficiency rate.
-            </p>
+            (() => {
+              const onTrackCount = summaryBoards.length > 0 ? summaryBoards.filter(b => b.overdue_count === 0).length : activeBoards.length;
+              const efficiencyRate = kpis && kpis.total_tasks > 0 ? Math.round(((kpis.tasks_by_status?.done || 0) / kpis.total_tasks) * 100) : 0;
+              return (
+                <p className="text-sm text-brand-text-muted mt-1 font-medium">
+                  Today: {pendingProposalsCount} new AI recommendation{pendingProposalsCount === 1 ? '' : 's'}, {onTrackCount} project{onTrackCount === 1 ? '' : 's'} on track, and {efficiencyRate}% efficiency rate.
+                </p>
+              );
+            })()
           ) : (
             <p className="text-sm text-brand-text-muted mt-1 font-medium">
               Here's an overview of your assigned projects and tasks.

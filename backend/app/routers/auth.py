@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, Request
+from fastapi.responses import JSONResponse
 from typing import List
 
 from app.schemas.auth import (
@@ -10,8 +11,13 @@ from app.schemas.auth import (
     UserResponse,
     SessionResponse,
     SecurityEventResponse,
-    PasswordPolicy
+    PasswordPolicy,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
+from app.services.email_service import send_email
+from app.services.email_templates import generate_password_reset_email, generate_email_verification_email
+from app.auth.password import get_password_hash
 from app.auth.jwt import create_access_token
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
@@ -183,3 +189,82 @@ async def get_password_policy():
         "require_number": True,
         "require_special": True
     }
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    result = await auth_service.create_password_reset_token(body.email)
+
+    if result is not None:
+        reset_url = f"{settings.FRONTEND_ORIGINS.split(',')[0].strip()}/reset-password?token={result['raw_token']}"
+        subject, email_body = generate_password_reset_email(result["user_first_name"] or "there", reset_url)
+        background_tasks.add_task(send_email, body.email, subject, email_body)
+
+    return {"data": {"message": "If that email is registered, a reset link has been sent."}}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    hashed_password = get_password_hash(body.new_password)
+    result = await auth_service.reset_password(body.token, hashed_password)
+
+    if not result["success"]:
+        error_messages = {
+            "TOKEN_INVALID": "This reset link is invalid. Please request a new one.",
+            "TOKEN_EXPIRED": "This reset link has expired. Please request a new one.",
+        }
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": error_messages.get(result["error_code"], "An error occurred."),
+                "error_code": result["error_code"],
+            },
+        )
+
+    return {"data": {"message": "Password reset successfully. Please log in."}}
+
+
+@router.post("/send-verification-email")
+async def send_verification_email(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    raw_token = await auth_service.create_email_verification_token(current_user["id"])
+    verify_url = f"{settings.FRONTEND_ORIGINS.split(',')[0].strip()}/verify-email?token={raw_token}"
+
+    user_row = await auth_service.get_me(current_user)
+    subject, email_body = generate_email_verification_email(user_row.get("first_name") or "there", verify_url)
+    background_tasks.add_task(send_email, user_row["email"], subject, email_body)
+
+    return {"data": {"message": "Verification email sent."}}
+
+
+@router.get("/verify-email")
+async def verify_email(
+    token: str = Query(...),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    result = await auth_service.verify_email(token)
+
+    if not result["success"]:
+        error_messages = {
+            "TOKEN_INVALID": "This verification link is invalid.",
+            "TOKEN_EXPIRED": "This verification link has expired.",
+        }
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": error_messages.get(result["error_code"], "An error occurred."),
+                "error_code": result["error_code"],
+            },
+        )
+
+    return {"data": {"message": "Email verified successfully."}}

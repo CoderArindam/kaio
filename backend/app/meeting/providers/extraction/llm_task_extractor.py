@@ -23,7 +23,7 @@ class LLMExtractedTaskPayload(BaseModel):
     """Pydantic validation schema for raw LLM JSON items."""
     title: str = Field(..., description="Actionable title summarizing the work item")
     description: Optional[str] = Field(default="", description="Technical context and details from meeting")
-    priority: Optional[str] = Field(default="MEDIUM", description="Task priority (LOW, MEDIUM, HIGH, URGENT)")
+    priority: Optional[str] = Field(default="MEDIUM", description="Task priority (LOW, MEDIUM, HIGH)")
     due_date: Optional[str] = Field(default=None, description="ISO date string (YYYY-MM-DD) if target deadline mentioned, else null")
     suggested_assignee_name: Optional[str] = Field(default=None, description="Name or full name of person designated to perform or receive the task (e.g. 'Arindam Mukherjee')")
     suggested_speaker_label: Optional[str] = Field(default=None, description="Speaker name or label responsible")

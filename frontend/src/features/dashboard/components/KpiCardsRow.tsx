@@ -81,7 +81,7 @@ export const KpiCardsRow: React.FC<KpiCardsRowProps> = ({
   const pendingProps = kpis?.pending_proposals_count !== undefined ? kpis.pending_proposals_count : pendingProposalsCount;
 
   const doneCount = kpis?.tasks_by_status?.done || 0;
-  const efficiencyRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 92;
+  const efficiencyRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
   const onScheduleCount = Math.max(0, activeBoards - (kpis?.overdue_tasks || 0));
 
   return (
@@ -135,7 +135,7 @@ export const KpiCardsRow: React.FC<KpiCardsRowProps> = ({
         </div>
 
         <div className="flex justify-end pt-2 text-xs font-medium text-brand-text-muted">
-          Today: <span className="font-bold text-brand-text ml-1">{kpis?.tasks_by_status?.todo || 18}</span>
+          To Do: <span className="font-bold text-brand-text ml-1">{kpis?.tasks_by_status?.todo ?? 0}</span>
         </div>
       </Card>
 
@@ -185,7 +185,7 @@ export const KpiCardsRow: React.FC<KpiCardsRowProps> = ({
         </div>
 
         <div className="flex justify-end pt-2 text-xs font-medium text-brand-text-muted">
-          Last Week: <span className="font-bold text-brand-text ml-1">89%</span>
+          Completed: <span className="font-bold text-brand-text ml-1">{doneCount}</span>
         </div>
       </Card>
 

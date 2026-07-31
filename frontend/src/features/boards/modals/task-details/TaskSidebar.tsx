@@ -61,10 +61,20 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
       <div className="pt-4 border-t border-brand-border">
         <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-brand-outline text-white flex items-center justify-center text-[10px]">
-            #{task.created_by}
-          </div>
-          <span className="text-sm text-brand-text">User #{task.created_by}</span>
+          {task.creator_avatar_url ? (
+            <img
+              src={task.creator_avatar_url}
+              alt="Reporter"
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px] font-bold">
+              {((task.creator_first_name?.[0] || task.creator_email?.[0] || 'U')).toUpperCase()}
+            </div>
+          )}
+          <span className="text-sm text-brand-text">
+            {[task.creator_first_name, task.creator_last_name].filter(Boolean).join(' ') || task.creator_email || `User #${task.created_by || '—'}`}
+          </span>
         </div>
       </div>
 
@@ -76,17 +86,21 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
       <div className="pt-4 border-t border-brand-border">
         <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Labels</p>
         <div className="flex gap-2 flex-wrap">
-          {["backend", "authentication", "bug"].map((label) => (
-            <span
-              key={label}
-              className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text-muted cursor-not-allowed opacity-70"
-            >
-              {label}
+          {task.priority && (
+            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text font-medium">
+              {task.priority.toLowerCase()}
             </span>
-          ))}
-          <button disabled className="px-2.5 py-1 rounded-md border border-dashed border-brand-border text-xs text-brand-text-muted cursor-not-allowed hover:bg-brand-surface-low opacity-70">
-            + Add Label
-          </button>
+          )}
+          {task.column_name && (
+            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text-muted">
+              {task.column_name.toLowerCase()}
+            </span>
+          )}
+          {task.task_reference && (
+            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text-muted font-mono">
+              {task.task_reference}
+            </span>
+          )}
         </div>
       </div>
     </aside>

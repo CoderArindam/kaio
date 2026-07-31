@@ -94,6 +94,16 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
+          {/* Forgot Password Link */}
+          <div className="flex justify-end">
+            <Link
+              to="/forgot-password"
+              className="text-xs text-brand-primary hover:text-brand-primary-hover font-medium transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {/* Submit */}
           <button
             type="submit"

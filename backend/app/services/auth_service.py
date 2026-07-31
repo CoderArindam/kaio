@@ -233,6 +233,32 @@ class AuthService:
             json.dumps({"browser": browser, "platform": platform, "status": "Success"})
         )
 
+    async def create_password_reset_token(self, email: str) -> dict | None:
+        row = await self.conn.fetchrow(
+            "SELECT * FROM fn_create_password_reset_token($1)", email
+        )
+        if not row:
+            return None
+        return {"raw_token": row["raw_token"], "user_first_name": row["user_first_name"]}
+
+    async def reset_password(self, token: str, new_password_hash: str) -> dict:
+        row = await self.conn.fetchrow(
+            "SELECT * FROM fn_reset_password($1, $2)", token, new_password_hash
+        )
+        return {"success": row["success"], "error_code": row["error_code"]}
+
+    async def create_email_verification_token(self, user_id: int) -> str:
+        raw_token = await self.conn.fetchval(
+            "SELECT fn_create_email_verification_token($1)", user_id
+        )
+        return raw_token
+
+    async def verify_email(self, token: str) -> dict:
+        row = await self.conn.fetchrow(
+            "SELECT * FROM fn_verify_email($1)", token
+        )
+        return {"success": row["success"], "error_code": row["error_code"]}
+
     async def get_security_events(self, current_user: dict) -> List[dict]:
         rows = await self.conn.fetch(
             "SELECT id, action, ip_address, details, created_at FROM fn_get_user_security_events($1, 50)",

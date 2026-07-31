@@ -29,7 +29,7 @@ export const NotificationSettings: React.FC = () => {
   const [activeView, setActiveView] = useState<'feed' | 'preferences'>('feed');
   const [feedFilter, setFeedFilter] = useState<'all' | 'unread'>('all');
 
-  // Preferences UI mock state
+  // Notification Channel Preferences State
   const [preferences, setPreferences] = useState({
     taskAssignedEmail: true,
     taskAssignedInApp: true,

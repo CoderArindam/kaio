@@ -102,6 +102,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         "/api/v1/auth/register",
         "/api/v1/auth/refresh",
         "/api/v1/invitations/accept",
+        "/api/v1/auth/forgot-password",
+        "/api/v1/auth/reset-password",
+        "/api/v1/auth/verify-email",
     }
 
     async def dispatch(self, request: Request, call_next):

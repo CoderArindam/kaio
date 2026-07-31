@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import type { TaskProposal } from '../../../services/taskProposals';
-import type { Board } from '../../../services/boardsApi';
-import UserAvatar from '../../../components/common/UserAvatar';
+import React, { useState } from "react";
+import type { TaskProposal } from "../../../services/taskProposals";
+import type { Board } from "../../../services/boardsApi";
+import UserAvatar from "../../../components/common/UserAvatar";
 import {
   Check,
   X,
@@ -12,7 +12,7 @@ import {
   Sparkles,
   AlertCircle,
   Kanban,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface ProposalCardProps {
   proposal: TaskProposal;
@@ -31,13 +31,14 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
 }) => {
   const [showQuote, setShowQuote] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState<number | null>(
-    proposal.board_id || null
+    proposal.board_id || null,
   );
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
 
   const confidence =
-    proposal.confidence_score !== undefined && proposal.confidence_score !== null
+    proposal.confidence_score !== undefined &&
+    proposal.confidence_score !== null
       ? Math.round(proposal.confidence_score * 100)
       : 80;
 
@@ -66,7 +67,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
   const assigneeUser = proposal.suggested_assignee_id
     ? {
         id: proposal.suggested_assignee_id,
-        email: proposal.suggested_assignee_email || '',
+        email: proposal.suggested_assignee_email || "",
         first_name: proposal.suggested_assignee_first_name,
         last_name: proposal.suggested_assignee_last_name,
         avatar_url: proposal.suggested_assignee_avatar_url,
@@ -100,13 +101,15 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             {getConfidenceBadge()}
             {proposal.priority && (
-              <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${
-                proposal.priority === 'High' || proposal.priority === 'Urgent'
-                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                  : proposal.priority === 'Medium'
-                  ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                  : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-              }`}>
+              <span
+                className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${
+                  proposal.priority === "High"
+                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                    : proposal.priority === "Medium"
+                      ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                      : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                }`}
+              >
                 {proposal.priority} Priority
               </span>
             )}
@@ -115,12 +118,12 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                 Due {new Date(proposal.due_date).toLocaleDateString()}
               </span>
             )}
-            {proposal.status === 'approved' && (
+            {proposal.status === "approved" && (
               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 Approved
               </span>
             )}
-            {proposal.status === 'rejected' && (
+            {proposal.status === "rejected" && (
               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
                 Rejected
               </span>
@@ -135,7 +138,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         <div className="flex items-center gap-2 shrink-0 bg-brand-surface-low px-3 py-1.5 rounded-lg border border-brand-border/50">
           <UserAvatar user={assigneeUser} size="sm" />
           <span className="text-xs text-brand-text-muted font-medium max-w-[120px] truncate">
-            {proposal.suggested_assignee_display_name || 'Unassigned'}
+            {proposal.suggested_assignee_display_name || "Unassigned"}
           </span>
         </div>
       </div>
@@ -145,8 +148,10 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         <Kanban className="w-4 h-4 text-brand-primary shrink-0" />
         <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-brand-text">Target Board:</span>
-            {proposal.board_source === 'llm_matched' && (
+            <span className="text-xs font-semibold text-brand-text">
+              Target Board:
+            </span>
+            {proposal.board_source === "llm_matched" && (
               <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30 flex items-center gap-1">
                 <Sparkles className="w-2.5 h-2.5" /> AI Suggested
               </span>
@@ -154,9 +159,11 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
           </div>
 
           <select
-            value={selectedBoardId || ''}
-            disabled={proposal.status !== 'pending'}
-            onChange={(e) => setSelectedBoardId(e.target.value ? Number(e.target.value) : null)}
+            value={selectedBoardId || ""}
+            disabled={proposal.status !== "pending"}
+            onChange={(e) =>
+              setSelectedBoardId(e.target.value ? Number(e.target.value) : null)
+            }
             className="px-3 py-1.5 text-xs bg-brand-surface border border-brand-border rounded-md text-brand-text focus:outline-none focus:border-brand-primary disabled:opacity-60"
           >
             <option value="">Select a target board…</option>
@@ -184,9 +191,14 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
             className="w-full px-3 py-2 text-xs text-brand-text-muted flex items-center justify-between hover:bg-brand-surface transition-colors"
           >
             <span className="flex items-center gap-1.5 font-medium">
-              <Quote className="w-3.5 h-3.5 text-brand-primary" /> Grounding Transcript Quote
+              <Quote className="w-3.5 h-3.5 text-brand-primary" /> Grounding
+              Transcript Quote
             </span>
-            {showQuote ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {showQuote ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
           </button>
           {showQuote && (
             <div className="px-3 py-2.5 text-xs italic text-brand-text/90 border-t border-brand-border/40 bg-brand-surface/80">
@@ -197,7 +209,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       )}
 
       {/* Actions (Only active when status === 'pending') */}
-      {proposal.status === 'pending' ? (
+      {proposal.status === "pending" ? (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-brand-border/40">
           {!selectedBoardId ? (
             <span className="text-xs text-amber-400 font-medium flex items-center gap-1">
@@ -217,7 +229,9 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
             </button>
 
             <button
-              onClick={() => onEditAndApprove({ ...proposal, board_id: selectedBoardId })}
+              onClick={() =>
+                onEditAndApprove({ ...proposal, board_id: selectedBoardId })
+              }
               disabled={isRejecting || isApproving || !selectedBoardId}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-colors border border-brand-primary/30 disabled:opacity-50"
             >
@@ -235,8 +249,12 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         </div>
       ) : (
         <div className="text-xs text-brand-text-muted pt-2 border-t border-brand-border/40 flex justify-between items-center">
-          <span>Reviewed by {proposal.reviewer_display_name || 'System'}</span>
-          <span>{proposal.reviewed_at ? new Date(proposal.reviewed_at).toLocaleDateString() : ''}</span>
+          <span>Reviewed by {proposal.reviewer_display_name || "System"}</span>
+          <span>
+            {proposal.reviewed_at
+              ? new Date(proposal.reviewed_at).toLocaleDateString()
+              : ""}
+          </span>
         </div>
       )}
     </div>
