@@ -51,9 +51,14 @@ class GoogleAuthService:
     def __init__(self, email: str = "", password: str = "") -> None:
         self._email = email or ""
         self._password = password or ""
+        self._attempted = False
 
     async def ensure_authenticated(self, page: Any) -> None:
         """Guarantee the page is authenticated with Google, or fallback to Guest mode."""
+        if self._attempted:
+            return
+        self._attempted = True
+
         if not self._email or not self._password:
             log.info("meeting.auth.skipped — no credentials configured, proceeding in Guest mode")
             return

@@ -33,7 +33,6 @@ class GoogleMeetProvider(MeetingProvider):
         await self._auth.ensure_authenticated(page)
 
     async def join(self, page: Any, meeting_url: str, bot_name: str) -> JoinState:
-        await self._auth.ensure_authenticated(page)
         return await self._joiner.join(page, meeting_url, bot_name)
 
     async def leave(self, page: Any) -> None:
