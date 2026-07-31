@@ -6,7 +6,6 @@ from app.ai.config.settings import ai_settings
 from app.ai.exceptions import AIError, ProviderError, ParsingError, PermissionError
 from app.ai.providers.base import AIProvider
 from app.ai.providers.openai import OpenAIProvider
-from app.ai.providers.gemini import GeminiProvider
 from app.ai.providers.puter import PuterProvider
 from app.ai.telemetry.context import Span, TraceContext
 from app.ai.telemetry.bus import telemetry_bus
@@ -29,11 +28,12 @@ class AIGateway:
         if self.provider_name.lower() == "openai":
             return OpenAIProvider(api_key=api_key, model=self.model_name)
         elif self.provider_name.lower() == "gemini":
+            from app.ai.providers.gemini import GeminiProvider
             return GeminiProvider(api_key=api_key, model=self.model_name)
         elif self.provider_name.lower() == "puter":
             return PuterProvider(api_key=api_key, model=self.model_name)
         else:
-            return GeminiProvider(api_key=api_key, model=self.model_name)
+            return PuterProvider(api_key=api_key, model=self.model_name)
 
     @staticmethod
     def _get_provider_api_key(provider: str) -> str | None:
