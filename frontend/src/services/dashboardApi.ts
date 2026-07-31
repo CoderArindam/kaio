@@ -62,11 +62,11 @@ export interface DashboardActivityItem {
 }
 
 export interface DashboardRecentMeeting {
-  id: number;
-  session_id: string;
-  meeting_url: string;
-  status: string;
-  source: string;
+  id: string | number;
+  session_id?: string | null;
+  meeting_url?: string | null;
+  status?: string | null;
+  source?: string | null;
   started_at?: string | null;
   created_at?: string | null;
   initiated_by_user_id?: number | null;

@@ -43,11 +43,11 @@ class DashboardBoardSummary(BaseModel):
     top_members: List[DashboardTopMember] = []
 
 class DashboardRecentMeeting(BaseModel):
-    id: int
-    session_id: str
-    meeting_url: str
-    status: str
-    source: str
+    id: Any
+    session_id: Optional[str] = None
+    meeting_url: Optional[str] = None
+    status: Optional[str] = None
+    source: Optional[str] = "manual"
     started_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     initiated_by_user_id: Optional[int] = None
