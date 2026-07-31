@@ -56,7 +56,7 @@ RUN mkdir -p /app/storage/meeting/profile \
              /app/uploads
 
 # Copy entrypoint script and make executable
-COPY ../docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Expose FastAPI backend port
@@ -67,4 +67,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
