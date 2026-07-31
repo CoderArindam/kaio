@@ -48,30 +48,33 @@ class GoogleAuthService:
     - Subsequent runs: detects cached session and skips login immediately.
     """
 
-    def __init__(self, email: str, password: str) -> None:
-        if not email or not password:
-            raise AuthenticationError(
-                "MEETING_GOOGLE_EMAIL and MEETING_GOOGLE_PASSWORD must be set in .env",
-                retryable=False,
-            )
-        self._email = email
-        self._password = password
+    def __init__(self, email: str = "", password: str = "") -> None:
+        self._email = email or ""
+        self._password = password or ""
 
     async def ensure_authenticated(self, page: Any) -> None:
-        """Guarantee the page is authenticated with Google."""
+        """Guarantee the page is authenticated with Google, or fallback to Guest mode."""
+        if not self._email or not self._password:
+            log.info("meeting.auth.skipped — no credentials configured, proceeding in Guest mode")
+            return
+
         log.info("meeting.auth.start")
         log.info("browser.profile_loaded")
 
-        if await self._is_authenticated(page):
-            log.info("meeting.auth.cached — reusing persisted session")
-            log.info("browser.profile_reused")
-            return
+        try:
+            if await self._is_authenticated(page):
+                log.info("meeting.auth.cached — reusing persisted session")
+                log.info("browser.profile_reused")
+                return
 
-        log.info("meeting.auth.login — no cached session or session expired, starting login flow")
-        log.info("browser.authentication_required")
-        await self._perform_login(page)
-        log.info("meeting.auth.success")
-        log.info("browser.authentication_completed")
+            log.info("meeting.auth.login — no cached session or session expired, starting login flow")
+            log.info("browser.authentication_required")
+            await self._perform_login(page)
+            log.info("meeting.auth.success")
+            log.info("browser.authentication_completed")
+        except AuthenticationError as exc:
+            log.warning("meeting.auth.fallback_to_guest", error=str(exc))
+            log.info("Google login blocked or failed. Proceeding to meeting room in Guest mode.")
 
     async def _is_authenticated(self, page: Any) -> bool:
         """Navigate to Google Accounts and check if we're already signed in."""
