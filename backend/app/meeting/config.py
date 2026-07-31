@@ -11,6 +11,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.meeting.artifacts.retention import ArtifactRetentionPolicy
 
 
+from typing import Any
+
 class MeetingSettings(BaseSettings):
     """Reads MEETING_* environment variables from .env and environment."""
 
@@ -200,9 +202,16 @@ class MeetingSettings(BaseSettings):
     R2_BUCKET_NAME: str = ""
     R2_ACCOUNT_ID: str = ""
     R2_ENDPOINT_URL: str = ""
-    R2_ACCESS_KEY_ID: str = ""
-    R2_SECRET_ACCESS_KEY: str = ""
     R2_PUBLIC_URL_PREFIX: str = ""
+
+    def model_post_init(self, __context: Any) -> None:
+        import sys
+        import shutil
+        if sys.platform != "win32":
+            if ":" in self.FFMPEG_PATH or "\\" in self.FFMPEG_PATH or self.FFMPEG_PATH.endswith(".exe"):
+                self.FFMPEG_PATH = shutil.which("ffmpeg") or "ffmpeg"
+            if ":" in self.FFPROBE_PATH or "\\" in self.FFPROBE_PATH or self.FFPROBE_PATH.endswith(".exe"):
+                self.FFPROBE_PATH = shutil.which("ffprobe") or "ffprobe"
 
 
 meeting_config = MeetingSettings()

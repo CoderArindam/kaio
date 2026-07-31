@@ -33,10 +33,9 @@ GOOGLE_MY_ACCOUNT_URL = "https://myaccount.google.com"
 
 MEET_SELECTORS: dict[str, str] = {
 
-    # ── Lobby / pre-join ─────────────────────────────────────────────
-    "join_now_btn":            'button:has-text("Join now")',
-    "ask_to_join_btn":         'button:has-text("Ask to join")',
-    "join_now_jsname":         'button[jsname="Qx7uuf"]',
+    "join_now_btn":            'button:has-text("Join now"), button:has-text("Join"), [jsname="Qx7uuf"]',
+    "ask_to_join_btn":         'button:has-text("Ask to join"), button:has-text("Ask to Join"), [jsname="CQylEf"], [jsname="Qx7uuf"]',
+    "join_now_jsname":         '[jsname="Qx7uuf"], [jsname="CQylEf"]',
     "mic_toggle":              '[aria-label="Turn off microphone"]',
     "mic_toggle_off":          '[aria-label="Turn on microphone"]',
     "cam_toggle":              '[aria-label="Turn off camera"]',
