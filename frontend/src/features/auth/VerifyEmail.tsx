@@ -8,7 +8,7 @@ export const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
-  const { user, isAuthenticated, updateUserLocally } = useAuthStore();
+  const { isAuthenticated, updateUserLocally } = useAuthStore();
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
