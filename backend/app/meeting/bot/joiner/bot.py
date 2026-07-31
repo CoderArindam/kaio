@@ -381,7 +381,7 @@ class GoogleMeetJoiner:
     def _log_indicators(self, detected: dict[str, bool], confidence: int) -> None:
         """Emit a structured log entry showing which indicators were seen."""
         lines = [
-            f"  {'\u2713' if ok else '\u2717'} {label}"
+            f"  {'✓' if ok else '✗'} {label}"
             for label, ok in detected.items()
         ]
         summary = "\n".join(lines)
