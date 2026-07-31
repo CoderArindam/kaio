@@ -28,13 +28,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+def is_secure_cookie() -> bool:
+    if settings.COOKIE_SECURE:
+        return True
+    return "https://" in settings.FRONTEND_ORIGINS.lower()
+
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
-    samesite_val = "none" if settings.COOKIE_SECURE else "lax"
+    secure_flag = is_secure_cookie()
+    samesite_val = "none" if secure_flag else "lax"
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=settings.COOKIE_SECURE,
+        secure=secure_flag,
         samesite=samesite_val,
         max_age=15 * 60 # 15 minutes
     )
@@ -42,7 +48,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=settings.COOKIE_SECURE,
+        secure=secure_flag,
         samesite=samesite_val,
         path="/api/v1/auth",
         max_age=7 * 24 * 60 * 60 # 7 days
@@ -146,9 +152,10 @@ async def logout(
     token = request.cookies.get("refresh_token")
     await auth_service.logout(token)
 
-    samesite_val = "none" if settings.COOKIE_SECURE else "lax"
-    response.delete_cookie(key="access_token", httponly=True, secure=settings.COOKIE_SECURE, samesite=samesite_val)
-    response.delete_cookie(key="refresh_token", httponly=True, secure=settings.COOKIE_SECURE, samesite=samesite_val, path="/api/v1/auth")
+    secure_flag = is_secure_cookie()
+    samesite_val = "none" if secure_flag else "lax"
+    response.delete_cookie(key="access_token", httponly=True, secure=secure_flag, samesite=samesite_val)
+    response.delete_cookie(key="refresh_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/api/v1/auth")
     
     return {"message": "Logged out successfully"}
 
