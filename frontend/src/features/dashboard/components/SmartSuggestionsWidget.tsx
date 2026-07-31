@@ -21,6 +21,7 @@ interface SmartSuggestionItem {
 
 interface SmartSuggestionsWidgetProps {
   summaryBoards?: DashboardBoardSummary[];
+  pendingProposals?: number;
   onOpenJoinModal: () => void;
   onOpenProposalsModal: () => void;
   onProposalProcessed?: () => void;
@@ -28,6 +29,7 @@ interface SmartSuggestionsWidgetProps {
 
 export const SmartSuggestionsWidget: React.FC<SmartSuggestionsWidgetProps> = ({
   summaryBoards = [],
+  pendingProposals,
   onOpenJoinModal,
   onOpenProposalsModal,
   onProposalProcessed,
@@ -90,8 +92,14 @@ export const SmartSuggestionsWidget: React.FC<SmartSuggestionsWidgetProps> = ({
   }, [summaryBoards]);
 
   useEffect(() => {
+    // Skip the fetch if we know there are no pending proposals
+    if (pendingProposals === 0) {
+      setIsLoading(false);
+      setSuggestions([]);
+      return;
+    }
     fetchRealProposals();
-  }, [fetchRealProposals]);
+  }, [fetchRealProposals, pendingProposals]);
 
   const handleDismiss = async (item: SmartSuggestionItem) => {
     setProcessingId(item.id);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Video, Sparkles, Loader2, Search, Folder } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -15,22 +15,16 @@ import JoinMeetingModal from '../meeting/components/JoinMeetingModal';
 import TranscriptEditor from '../meeting/TranscriptEditor';
 import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
-import {
-  listRecentMeetingSessions,
-  deleteMeetingSession,
-  rerunMeetingPipeline,
-  type MeetingSession,
-} from '../../services/meetingApi';
+import { deleteMeetingSession, rerunMeetingPipeline } from '../../services/meetingApi';
 import GlobalProposalsModal from '../proposals/components/GlobalProposalsModal';
-import { listOrgProposals } from '../../services/taskProposals';
 import {
   getDashboardSummary,
   type DashboardKPIs,
   type DashboardBoardSummary,
   type DashboardActivityItem,
+  type DashboardRecentMeeting,
+  type DashboardFocusTask,
 } from '../../services/dashboardApi';
-import { getApprovalQueueSummary } from '../../services/timesheetApprovalService';
-import { getOrgSummaryReport } from '../../services/timesheetReportsApi';
 import { isManagerOrAdmin } from '../../lib/rbac';
 
 // Widgets
@@ -53,7 +47,7 @@ export const DashboardView: React.FC = () => {
   const { user } = useAuthStore();
   usePageTitle('Dashboard');
 
-  const { isFetching, fetchBoards } = useBoardStore();
+  const { isFetching } = useBoardStore();
   const activeBoards = useActiveBoards();
   const archivedBoards = useArchivedBoards();
   const { openCreateProjectModal } = useUiStore();
@@ -61,43 +55,28 @@ export const DashboardView: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [recentSessions, setRecentSessions] = useState<MeetingSession[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState<boolean>(false);
-
   const [isProposalsModalOpen, setIsProposalsModalOpen] = useState(false);
-  const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(4);
-
   const [transcriptEditorSessionId, setTranscriptEditorSessionId] = useState<string | null>(null);
 
-  // Dashboard summary API state
+  // Aggregated dashboard summary state
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
   const [summaryBoards, setSummaryBoards] = useState<DashboardBoardSummary[]>([]);
   const [recentActivities, setRecentActivities] = useState<DashboardActivityItem[]>([]);
-  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
-  const [hasSummaryError, setHasSummaryError] = useState<boolean>(false);
-
-  // Timesheet dashboard state
+  const [recentSessions, setRecentSessions] = useState<DashboardRecentMeeting[]>([]);
+  const [focusTasks, setFocusTasks] = useState<DashboardFocusTask[]>([]);
+  const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(0);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   const [timesheetComplianceRate, setTimesheetComplianceRate] = useState<number>(0);
   const [timesheetHoursLogged, setTimesheetHoursLogged] = useState<number>(0);
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
+  const [hasSummaryError, setHasSummaryError] = useState<boolean>(false);
 
-  // Single source of truth for role — uses lib/rbac which handles all casing variants
   const canAccessAdminFeatures = isManagerOrAdmin(user);
-
   const userName = user?.first_name || user?.email?.split('@')[0] || 'User';
 
-  const fetchProposalsCount = React.useCallback(async () => {
-    try {
-      const data = await listOrgProposals('pending');
-      if (data && data.length > 0) {
-        setPendingProposalsCount(data.length);
-      }
-    } catch (err) {
-      console.error('Failed to fetch org proposals count:', err);
-    }
-  }, []);
-
+  // --- Single aggregated fetch ---
   const fetchSummaryData = React.useCallback(async () => {
+    if (!canAccessAdminFeatures) return;
     setIsLoadingSummary(true);
     setHasSummaryError(false);
     try {
@@ -106,9 +85,12 @@ export const DashboardView: React.FC = () => {
         setKpis(summary.kpis);
         setSummaryBoards(summary.boards);
         setRecentActivities(summary.recent_activity);
-        if (summary.kpis?.pending_proposals_count !== undefined) {
-          setPendingProposalsCount(summary.kpis.pending_proposals_count);
-        }
+        setRecentSessions(summary.recent_meetings ?? []);
+        setFocusTasks(summary.focus_tasks ?? []);
+        setPendingProposalsCount(summary.kpis?.pending_proposals_count ?? 0);
+        setPendingApprovalsCount(summary.pending_approvals_count ?? 0);
+        setTimesheetComplianceRate(summary.timesheet_compliance_rate ?? 0);
+        setTimesheetHoursLogged(summary.timesheet_hours_logged ?? 0);
       }
     } catch (err) {
       console.error('Failed to load dashboard summary:', err);
@@ -116,71 +98,35 @@ export const DashboardView: React.FC = () => {
     } finally {
       setIsLoadingSummary(false);
     }
-  }, []);
+  }, [canAccessAdminFeatures]);
 
-  const fetchTimesheetSummary = React.useCallback(async () => {
-    try {
-      const queueSummary = await getApprovalQueueSummary();
-      if (queueSummary && queueSummary.pending_count !== undefined) {
-        setPendingApprovalsCount(queueSummary.pending_count);
-      }
-    } catch (err) {
-      console.error('Failed to load approval queue summary:', err);
-    }
-
-    try {
-      const reports = await getOrgSummaryReport(1);
-      if (reports && reports.length > 0) {
-        setTimesheetComplianceRate(reports[0].compliance_rate || 0);
-        setTimesheetHoursLogged(reports[0].total_hours_logged || 0);
-      }
-    } catch (err) {
-      console.error('Failed to load org summary report:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchBoards();
-  }, [fetchBoards]);
+  // Track latest fetchSummaryData in a ref so WS handler always has current version
+  const fetchSummaryRef = useRef(fetchSummaryData);
+  useEffect(() => { fetchSummaryRef.current = fetchSummaryData; }, [fetchSummaryData]);
 
   useEffect(() => {
     if (!canAccessAdminFeatures) return;
 
-    fetchProposalsCount();
     fetchSummaryData();
-    fetchTimesheetSummary();
 
-    const handleFocus = () => {
-      fetchSummaryData();
-    };
+    // Window focus fallback (no polling — WebSocket handles real-time pushes)
+    const handleFocus = () => fetchSummaryRef.current();
+    const handleRefresh = () => fetchSummaryRef.current();
 
     window.addEventListener('focus', handleFocus);
-    const intervalId = setInterval(() => {
-      fetchSummaryData();
-    }, 60000);
+    window.addEventListener('kaio:dashboard_refresh', handleRefresh);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
-      clearInterval(intervalId);
+      window.removeEventListener('kaio:dashboard_refresh', handleRefresh);
     };
-  }, [fetchProposalsCount, fetchSummaryData, fetchTimesheetSummary, canAccessAdminFeatures]);
+  }, [canAccessAdminFeatures, fetchSummaryData]);
 
-  const fetchSessions = React.useCallback(async () => {
-    setIsLoadingSessions(true);
-    try {
-      const data = await listRecentMeetingSessions(5);
-      setRecentSessions(data || []);
-    } catch (err) {
-      console.error('Failed to load recent meeting sessions:', err);
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  }, []);
-
+  // Session mutation handlers (delete/rerun still need direct API calls)
   const handleDeleteSession = async (sessionId: string) => {
     try {
       await deleteMeetingSession(sessionId);
-      setRecentSessions((prev) => prev.filter((s) => (s.id || s.session_id) !== sessionId));
+      setRecentSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
     } catch (err) {
       console.error('Failed to delete session:', err);
     }
@@ -190,17 +136,11 @@ export const DashboardView: React.FC = () => {
     try {
       await rerunMeetingPipeline(sessionId);
       toast.success('Meeting pipeline re-run started');
-      fetchSessions();
+      fetchSummaryData(); // refresh meetings from the aggregated endpoint
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to re-run meeting pipeline');
     }
   };
-
-  useEffect(() => {
-    if (canAccessAdminFeatures) {
-      fetchSessions();
-    }
-  }, [fetchSessions, canAccessAdminFeatures]);
 
   const filteredActiveBoards = activeBoards.filter((board: any) =>
     board.name.toLowerCase().includes(search.toLowerCase())
@@ -235,7 +175,6 @@ export const DashboardView: React.FC = () => {
           )}
         </div>
 
-        {/* Quick actions — only for managers and admins */}
         {canAccessAdminFeatures && (
           <div className="flex items-center flex-wrap gap-3 shrink-0">
             <button
@@ -259,7 +198,7 @@ export const DashboardView: React.FC = () => {
         )}
       </div>
 
-      {/* MEMBER ROLE VIEW (If non-manager) */}
+      {/* MEMBER ROLE VIEW */}
       {!canAccessAdminFeatures ? (
         <div className="space-y-8">
           <section className="space-y-6" aria-label="Member Active Projects">
@@ -308,9 +247,9 @@ export const DashboardView: React.FC = () => {
           </section>
         </div>
       ) : (
-        /* MANAGER & SUPERADMIN REDESIGNED DASHBOARD LAYOUT */
+        /* MANAGER & SUPERADMIN DASHBOARD LAYOUT */
         <div className="space-y-8">
-          {/* 1. KPI Cards Row with Sparklines */}
+          {/* 1. KPI Cards Row */}
           <KpiCardsRow
             kpis={kpis}
             isLoading={isLoadingSummary}
@@ -328,9 +267,8 @@ export const DashboardView: React.FC = () => {
 
           {/* 2. Main Content 2-Column Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* LEFT COLUMN (8 cols out of 12) */}
+            {/* LEFT COLUMN */}
             <div className="lg:col-span-8 space-y-8">
-              {/* Strategic Projects Overview */}
               <StrategicProjectsWidget
                 summaryBoards={summaryBoards}
                 activeBoardsFallback={activeBoards}
@@ -341,9 +279,8 @@ export const DashboardView: React.FC = () => {
               />
             </div>
 
-            {/* RIGHT COLUMN (4 cols out of 12) */}
+            {/* RIGHT COLUMN */}
             <div className="lg:col-span-4 space-y-8">
-              {/* Quick Actions Widget */}
               <QuickActionsWidget
                 userRole={user?.role || 'MEMBER'}
                 pendingPropsCount={pendingProposalsCount}
@@ -352,29 +289,25 @@ export const DashboardView: React.FC = () => {
                 onOpenCreateProjectModal={openCreateProjectModal}
               />
 
-              {/* Focus Tasks Widget */}
               <FocusTasksWidget
                 pendingPropsCount={pendingProposalsCount}
                 onOpenProposalsModal={() => setIsProposalsModalOpen(true)}
                 summaryBoards={summaryBoards}
+                prefetchedTasks={focusTasks}
               />
 
-              {/* Smart Suggestions Widget */}
               <SmartSuggestionsWidget
                 summaryBoards={summaryBoards}
+                pendingProposals={pendingProposalsCount}
                 onOpenJoinModal={() => setIsJoinModalOpen(true)}
                 onOpenProposalsModal={() => setIsProposalsModalOpen(true)}
-                onProposalProcessed={() => {
-                  fetchProposalsCount();
-                  fetchSummaryData();
-                }}
+                onProposalProcessed={fetchSummaryData}
               />
 
-              {/* Recent Meetings Widget */}
               <RecentMeetingsWidget
                 sessions={recentSessions}
-                isLoading={isLoadingSessions}
-                onRetry={fetchSessions}
+                isLoading={isLoadingSummary}
+                onRetry={fetchSummaryData}
                 pendingPropsCount={pendingProposalsCount}
                 onDeleteSession={handleDeleteSession}
                 onOpenJoinModal={() => setIsJoinModalOpen(true)}
@@ -383,7 +316,6 @@ export const DashboardView: React.FC = () => {
                 onOpenTranscriptEditor={(id) => setTranscriptEditorSessionId(id)}
               />
 
-              {/* Recent Activity Widget */}
               <RecentActivityWidget
                 activities={recentActivities}
                 isLoading={isLoadingSummary}
@@ -421,11 +353,7 @@ export const DashboardView: React.FC = () => {
       <GlobalProposalsModal
         isOpen={isProposalsModalOpen}
         onClose={() => setIsProposalsModalOpen(false)}
-        onProposalsUpdated={() => {
-          fetchProposalsCount();
-          fetchSummaryData();
-          fetchSessions();
-        }}
+        onProposalsUpdated={fetchSummaryData}
       />
 
       <Modal
@@ -439,7 +367,7 @@ export const DashboardView: React.FC = () => {
           <TranscriptEditor
             sessionId={transcriptEditorSessionId}
             onClose={() => setTranscriptEditorSessionId(null)}
-            onSaved={() => fetchSessions()}
+            onSaved={fetchSummaryData}
           />
         )}
       </Modal>
@@ -448,4 +376,3 @@ export const DashboardView: React.FC = () => {
 };
 
 export default DashboardView;
-

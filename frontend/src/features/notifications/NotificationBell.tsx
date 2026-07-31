@@ -11,20 +11,14 @@ const NotificationBell: React.FC = () => {
     // Initial fetch on mount
     fetchNotifications(undefined);
 
-    // Refetch on window focus
+    // Refetch on window focus as a fallback (WebSocket handles real-time pushes)
     const onFocus = () => {
       if (!isOpen) fetchNotifications(undefined);
     };
     window.addEventListener('focus', onFocus);
     
-    // Poll for new notifications
-    const interval = setInterval(() => {
-      if (!isOpen) fetchNotifications(undefined);
-    }, 15000);
-
     return () => {
       window.removeEventListener('focus', onFocus);
-      clearInterval(interval);
     };
   }, [fetchNotifications, isOpen]);
 

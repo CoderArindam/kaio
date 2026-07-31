@@ -26,6 +26,9 @@ interface NotificationState {
   removeNotification: (id: number) => Promise<void>;
 }
 
+// Module-level in-flight guard — prevents duplicate concurrent first-page fetches
+let _notifFetchingPromise: Promise<void> | null = null;
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -35,20 +38,41 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   cursor: null,
 
   fetchNotifications: async (currentCursor: number | null = null) => {
+    // Deduplicate concurrent first-page fetches
+    if (currentCursor === null || currentCursor === undefined) {
+      if (_notifFetchingPromise) return _notifFetchingPromise;
+      _notifFetchingPromise = (async () => {
+        set({ isLoading: true });
+        try {
+          const response = await getNotifications(null, 20);
+          set(() => {
+            const uniqueNotifications = Array.from(new Map(response.data.map(n => [n.id, n])).values());
+            return {
+              notifications: uniqueNotifications,
+              unreadCount: uniqueNotifications.filter(n => !n.is_read).length,
+              hasMore: response.meta.has_more,
+              cursor: response.meta.cursor ? Number(response.meta.cursor) : null,
+              isLoading: false,
+            };
+          });
+        } catch (error) {
+          console.error('Failed to fetch notifications', error);
+          toast.error('Failed to load notifications');
+        } finally {
+          set({ isLoading: false });
+          _notifFetchingPromise = null;
+        }
+      })();
+      return _notifFetchingPromise;
+    }
+
+    // Paginated load-more (no deduplication guard needed)
     set({ isLoading: true });
     try {
-      const apiCursor = (currentCursor === null || currentCursor === undefined) ? null : currentCursor;
-      const response = await getNotifications(apiCursor, 20);
-      
+      const response = await getNotifications(currentCursor, 20);
       set((state) => {
-        const isFirstPage = apiCursor === null;
-        const existingNotifications = isFirstPage ? [] : state.notifications;
-        const newNotifications = response.data;
-        const combined = isFirstPage ? newNotifications : [...existingNotifications, ...newNotifications];
-        
-        // Ensure no duplicate IDs
+        const combined = [...state.notifications, ...response.data];
         const uniqueNotifications = Array.from(new Map(combined.map(n => [n.id, n])).values());
-        
         return {
           notifications: uniqueNotifications,
           unreadCount: uniqueNotifications.filter(n => !n.is_read).length,
@@ -81,10 +105,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await markNotificationRead(id);
     } catch (error) {
       // Rollback
-      set({
-        notifications,
-        unreadCount
-      });
+      set({ notifications, unreadCount });
       toast.error('Failed to mark notification as read');
     }
   },
@@ -105,10 +126,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await markNotificationUnread(id);
     } catch (error) {
       // Rollback
-      set({
-        notifications,
-        unreadCount
-      });
+      set({ notifications, unreadCount });
       toast.error('Failed to mark notification as unread');
     }
   },
@@ -129,10 +147,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await markBatchRead(ids);
     } catch (error) {
       // Rollback
-      set({
-        notifications,
-        unreadCount
-      });
+      set({ notifications, unreadCount });
       toast.error('Failed to mark notifications as read');
     }
   },
@@ -150,10 +165,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await markAllRead();
     } catch (error) {
       // Rollback
-      set({
-        notifications,
-        unreadCount
-      });
+      set({ notifications, unreadCount });
       toast.error('Failed to mark all as read');
     }
   },
@@ -175,11 +187,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await deleteNotification(id);
     } catch (error) {
       // Rollback
-      set({
-        notifications,
-        unreadCount,
-        total: get().total + 1
-      });
+      set({ notifications, unreadCount, total: get().total + 1 });
       toast.error('Failed to delete notification');
     }
   }

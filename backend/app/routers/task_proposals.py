@@ -14,6 +14,7 @@ from app.schemas.task import CanonicalTaskResponse
 from app.schemas.envelope import DataEnvelope
 from app.auth.dependencies import require_proposal_review_access
 from app.database.connection import get_db_connection
+from app.websockets.manager import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,14 @@ async def approve_task_proposal(
     if not canonical_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Created task card not found")
 
+    try:
+        await connection_manager.send_to_org(
+            org_id=current_user["organization_id"],
+            message={"type": "dashboard_refresh"},
+        )
+    except Exception:
+        pass
+
     return DataEnvelope(data=CanonicalTaskResponse(**dict(canonical_row)))
 
 
@@ -267,6 +276,15 @@ async def reject_task_proposal(
         "SELECT * FROM v_task_proposals_canonical WHERE id = $1::uuid",
         id
     )
+
+    try:
+        await connection_manager.send_to_org(
+            org_id=current_user["organization_id"],
+            message={"type": "dashboard_refresh"},
+        )
+    except Exception:
+        pass
+
     return DataEnvelope(data=TaskProposalOut.model_validate(dict(row)))
 
 

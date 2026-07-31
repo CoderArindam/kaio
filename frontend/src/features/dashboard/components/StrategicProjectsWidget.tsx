@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Kanban, Plus, FolderPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
@@ -6,7 +6,6 @@ import { Skeleton } from '../../../components/ui/Skeleton';
 import { WidgetError } from '../../../components/ui/WidgetError';
 import type { DashboardBoardSummary } from '../../../services/dashboardApi';
 import EmptyState from '../../../components/common/EmptyState';
-import { getBoardMembers, type BoardMember } from '../../../services/usersApi';
 import { useAuthStore } from '../../../store/authStore';
 
 interface StrategicProjectsWidgetProps {
@@ -51,8 +50,6 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
 }) => {
   const { user: currentUser } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(1);
-  const [boardMembersMap, setBoardMembersMap] = useState<Record<number, BoardMember[]>>({});
-  const fetchedBoardIdsRef = useRef<Set<number>>(new Set());
   const pageSize = 3;
 
   const displayBoards = useMemo(() => {
@@ -68,6 +65,7 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           overdue_count: sb.overdue_count,
           member_count: sb.member_count || 1,
           created_at: sb.created_at,
+          top_members: sb.top_members || [],
         }))
       : activeBoardsFallback.map((ab) => ({
           id: ab.id,
@@ -80,34 +78,9 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           overdue_count: ab.overdue_count || 0,
           member_count: ab.member_count || 1,
           created_at: ab.created_at,
+          top_members: [],
         }));
   }, [summaryBoards, activeBoardsFallback]);
-
-  // Fetch actual board members once per board
-  useEffect(() => {
-    let isMounted = true;
-    displayBoards.forEach((board) => {
-      if (!fetchedBoardIdsRef.current.has(board.id)) {
-        fetchedBoardIdsRef.current.add(board.id);
-        getBoardMembers(board.id)
-          .then((members) => {
-            if (isMounted && members) {
-              setBoardMembersMap((prev) => ({
-                ...prev,
-                [board.id]: members,
-              }));
-            }
-          })
-          .catch((err) => {
-            console.error(`Failed to fetch members for board ${board.id}:`, err);
-            fetchedBoardIdsRef.current.delete(board.id);
-          });
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [displayBoards]);
 
   const totalPages = Math.ceil(displayBoards.length / pageSize) || 1;
   const paginatedBoards = displayBoards.slice(
@@ -115,18 +88,18 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
     currentPage * pageSize
   );
 
-  // Resolves actual assigned members for a board
-  const getBoardMembersToRender = (boardId: number) => {
-    const realMembers = boardMembersMap[boardId];
+  // Resolves members for a board from canonical top_members or creator fallback
+  const getBoardMembersToRender = (board: (typeof displayBoards)[0]) => {
+    const realMembers = board.top_members;
     if (realMembers && realMembers.length > 0) {
       return realMembers.map((m) => {
-        const fullName = [m.first_name, m.last_name].filter(Boolean).join(' ') || m.email.split('@')[0];
+        const fullName = [m.first_name, m.last_name].filter(Boolean).join(' ') || (m.email ? m.email.split('@')[0] : 'Member');
         const initials = (
-          (m.first_name ? m.first_name[0] : m.email[0]) +
+          (m.first_name ? m.first_name[0] : (m.email ? m.email[0] : 'M')) +
           (m.last_name ? m.last_name[0] : '')
         ).toUpperCase();
         return {
-          id: m.id,
+          id: m.user_id,
           fullName,
           initials,
           avatarUrl: m.avatar_url,
@@ -134,7 +107,7 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
       });
     }
 
-    // Default fallback if real members are loading: show current logged-in creator
+    // Default fallback: show current logged-in creator
     const creatorName = currentUser
       ? [currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.email.split('@')[0]
       : 'Creator';
@@ -227,7 +200,7 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
               : 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
 
             const relativeTime = getRelativeTime(board.created_at, idx);
-            const membersToRender = getBoardMembersToRender(board.id);
+            const membersToRender = getBoardMembersToRender(board);
 
             return (
               <Link

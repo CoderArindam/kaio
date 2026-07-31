@@ -12,22 +12,30 @@ interface BoardState {
   removeBoard: (boardId: number) => Promise<void>;
 }
 
+let _boardFetchingPromise: Promise<void> | null = null;
+
 export const useBoardStore = create<BoardState>((set, get) => ({
   boards: [],
   isFetching: true,
   isSubmitting: false,
 
   fetchBoards: async () => {
-    set({ isFetching: true });
-    try {
-      const data = await getBoards();
-      set({ boards: data || [] });
-    } catch (error) {
-      console.error('Failed to fetch boards:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      set({ isFetching: false });
-    }
+    // Deduplicate concurrent calls — return the same in-flight promise
+    if (_boardFetchingPromise) return _boardFetchingPromise;
+    _boardFetchingPromise = (async () => {
+      set({ isFetching: true });
+      try {
+        const data = await getBoards();
+        set({ boards: data || [] });
+      } catch (error) {
+        console.error('Failed to fetch boards:', error);
+        toast.error('Failed to load projects');
+      } finally {
+        set({ isFetching: false });
+        _boardFetchingPromise = null;
+      }
+    })();
+    return _boardFetchingPromise;
   },
 
   createNewBoard: async (boardData: Partial<Board>) => {

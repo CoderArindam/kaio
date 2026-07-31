@@ -14,7 +14,7 @@ import { WidgetError } from '../../../components/ui/WidgetError';
 import type { MeetingSession } from '../../../services/meetingApi';
 
 interface RecentMeetingsWidgetProps {
-  sessions: MeetingSession[];
+  sessions: (MeetingSession | any)[];
   isLoading: boolean;
   hasError?: boolean;
   onRetry?: () => void;

@@ -54,6 +54,11 @@ async def create_task(
             message={"type": "task_created", "board_id": task.board_id, "task_id": task.id, "action": "created"},
             exclude_user_id=None,
         )
+        # Notify dashboard listeners to refresh KPI counts
+        await connection_manager.send_to_org(
+            org_id=current_user["organization_id"],
+            message={"type": "dashboard_refresh"},
+        )
     except Exception as e:
         logger.error(f"Error sending websocket task_created event: {e}")
     if task.assigned_to and task.assigned_to != current_user["id"]:
@@ -284,6 +289,10 @@ async def bulk_move_tasks(
                 message={"type": "task_moved", "board_id": board_id, "task_ids": body.task_ids, "action": "moved"},
                 exclude_user_id=None,
             )
+            await connection_manager.send_to_org(
+                org_id=current_user["organization_id"],
+                message={"type": "dashboard_refresh"},
+            )
         except Exception:
             pass
 
@@ -312,6 +321,10 @@ async def bulk_delete_tasks(
                 board_id=board_id,
                 message={"type": "task_deleted", "board_id": board_id, "task_ids": body.task_ids, "action": "deleted"},
                 exclude_user_id=None,
+            )
+            await connection_manager.send_to_org(
+                org_id=current_user["organization_id"],
+                message={"type": "dashboard_refresh"},
             )
         except Exception:
             pass

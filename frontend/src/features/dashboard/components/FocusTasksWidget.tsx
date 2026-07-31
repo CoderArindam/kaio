@@ -4,20 +4,23 @@ import { CheckCircle2, Circle, ListTodo, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { getMyTasks, type MyTask } from '../../../services/myWorkApi';
 import { updateTask } from '../../../services/tasksApi';
+import type { DashboardFocusTask } from '../../../services/dashboardApi';
 
 interface FocusTasksWidgetProps {
   pendingPropsCount: number;
   onOpenProposalsModal: () => void;
   summaryBoards?: any[];
+  prefetchedTasks?: DashboardFocusTask[];
 }
 
 export const FocusTasksWidget: React.FC<FocusTasksWidgetProps> = ({
   pendingPropsCount,
   onOpenProposalsModal,
+  prefetchedTasks,
 }) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<MyTask[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(!prefetchedTasks);
 
   const fetchUserTasks = useCallback(async () => {
     setIsLoading(true);
@@ -32,8 +35,24 @@ export const FocusTasksWidget: React.FC<FocusTasksWidgetProps> = ({
   }, []);
 
   useEffect(() => {
-    fetchUserTasks();
-  }, [fetchUserTasks]);
+    if (prefetchedTasks) {
+      // Map DashboardFocusTask → MyTask shape used in the UI
+      setTasks(prefetchedTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        priority: t.priority ?? undefined,
+        due_date: t.due_date ?? undefined,
+        board_name: t.board_name ?? undefined,
+        board_id: t.board_id ?? undefined,
+        column_id: t.column_id ?? 0,
+        column_type: t.column_type ?? undefined,
+        is_completed: false,
+      } as any)));
+      setIsLoading(false);
+    } else {
+      fetchUserTasks();
+    }
+  }, [prefetchedTasks, fetchUserTasks]);
 
   // Toggle completion in real PostgreSQL database via API
   const handleToggleTask = async (task: MyTask) => {

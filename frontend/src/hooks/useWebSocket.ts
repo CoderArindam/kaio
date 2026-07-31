@@ -167,6 +167,11 @@ export function useWebSocket(): { isConnected: boolean } {
           break;
         }
 
+        case 'dashboard_refresh': {
+          window.dispatchEvent(new CustomEvent('kaio:dashboard_refresh'));
+          break;
+        }
+
         case 'pong':
           break;
 

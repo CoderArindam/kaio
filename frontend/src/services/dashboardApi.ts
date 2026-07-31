@@ -17,6 +17,15 @@ export interface DashboardKPIs {
   active_meetings_count: number;
 }
 
+export interface DashboardTopMember {
+  user_id: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  permission?: string | null;
+}
+
 export interface DashboardBoardSummary {
   id: number;
   name: string;
@@ -31,6 +40,7 @@ export interface DashboardBoardSummary {
   overdue_count: number;
   member_count: number;
   created_at?: string;
+  top_members?: DashboardTopMember[];
 }
 
 export interface DashboardActivityItem {
@@ -51,10 +61,40 @@ export interface DashboardActivityItem {
   target_reference?: string | null;
 }
 
+export interface DashboardRecentMeeting {
+  id: number;
+  session_id: string;
+  meeting_url: string;
+  status: string;
+  source: string;
+  started_at?: string | null;
+  created_at?: string | null;
+  initiated_by_user_id?: number | null;
+  initiator_email?: string | null;
+  initiator_display_name?: string | null;
+  initiator_avatar_url?: string | null;
+}
+
+export interface DashboardFocusTask {
+  id: number;
+  title: string;
+  priority?: string | null;
+  due_date?: string | null;
+  board_name?: string | null;
+  board_id?: number | null;
+  column_id?: number | null;
+  column_type?: string | null;
+}
+
 export interface DashboardSummaryResponse {
   kpis: DashboardKPIs;
   boards: DashboardBoardSummary[];
   recent_activity: DashboardActivityItem[];
+  recent_meetings: DashboardRecentMeeting[];
+  focus_tasks: DashboardFocusTask[];
+  pending_approvals_count: number;
+  timesheet_compliance_rate: number;
+  timesheet_hours_logged: number;
 }
 
 export const getDashboardSummary = async (): Promise<DashboardSummaryResponse> => {
