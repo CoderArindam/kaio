@@ -45,6 +45,10 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     playwright install --with-deps chromium && \
     pip cache purge
 
+# Copy Chrome extension for meeting bot
+COPY extension/ /extension/
+COPY extension/ /app/extension/
+
 # Copy application source code
 COPY backend/ /app/
 

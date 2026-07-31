@@ -47,23 +47,29 @@ class BrowserFactory:
             return None
 
         configured_path = Path(meeting_config.EXTENSION_DIRECTORY)
-        if configured_path.is_absolute():
-            candidate = configured_path
-        else:
-            # Try relative to backend root (assuming factory is in app/meeting/bot/browser/factory.py)
-            backend_root = Path(__file__).resolve().parents[4]
-            candidate = backend_root / configured_path
-            
-            # If not found, try from current working directory
-            if not candidate.exists():
-                candidate = Path.cwd() / configured_path
-                
-        if not candidate.exists():
-            raise BrowserLaunchError(
-                f"Extension directory not found: {candidate}", retryable=False
-            )
-            
-        return candidate.resolve()
+        if configured_path.is_absolute() and configured_path.exists():
+            return configured_path.resolve()
+
+        backend_root = Path(__file__).resolve().parents[4]
+        candidates = [
+            Path("/extension"),
+            Path("/app/extension"),
+            configured_path,
+            backend_root / configured_path,
+            backend_root / "extension",
+            backend_root / "../extension",
+            Path.cwd() / configured_path,
+            Path.cwd() / "extension",
+            Path.cwd() / "../extension",
+        ]
+
+        for candidate in candidates:
+            if candidate.exists() and (candidate / "manifest.json").exists():
+                return candidate.resolve()
+
+        raise BrowserLaunchError(
+            f"Extension directory not found: tried {[str(c) for c in candidates]}", retryable=False
+        )
 
     @classmethod
     def validate_extension(cls, ext_path: Path) -> None:
