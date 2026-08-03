@@ -91,7 +91,7 @@ export const ProjectSettingsLayout: React.FC = () => {
                 >
                   <item.icon size={18} className="flex-shrink-0" />
                   {item.name}
-                  {item.path !== '' && (
+                  {item.path !== '' && item.path !== 'workflow' && (
                     <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-brand-surface-low px-1.5 py-0.5 rounded text-brand-text-muted">Soon</span>
                   )}
                 </NavLink>

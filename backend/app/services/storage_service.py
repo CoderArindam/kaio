@@ -34,32 +34,31 @@ class StorageService:
     def _is_cloudinary_configured() -> bool:
         if not HAS_CLOUDINARY:
             return False
-        return bool(
-            settings.CLOUDINARY_URL or 
-            (settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET)
-        )
+        url = (settings.CLOUDINARY_URL or "").strip('\'" ')
+        cloud_name = (settings.CLOUDINARY_CLOUD_NAME or "").strip('\'" ')
+        api_key = (settings.CLOUDINARY_API_KEY or "").strip('\'" ')
+        api_secret = (settings.CLOUDINARY_API_SECRET or "").strip('\'" ')
+        return bool(url or (cloud_name and api_key and api_secret))
 
     @staticmethod
     def _configure_cloudinary():
         if not HAS_CLOUDINARY or not cloudinary:
             return
-        if settings.CLOUDINARY_URL:
+        url = (settings.CLOUDINARY_URL or "").strip('\'" ')
+        cloud_name = (settings.CLOUDINARY_CLOUD_NAME or "").strip('\'" ')
+        api_key = (settings.CLOUDINARY_API_KEY or "").strip('\'" ')
+        api_secret = (settings.CLOUDINARY_API_SECRET or "").strip('\'" ')
+
+        if url:
             try:
-                from urllib.parse import urlparse
-                p = urlparse(settings.CLOUDINARY_URL)
-                cloudinary.config(
-                    cloud_name=p.hostname,
-                    api_key=p.username,
-                    api_secret=p.password,
-                    secure=True
-                )
+                cloudinary.config(cloudinary_url=url, secure=True)
             except Exception as e:
-                logger.error(f"Failed to parse CLOUDINARY_URL: {e}")
-        elif settings.CLOUDINARY_CLOUD_NAME:
+                logger.error(f"Failed to configure CLOUDINARY_URL: {e}")
+        elif cloud_name:
             cloudinary.config(
-                cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-                api_key=settings.CLOUDINARY_API_KEY,
-                api_secret=settings.CLOUDINARY_API_SECRET,
+                cloud_name=cloud_name,
+                api_key=api_key,
+                api_secret=api_secret,
                 secure=True
             )
 

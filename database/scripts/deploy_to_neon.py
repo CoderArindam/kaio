@@ -3,6 +3,14 @@ import asyncpg
 import os
 import sys
 
+try:
+    from dotenv import load_dotenv
+    env_path = os.path.join(os.path.dirname(__file__), "..", "..", "backend", ".env")
+    load_dotenv(dotenv_path=env_path)
+    load_dotenv()
+except ImportError:
+    pass
+
 MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "migrations")
 
 async def deploy_to_neon():
@@ -29,7 +37,7 @@ async def deploy_to_neon():
             # Ignore duplicate objects if running on an already seeded database
             print(f"  Note on {filename}: {e}")
 
-    print("\n✅ All migrations applied successfully to Neon Database!")
+    print("\n[SUCCESS] All migrations applied successfully to Neon Database!")
     await conn.close()
 
 if __name__ == "__main__":

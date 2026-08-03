@@ -49,7 +49,7 @@ class AttachmentService:
             raise
         except Exception as e:
             logger.error(f'Unexpected error uploading attachment for task {task_id}: {e}')
-            raise HTTPException(status_code=400, detail='An unexpected error occurred during attachment upload')
+            raise HTTPException(status_code=400, detail=f'Attachment upload failed: {str(e)}')
 
     async def create_attachment(self, task_id: int, attachment_in: AttachmentCreate, current_user: dict):
         try:
@@ -71,7 +71,7 @@ class AttachmentService:
             raise
         except Exception as e:
             logger.error(f'Unexpected error creating attachment: {e}')
-            raise HTTPException(status_code=400, detail='An unexpected error occurred')
+            raise HTTPException(status_code=400, detail=f'Failed to create attachment: {str(e)}')
 
     async def get_task_attachments(self, task_id: int, current_user: dict):
         try:
@@ -86,7 +86,7 @@ class AttachmentService:
             raise
         except Exception as e:
             logger.error(f'Unexpected error fetching attachments for task {task_id}: {e}')
-            raise HTTPException(status_code=400, detail='An unexpected error occurred')
+            raise HTTPException(status_code=400, detail=f'Failed to fetch attachments: {str(e)}')
 
     async def delete_attachment(self, attachment_id: int, current_user: dict):
         try:
@@ -111,4 +111,4 @@ class AttachmentService:
             raise
         except Exception as e:
             logger.error(f'Unexpected error deleting attachment {attachment_id}: {e}')
-            raise HTTPException(status_code=400, detail='An unexpected error occurred deleting attachment')
+            raise HTTPException(status_code=400, detail=f'Failed to delete attachment: {str(e)}')

@@ -33,6 +33,7 @@ import TimesheetAdminPage from '../features/timesheets/admin/TimesheetAdminPage'
 
 import { ProjectSettingsLayout } from '../features/projects/ProjectSettingsLayout';
 import { ProjectSettingsPage } from '../features/projects/ProjectSettingsPage';
+import { ProjectWorkflowSettings } from '../features/projects/ProjectWorkflowSettings';
 
 import {
   Key,
@@ -40,7 +41,6 @@ import {
   Keyboard,
   Boxes,
   Users,
-  GitMerge,
   Tag,
   Zap,
   Puzzle,
@@ -100,13 +100,7 @@ export const AppRoutes: React.FC = () => {
               />
               <Route
                 path="workflow"
-                element={
-                  <PlaceholderSetting
-                    title="Workflow"
-                    description="Customize project statuses and transitions."
-                    Icon={GitMerge}
-                  />
-                }
+                element={<ProjectWorkflowSettings />}
               />
               <Route
                 path="labels"

@@ -122,7 +122,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     assignTask,
     setSelectedAssigneeId,
     initializeBoard,
-    addColumn,
     renameColumn,
     removeColumn,
     reorderBoardColumns,
@@ -158,9 +157,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
   const [editingColumnName, setEditingColumnName] = useState('');
   const [openMenuColumnId, setOpenMenuColumnId] = useState<number | null>(null);
-  const [isAddingColumn, setIsAddingColumn] = useState(false);
-  const [newColumnName, setNewColumnName] = useState('');
-  const [newColumnType, setNewColumnType] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
   const [columnToDelete, setColumnToDelete] = useState<{ id: number; name: string; taskCount: number } | null>(null);
   const [targetColumnIdForDelete, setTargetColumnIdForDelete] = useState<number | ''>('');
 
@@ -196,14 +192,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     }
     setColumnToDelete(null);
     setTargetColumnIdForDelete('');
-  };
-
-  const handleAddColumnSubmit = async () => {
-    if (!newColumnName.trim()) return;
-    await addColumn(boardId, { name: newColumnName.trim(), column_type: newColumnType });
-    setNewColumnName('');
-    setNewColumnType('TODO');
-    setIsAddingColumn(false);
   };
 
   const toggleTaskSelection = (taskId: number) => {
@@ -450,7 +438,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                 return (
                   <div
                     key={column.id}
-                    className="flex-1 min-w-[220px] sm:min-w-[230px] md:min-w-[240px] max-w-[340px] shrink-0 flex flex-col bg-brand-surface border border-brand-border/80 rounded-2xl p-2 sm:p-2.5 h-full shadow-2xs transition-all overflow-hidden"
+                    className="flex-1 min-w-[260px] sm:min-w-[280px] md:min-w-[300px] max-w-[440px] shrink-0 flex flex-col bg-brand-surface border border-brand-border/80 rounded-2xl p-2 sm:p-2.5 h-full shadow-2xs transition-all overflow-hidden"
                   >
                     <div className="flex justify-between items-center px-2 py-2 mb-2 relative border-b border-brand-border/40 pb-2.5">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -652,75 +640,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                   </div>
                 );
               })}
-
-              {/* + Add Column Ghost Column (Manager/Admin Only) */}
-              {canManageColumns && (
-                <div className="flex-1 min-w-[200px] sm:min-w-[220px] max-w-[280px] shrink-0 flex flex-col">
-                  {!isAddingColumn ? (
-                    <button
-                      onClick={() => setIsAddingColumn(true)}
-                      className="w-full h-[120px] border-2 border-dashed border-brand-border hover:border-brand-primary rounded-2xl bg-brand-surface-low/50 hover:bg-brand-surface-container flex flex-col items-center justify-center gap-2 text-brand-text-muted hover:text-brand-primary transition-all group cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-brand-surface-low border border-brand-border group-hover:border-brand-primary flex items-center justify-center">
-                        <Plus size={18} />
-                      </div>
-                      <span className="font-semibold text-sm">+ Add Column</span>
-                    </button>
-                  ) : (
-                    <div className="p-4 bg-brand-surface border border-brand-border rounded-2xl shadow-xl flex flex-col gap-3">
-                      <h4 className="font-semibold text-brand-text text-sm">Add New Column</h4>
-                      <div>
-                        <label className="text-xs text-brand-text-muted mb-1 block">Column Name</label>
-                        <input
-                          type="text"
-                          value={newColumnName}
-                          onChange={(e) => setNewColumnName(e.target.value)}
-                          placeholder="e.g. In Review, QA..."
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddColumnSubmit();
-                            if (e.key === 'Escape') {
-                              setIsAddingColumn(false);
-                              setNewColumnName('');
-                            }
-                          }}
-                          className="w-full px-3 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-brand-text-muted mb-1 block">Type</label>
-                        <select
-                          value={newColumnType}
-                          onChange={(e) => setNewColumnType(e.target.value as any)}
-                          className="w-full px-3 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary cursor-pointer"
-                        >
-                          <option value="TODO">TODO</option>
-                          <option value="IN_PROGRESS">IN_PROGRESS</option>
-                          <option value="DONE">DONE</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2 justify-end mt-1">
-                        <button
-                          onClick={() => {
-                            setIsAddingColumn(false);
-                            setNewColumnName('');
-                          }}
-                          className="px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-surface-low rounded-lg cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddColumnSubmit}
-                          disabled={!newColumnName.trim()}
-                          className="px-4 py-1.5 text-xs bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 cursor-pointer transition-colors"
-                        >
-                          Add Column
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
