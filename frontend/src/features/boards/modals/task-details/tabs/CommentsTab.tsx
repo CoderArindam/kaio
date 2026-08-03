@@ -21,7 +21,6 @@ import { type Task } from '../../../../../services/tasksApi';
 import { type User, getBoardMembers, getUsers } from '../../../../../services/usersApi';
 import toast from 'react-hot-toast';
 import { useActivityStore } from '../../../../../store/activityStore';
-import { useAuthStore } from '../../../../../store/authStore';
 import ConfirmDialog from '../../../../../components/common/ConfirmDialog';
 import { UserAvatar } from '../../../../../components/common/UserAvatar';
 import { formatUserName } from '../../../../../utils/userHelpers';
@@ -52,7 +51,6 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   const [editText, setEditText] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  const { user: authUser } = useAuthStore();
   const highlightedCommentId = useUiStore((state) => state.highlightedCommentId);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);

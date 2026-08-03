@@ -8,6 +8,7 @@ import PrioritySelector from '../../../components/shared/PrioritySelector';
 import DueDatePicker from '../../../components/shared/DueDatePicker';
 import LabelPicker from '../../../components/shared/LabelPicker';
 import Modal from '../../../components/common/Modal';
+import MarkdownEditor from '../../../components/shared/MarkdownEditor';
 
 const CreateTaskModal: React.FC = () => {
   const { isCreateTaskModalOpen, closeCreateTaskModal } = useUiStore();
@@ -76,12 +77,14 @@ const CreateTaskModal: React.FC = () => {
           </div>
           
           <div>
-            <textarea
+            <label className="block text-xs font-semibold text-brand-text-muted mb-1.5 uppercase tracking-wider">
+              Description
+            </label>
+            <MarkdownEditor
               rows={4}
               placeholder="Add a detailed description..."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-brand-surface border border-brand-border rounded-lg px-4 py-3 text-sm outline-none resize-none focus:border-brand-primary"
+              onChange={setDescription}
             />
           </div>
 

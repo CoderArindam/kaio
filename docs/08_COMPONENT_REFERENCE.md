@@ -56,13 +56,14 @@ This document provides a reference catalog of the primary React UI components wi
 
 ---
 
-## 5. Shared Domain Selector Components (`src/components/shared/`)
+## 5. Shared Domain Selector & Form Components (`src/components/shared/`)
 
 | Component          | Path                                     | Description                                             |
 | ------------------ | ---------------------------------------- | ------------------------------------------------------- |
 | `AssigneeSelector` | `components/shared/AssigneeSelector.tsx` | Dropdown for selecting a board member as task assignee. |
 | `DueDatePicker`    | `components/shared/DueDatePicker.tsx`    | Date picker input for task due dates.                   |
 | `LabelPicker`      | `components/shared/LabelPicker.tsx`      | Color-coded label selector dropdown & board label creator for task tagging. |
+| `MarkdownEditor`   | `components/shared/MarkdownEditor.tsx`   | Enterprise-grade WYSIWYG & Markdown editor powered by TipTap (`@tiptap/react` ProseMirror engine). Features full native undo/redo history (`Ctrl+Z`/`Ctrl+Y`), zero input latency, strict shortcut encapsulation (stops event propagation so `Ctrl+B` does not trigger sidebar toggling), smart list indentation (`Tab` to indent / `Shift+Tab` to outdent sub-bullets), interactive TaskLists/checklists (`- [ ] `), Headings (H1/H2/H3), Blockquotes, Code Blocks, Horizontal dividers, Hyperlinks, Write/Preview modes, and seamless raw Markdown serialization. |
 | `PrioritySelector` | `components/shared/PrioritySelector.tsx` | Priority badge selector (LOW, MEDIUM, HIGH).            |
 | `StatusSelector`   | `components/shared/StatusSelector.tsx`   | Column status selector for task editing.                |
 
@@ -81,10 +82,20 @@ This document provides a reference catalog of the primary React UI components wi
 - **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` for task card reordering across columns. Manages column rendering, dynamic column management (inline double-click title rename, column header dropdown menu with column type changes, move left/right reordering handles, target column selection modal on column deletion), "+ Add Column" ghost column creation card (Manager/Admin only), filter state (assignee, due date, label tags), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
 - **Child Components**: Column containers (inline), `TaskCard`, `LabelFilter`, `AssigneeFilter`, `DueDateFilter`, `ConfirmDialog`.
 
-### 6.3 `TaskCard`
+### 6.3 `TaskListView`
+
+- **Path**: `features/boards/components/TaskListView.tsx`
+- **Purpose**: Alternative list view rendering tasks in a sortable table (Title, Status, Assignee, Priority, Due Date). Integrates filter controls (`AssigneeFilter`, `DueDateFilter`, `LabelFilter`) and reuses `TaskCard` with `variant="list"`. Clicking task items opens `TaskDetailsModal`.
+
+### 6.4 `TaskCalendarView`
+
+- **Path**: `features/boards/components/TaskCalendarView.tsx`
+- **Purpose**: Calendar view rendering tasks grouped by `due_date` in a Month or Week grid. Features navigation controls (Prev, Next, Today), Month/Week view mode toggle, an "Unscheduled" side panel for tasks lacking due dates, filter controls, and task pills opening `TaskDetailsModal`.
+
+### 6.5 `TaskCard`
 
 - **Path**: `features/boards/components/TaskCard.tsx`
-- **Purpose**: Draggable task card preview. Displays title, assignee avatar, due date, priority badge, comment count, subtask ratio badge (`3/5`), and color-coded label tag pills. Clicking opens the task detail modal.
+- **Purpose**: Draggable task card preview with support for `variant="board"` and `variant="list"`. Displays title, assignee avatar, due date, priority badge, comment count, subtask ratio badge (`3/5`), and color-coded label tag pills. Clicking opens the task detail modal.
 
 ### 6.4 `SubtaskChecklist`
 
@@ -109,7 +120,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.6 `CreateTaskModal`
 
 - **Path**: `features/boards/modals/CreateTaskModal.tsx`
-- **Purpose**: Quick task creation form with title, description, assignee selector, priority selector, and due date picker.
+- **Purpose**: Quick task creation form with title, Markdown description editor (`MarkdownEditor` with Write/Preview tabs and formatting toolbar), assignee selector, priority selector, and due date picker.
 
 ### 6.7 `AddMemberModal`
 
@@ -128,7 +139,7 @@ This document provides a reference catalog of the primary React UI components wi
 
 ### 6.9 Task Detail Modals (`features/boards/modals/task-details/`)
 
-- **Purpose**: Full task detail view. Displays and edits all task fields (title, description in Markdown, status, assignee, priority, due date), renders comment thread with replies, and shows file attachments. Performs bidirectional synchronization between modal state (`selectedTaskId`) and URL search parameters (`?taskId=...`) for deep linking.
+- **Purpose**: Full task detail view. Displays and edits all task fields (title, Markdown description via `MarkdownEditor` in edit-mode and `ReactMarkdown` + `remark-gfm` in read-mode, status, assignee, priority, due date), renders comment thread with replies, and shows file attachments. Performs bidirectional synchronization between modal state (`selectedTaskId`) and URL search parameters (`?taskId=...`) for deep linking.
 
 ---
 

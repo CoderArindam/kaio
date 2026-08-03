@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AlignLeft, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { type Task } from '../../../../services/tasksApi';
 import { useTaskStore } from '../../../../store/taskStore';
+import MarkdownEditor from '../../../../components/shared/MarkdownEditor';
 
 interface TaskDescriptionProps {
   task: Task;
@@ -43,13 +46,12 @@ const TaskDescription: React.FC<TaskDescriptionProps> = ({ task, canEdit }) => {
 
       {isEditing ? (
         <div className="space-y-3">
-          <textarea
+          <MarkdownEditor
             autoFocus
             value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
+            onChange={setEditDescription}
             rows={5}
             placeholder="Add a more detailed description..."
-            className="w-full bg-brand-surface border border-brand-border rounded-lg p-4 text-sm outline-none resize-none focus:border-brand-primary"
             onKeyDown={(e) => {
               if (e.key === 'Escape') handleCancel();
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
@@ -77,7 +79,15 @@ const TaskDescription: React.FC<TaskDescriptionProps> = ({ task, canEdit }) => {
           onClick={() => canEdit && setIsEditing(true)}
           className={`bg-brand-surface-low border border-brand-border rounded-lg p-5 text-sm ${canEdit ? 'cursor-pointer hover:bg-brand-surface transition' : ''} ${task.description ? 'text-brand-text' : 'text-brand-text-muted italic'}`}
         >
-          {task.description || "Add a more detailed description..."}
+          {task.description ? (
+            <div className="md-body">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {task.description}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            "Add a more detailed description..."
+          )}
         </div>
       )}
     </section>

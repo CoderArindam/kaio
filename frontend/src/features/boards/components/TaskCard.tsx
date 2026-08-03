@@ -88,25 +88,25 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
   if (variant === 'list') {
     return (
       <div
-        className="group bg-brand-surface rounded-xl border border-brand-border p-4 flex items-center justify-between shadow-sm hover:shadow-md transition cursor-pointer gap-4"
+        className="group bg-brand-surface rounded-xl border border-brand-border p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm hover:shadow-md transition cursor-pointer gap-3 sm:gap-4"
         onClick={onOpen}
       >
-        <div className="flex flex-col flex-1 gap-1">
-          <div className="flex items-center gap-2">
-            <h4 className="text-base font-semibold text-brand-text leading-tight">
+        <div className="flex flex-col flex-1 gap-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm sm:text-base font-semibold text-brand-text leading-tight break-words">
               {task.title}
             </h4>
             {task.priority && (
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                task.priority === "High" ? "bg-red-50 text-red-600"
-                  : task.priority === "Medium" ? "bg-orange-50 text-orange-600"
-                  : "bg-green-50 text-green-600"
+                task.priority === "High" ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                  : task.priority === "Medium" ? "bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400"
+                  : "bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400"
               }`}>
                 {task.priority}
               </span>
             )}
           </div>
-          <div className="text-xs text-brand-text-muted flex items-center gap-2">
+          <div className="text-xs text-brand-text-muted flex flex-wrap items-center gap-2">
             {task.board_name && <span className="font-medium">{task.board_name}</span>}
             {task.board_name && <span>•</span>}
             {task.column_name && <span>{task.column_name}</span>}
@@ -114,14 +114,14 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-brand-border/50">
           {dueDateBadge}
           <div className="shrink-0">
             {assignee ? (
-              <UserAvatar user={assignee} size="md" />
+              <UserAvatar user={assignee} size="sm" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-brand-surface-low border border-brand-border flex items-center justify-center overflow-hidden">
-                <UserRound size={15} className="text-brand-outline" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-surface-low border border-brand-border flex items-center justify-center overflow-hidden">
+                <UserRound size={14} className="text-brand-outline" />
               </div>
             )}
           </div>
@@ -188,11 +188,28 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
         </div>
       )}
 
-      {task.description && (
-        <p className="text-sm text-brand-text-muted leading-relaxed">
-          {task.description}
-        </p>
-      )}
+      {task.description && (() => {
+        // Strip markdown to plain text for the card preview
+        const plain = task.description
+          .replace(/!\[.*?\]\(.*?\)/g, '')           // images
+          .replace(/\[([^\]]+)\]\(.*?\)/g, '$1')     // links → label
+          .replace(/#{1,6}\s+/g, '')                 // headings
+          .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1') // bold/italic
+          .replace(/~~([^~]+)~~/g, '$1')             // strikethrough
+          .replace(/`{1,3}[^`]*`{1,3}/g, '')         // code
+          .replace(/^\s*[-*+>]\s+/gm, '')            // bullets / blockquote
+          .replace(/^\s*\d+\.\s+/gm, '')             // ordered list
+          .replace(/\[[ x]\]\s*/gi, '')               // task checkboxes
+          .replace(/\n+/g, ' ')
+          .trim();
+
+        if (!plain) return null;
+        return (
+          <p className="text-xs text-brand-text-muted leading-relaxed line-clamp-2 break-words">
+            {plain}
+          </p>
+        );
+      })()}
 
       {dueDateBadge && (
         <div className="flex">

@@ -76,11 +76,13 @@ frontend/src/
 │   │   └── UsersManagement.tsx
 │   ├── ai/                     # KAI AI agent UI (chat, tools, store)
 │   ├── auth/                   # Login, Signup, ForgotPassword, ResetPassword, VerifyEmail, AcceptInvitation
-│   ├── boards/                 # Kanban board feature
-│   │   ├── BoardPage.tsx       # Board page wrapper
+│   ├── boards/                 # Kanban board feature (Board, List, Calendar views)
+│   │   ├── BoardPage.tsx       # Board page wrapper with view-mode toggle (Board | List | Calendar)
 │   │   ├── components/
 │   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop & multi-select bulk move/delete toolbar
-│   │   │   ├── TaskCard.tsx        # Individual task card preview with selection checkbox & label tag pills
+│   │   │   ├── TaskListView.tsx    # Sortable table list view (Title, Status, Assignee, Priority, Due Date)
+│   │   │   ├── TaskCalendarView.tsx # Month/Week grid calendar view with Unscheduled side panel
+│   │   │   ├── TaskCard.tsx        # Task card preview supporting board and list variants
 │   │   │   ├── LabelFilter.tsx     # Board label filtering pills bar
 │   │   │   ├── AssigneeFilter.tsx  # Board assignee filter bar
 │   │   │   └── DueDateFilter.tsx   # Board due date filter bar

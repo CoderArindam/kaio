@@ -45,6 +45,13 @@ export const ApplicationSidebar: React.FC = () => {
   // Handle global keyboard shortcut (Ctrl+B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isEditable = e.target instanceof HTMLElement && (
+        e.target.isContentEditable ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) ||
+        e.target.closest('.ProseMirror') !== null
+      );
+      if (isEditable) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         toggleSidebar();

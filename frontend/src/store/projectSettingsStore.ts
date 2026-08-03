@@ -3,21 +3,48 @@ import { getProjectSettings, updateProjectSettings, archiveProject, type Project
 import { useBoardStore } from './boardStore';
 import toast from 'react-hot-toast';
 
+export type ViewMode = 'board' | 'list' | 'calendar';
+
 interface ProjectSettingsState {
   currentSettings: ProjectSettingsResponse | null;
   isLoading: boolean;
   isSaving: boolean;
   isArchiving: boolean;
+  viewModes: Record<number, ViewMode>;
+  getViewMode: (boardId: number) => ViewMode;
+  setViewMode: (boardId: number, mode: ViewMode) => void;
   fetchSettings: (boardId: number) => Promise<void>;
   updateSettings: (boardId: number, updates: ProjectSettingsUpdate) => Promise<void>;
   archiveProject: (boardId: number) => Promise<void>;
 }
 
-export const useProjectSettingsStore = create<ProjectSettingsState>((set) => ({
+export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) => ({
   currentSettings: null,
   isLoading: false,
   isSaving: false,
   isArchiving: false,
+  viewModes: {},
+
+  getViewMode: (boardId: number) => {
+    const current = get().viewModes[boardId];
+    if (current) return current;
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(`kanban_view_mode_${boardId}`);
+      if (saved === 'list' || saved === 'calendar' || saved === 'board') {
+        return saved;
+      }
+    }
+    return 'board';
+  },
+
+  setViewMode: (boardId: number, mode: ViewMode) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`kanban_view_mode_${boardId}`, mode);
+    }
+    set((state) => ({
+      viewModes: { ...state.viewModes, [boardId]: mode },
+    }));
+  },
 
   fetchSettings: async (boardId: number) => {
     set({ isLoading: true });

@@ -324,39 +324,41 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
       onDragEnd={handleDragEnd}
     >
       <div className="h-full flex flex-col overflow-hidden bg-brand-bg relative">
-        <header className="h-20 flex items-center justify-between px-4 md:px-8 shrink-0">
-          <h1 className="text-2xl md:text-3xl font-bold text-brand-text">
+        <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-3.5 sm:py-4 shrink-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-text">
             Kanban
           </h1>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 sm:gap-3 items-center">
             <button
               onClick={() => {
                 setIsMultiSelect(!isMultiSelect);
                 if (isMultiSelect) setSelectedTaskIds([]);
               }}
-              className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border ${
                 isMultiSelect
                   ? 'bg-brand-primary text-white border-brand-primary'
                   : 'bg-brand-surface text-brand-text border-brand-border hover:bg-brand-surface-low'
               }`}
             >
               <CheckSquare className="w-4 h-4" />
-              {isMultiSelect ? 'Exit Select Mode' : 'Select Tasks'}
+              <span>{isMultiSelect ? 'Exit Select' : 'Select Tasks'}</span>
             </button>
             {isManager && (
               <button
                 onClick={() => setIsAddMemberModalOpen(true)}
-                className="bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                className="bg-brand-primary hover:bg-brand-primary-hover text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer focus:ring-2 focus:ring-brand-primary focus:outline-none"
               >
-                <UserPlus className="w-4 h-4" /> Add Member
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Member</span>
+                <span className="sm:hidden">Add</span>
               </button>
             )}
           </div>
         </header>
 
         {/* Filters */}
-        <div className="px-4 md:px-8 flex flex-wrap gap-4 items-center">
+        <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-2">
           <AssigneeFilter
             users={boardMembers}
             selectedAssigneeId={selectedAssigneeId}
@@ -374,14 +376,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </div>
 
         {/* Board columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-8 pb-40 pt-4">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-8 pb-32 sm:pb-40 pt-2 sm:pt-4 custom-scrollbar">
           {isFetching ? (
             <div className="h-full flex flex-col items-center justify-center text-brand-text-muted">
               <Loader2 className="w-10 h-10 animate-spin text-brand-primary opacity-50 mb-4" />
               <p>Loading board...</p>
             </div>
           ) : (
-            <div className="flex gap-6 h-full">
+            <div className="flex gap-4 sm:gap-6 h-full">
               {columns.map((column: any, colIdx: number) => {
                 let columnTasks = tasks.filter((task: any) => {
                   if (task.column_id !== column.id) return false;
@@ -446,7 +448,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                 return (
                   <div
                     key={column.id}
-                    className="w-[340px] shrink-0 flex flex-col"
+                    className="w-[82vw] max-w-[340px] sm:w-[320px] md:w-[340px] shrink-0 flex flex-col"
                   >
                     <div className="flex justify-between items-center px-4 py-3 bg-brand-surface rounded-2xl border border-brand-border mb-4 relative">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -643,7 +645,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
               {/* + Add Column Ghost Column (Manager/Admin Only) */}
               {canManageColumns && (
-                <div className="w-[340px] shrink-0 flex flex-col">
+                <div className="w-[82vw] max-w-[340px] sm:w-[320px] md:w-[340px] shrink-0 flex flex-col">
                   {!isAddingColumn ? (
                     <button
                       onClick={() => setIsAddingColumn(true)}
@@ -715,7 +717,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
         {/* Floating Bulk Move Action Bar */}
         {isMultiSelect && selectedTaskIds.length > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-brand-surface border border-brand-border shadow-2xl rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-200">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] bg-brand-surface border border-brand-border shadow-2xl rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 animate-in slide-in-from-bottom-5 duration-200">
             <span className="text-xs font-semibold text-brand-text">
               {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? 's' : ''} selected
             </span>
