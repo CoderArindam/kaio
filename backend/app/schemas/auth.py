@@ -25,11 +25,30 @@ class OrganizationRegistrationResponse(BaseModel):
     message: str = "Registration successful"
 
 
+class RegisterInitResponse(BaseModel):
+    otp_required: bool = True
+    registration_token: str
+    email: str
+    message: str = "Verification OTP sent to your email address."
+
+
+class RegisterVerifyRequest(BaseModel):
+    registration_token: str
+    otp_code: str = Field(min_length=6, max_length=6)
+
+
 # --- Auth ---
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class LoginResponse(BaseModel):
+    message: str
+    otp_required: bool = False
+    mfa_token: Optional[str] = None
+    email: Optional[str] = None
 
 
 class SuccessResponse(BaseModel):
@@ -45,6 +64,9 @@ class UserResponse(BaseModel):
     role: Optional[str] = None
     organization_id: Optional[int] = None
     is_email_verified: bool = True
+    is_2fa_enabled: bool = False
+    two_factor_type: Optional[str] = "email"
+
 
 class SessionResponse(BaseModel):
     id: int
@@ -56,12 +78,14 @@ class SessionResponse(BaseModel):
     created_at: datetime
     is_current: bool = False
 
+
 class SecurityEventResponse(BaseModel):
     id: int
     action: str
     ip_address: Optional[str] = None
     details: Optional[dict] = None
     created_at: datetime
+
 
 class PasswordPolicy(BaseModel):
     min_length: int
@@ -79,3 +103,26 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str = Field(min_length=8)
 
+
+# --- OTP & 2FA Schemas ---
+
+class OTPVerifyRequest(BaseModel):
+    mfa_token: str
+    otp_code: str = Field(min_length=6, max_length=6)
+
+
+class OTPResendRequest(BaseModel):
+    mfa_token: str
+
+
+class Enable2FARequest(BaseModel):
+    password: Optional[str] = None
+
+
+class Confirm2FARequest(BaseModel):
+    mfa_token: str
+    otp_code: str = Field(min_length=6, max_length=6)
+
+
+class Disable2FARequest(BaseModel):
+    password: str

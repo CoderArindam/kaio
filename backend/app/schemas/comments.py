@@ -22,3 +22,5 @@ class CommentResponse(BaseModel):
     user_first_name: Optional[str] = None
     user_last_name: Optional[str] = None
     user_avatar_url: Optional[str] = None
+    user_email: Optional[str] = None
+

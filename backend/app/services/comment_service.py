@@ -32,6 +32,7 @@ class CommentService:
                     ) or []
 
                 task_row = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
+                parent_user = None
                 root_user_id = None
                 if comment_in.parent_comment_id:
                     parent_user = await self.conn.fetchrow(

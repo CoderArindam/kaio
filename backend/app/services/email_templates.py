@@ -255,3 +255,36 @@ Thanks,
 The Team
 """
     return subject, body
+
+
+def generate_otp_email(first_name: str, otp_code: str, purpose_title: str = "Verification Code", expiry_minutes: int = 10) -> tuple[str, str]:
+    subject = f"[{otp_code}] Your KAIO {purpose_title}"
+    greeting = f"Hi {first_name} 👋" if first_name else "Hi there 👋"
+    body = f"""
+{greeting}
+
+
+Here is your one-time verification code for KAIO ({purpose_title}):
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 Verification Code
+
+       {otp_code}
+
+⏰ This code is valid for {expiry_minutes} minutes.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+
+🔒 Security Notice: Never share this code with anyone. KAIO support will never ask for your verification code.
+
+If you did not request this code, please secure your account immediately.
+
+
+Thanks,
+
+The KAIO Team
+"""
+    return subject, body

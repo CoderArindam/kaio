@@ -5,8 +5,38 @@ export const registerOrganization = async (org_name: string, email: string, pass
   return response.data;
 };
 
+export const verifyRegistrationOtp = async (registration_token: string, otp_code: string) => {
+  const response = await api.post('/auth/register/verify-otp', { registration_token, otp_code });
+  return response.data;
+};
+
 export const loginUser = async (email: string, password: string) => {
   const response = await api.post('/auth/login', { email, password });
+  return response.data;
+};
+
+export const verifyLoginOtp = async (mfa_token: string, otp_code: string) => {
+  const response = await api.post('/auth/login/verify-otp', { mfa_token, otp_code });
+  return response.data;
+};
+
+export const resendOtp = async (mfa_token: string) => {
+  const response = await api.post('/auth/otp/resend', { mfa_token });
+  return response.data;
+};
+
+export const requestEnable2FA = async (password?: string) => {
+  const response = await api.post('/auth/2fa/enable', { password });
+  return response.data;
+};
+
+export const confirmEnable2FA = async (mfa_token: string, otp_code: string) => {
+  const response = await api.post('/auth/2fa/confirm-enable', { mfa_token, otp_code });
+  return response.data;
+};
+
+export const disable2FA = async (password: string) => {
+  const response = await api.post('/auth/2fa/disable', { password });
   return response.data;
 };
 
