@@ -11,6 +11,7 @@ class TaskCreate(BaseModel):
     assigned_to: Optional[int] = None
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
+    label_ids: Optional[List[int]] = []
 
 class TaskUpdate(BaseModel):
     column_id: Optional[int] = None
@@ -22,6 +23,8 @@ class TaskUpdate(BaseModel):
 
 class TaskAssigneeUpdate(BaseModel):
     assigned_to: Optional[int] = None
+
+from app.schemas.label import LabelResponse
 
 class CanonicalTaskResponse(BaseModel):
     id: int
@@ -53,6 +56,7 @@ class CanonicalTaskResponse(BaseModel):
     creator_first_name: Optional[str] = None
     creator_last_name: Optional[str] = None
     creator_avatar_url: Optional[str] = None
+    labels: List[LabelResponse] = []
 
 class ColumnResponse(BaseModel):
     id: int

@@ -32,7 +32,7 @@ from app.routers import (
     auth, boards, tasks, users, comments, attachments, activity,
     board_members, admin, invitations, notifications, my_work,
     preferences, organization, ai, task_proposals, dashboard,
-    timesheet_admin, timesheets, timesheet_approvals, search
+    timesheet_admin, timesheets, timesheet_approvals, search, labels
 )
 from app.meeting.api import router as meeting_router
 from app.websockets.router import router as ws_router
@@ -110,6 +110,7 @@ app.include_router(timesheet_admin.router, prefix="/api/v1")
 app.include_router(timesheet_approvals.router, prefix="/api/v1")
 app.include_router(timesheets.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
+app.include_router(labels.router, prefix="/api/v1")
 app.include_router(meeting_router, prefix="/api/v1")
 app.include_router(ws_router, prefix="/api/v1")
 

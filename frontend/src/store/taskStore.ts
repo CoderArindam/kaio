@@ -259,6 +259,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         priority: taskData.priority,
         due_date: taskData.due_date,
         assigned_to: taskData.assigned_to,
+        label_ids: taskData.label_ids,
       });
       
       set((state) => ({

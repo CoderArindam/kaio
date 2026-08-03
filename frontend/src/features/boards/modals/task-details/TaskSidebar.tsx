@@ -6,6 +6,7 @@ import StatusSelector from '../../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../../components/shared/PrioritySelector';
 import DueDatePicker from '../../../../components/shared/DueDatePicker';
+import LabelPicker from '../../../../components/shared/LabelPicker';
 
 interface TaskSidebarProps {
   task: Task;
@@ -85,23 +86,7 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
 
       <div className="pt-4 border-t border-brand-border">
         <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Labels</p>
-        <div className="flex gap-2 flex-wrap">
-          {task.priority && (
-            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text font-medium">
-              {task.priority.toLowerCase()}
-            </span>
-          )}
-          {task.column_name && (
-            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text-muted">
-              {task.column_name.toLowerCase()}
-            </span>
-          )}
-          {task.task_reference && (
-            <span className="px-2.5 py-1 rounded-md bg-brand-surface-low border border-brand-border text-xs text-brand-text-muted font-mono">
-              {task.task_reference}
-            </span>
-          )}
-        </div>
+        <LabelPicker task={task} canEdit={canEdit} />
       </div>
     </aside>
   );

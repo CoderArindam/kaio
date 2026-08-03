@@ -1,4 +1,6 @@
 import api from '../lib/axios';
+import { type Label } from './labelsApi';
+export type { Label };
 
 export interface Task {
   id: number;
@@ -30,6 +32,8 @@ export interface Task {
   creator_first_name?: string;
   creator_last_name?: string;
   creator_avatar_url?: string;
+  labels?: Label[];
+  label_ids?: number[];
 }
 
 export interface Column {

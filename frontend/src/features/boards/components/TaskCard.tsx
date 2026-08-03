@@ -169,6 +169,25 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
         )}
       </div>
 
+      {task.labels && task.labels.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {task.labels.map((label) => (
+            <span
+              key={label.id}
+              style={{
+                backgroundColor: `${label.color}15`,
+                borderColor: `${label.color}40`,
+                color: label.color,
+              }}
+              className="px-2 py-0.5 rounded-md text-[11px] font-semibold border flex items-center gap-1 leading-tight"
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: label.color }} />
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
+
       {task.description && (
         <p className="text-sm text-brand-text-muted leading-relaxed">
           {task.description}

@@ -333,3 +333,11 @@ Meeting UI components expose joining controls, active session status indicators,
 
 - **`TimesheetErrorBanner`** (`shared/TimesheetErrorBanner.tsx`): Standardized error display banner mapping database error codes (`OVERTIME_BLOCKED`, `TASK_NOT_ASSIGNED`, `TASK_LINK_REQUIRED`, `TASK_ASSIGNMENT_CHANGED`, etc.) to user-friendly alert banners with recovery guidance.
 - **`TaskSearchSelector`** (`shared/TaskSearchSelector.tsx`): Auto-completing task search dropdown component for linking time entries directly to assigned Kanban tasks.
+
+---
+
+## 17. Labels Feature Components
+
+- **`LabelPicker`** (`src/components/shared/LabelPicker.tsx`): Reusable interactive label dropdown component for `TaskSidebar`. Displays attached color pill badges, allows multi-select attach/detach, and includes inline color swatch picker for Manager/Admin label creation and deletion.
+- **`LabelFilter`** (`src/features/boards/components/LabelFilter.tsx`): Kanban board toolbar filter dropdown displaying board labels with color indicators for instant task filtering.
+

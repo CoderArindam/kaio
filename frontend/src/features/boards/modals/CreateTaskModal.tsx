@@ -6,13 +6,15 @@ import StatusSelector from '../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../components/shared/PrioritySelector';
 import DueDatePicker from '../../../components/shared/DueDatePicker';
+import LabelPicker from '../../../components/shared/LabelPicker';
 import Modal from '../../../components/common/Modal';
 
 const CreateTaskModal: React.FC = () => {
   const { isCreateTaskModalOpen, closeCreateTaskModal } = useUiStore();
-  const { getBoardMembersList, getColumnsList, createNewTask, isSubmitting } = useTaskStore();
+  const { getBoardMembersList, getColumnsList, createNewTask, isSubmitting, boardView } = useTaskStore();
   const boardMembers = getBoardMembersList();
   const columns = getColumnsList();
+  const boardId = boardView.boardId;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,6 +22,7 @@ const CreateTaskModal: React.FC = () => {
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [columnId, setColumnId] = useState<number | undefined>(undefined);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
 
   // set initial columnId when modal opens if not set
   React.useEffect(() => {
@@ -39,6 +42,7 @@ const CreateTaskModal: React.FC = () => {
       assigned_to: assigneeId || undefined,
       due_date: dueDate,
       column_id: columnId,
+      label_ids: selectedLabelIds,
     });
     
     setTitle('');
@@ -46,6 +50,7 @@ const CreateTaskModal: React.FC = () => {
     setPriority('Medium');
     setAssigneeId(null);
     setDueDate(null);
+    setSelectedLabelIds([]);
     setColumnId(columns[0]?.id);
     closeCreateTaskModal();
   };
@@ -112,6 +117,15 @@ const CreateTaskModal: React.FC = () => {
               <DueDatePicker 
                 dueDate={dueDate} 
                 onChange={(newDueDate: any) => setDueDate(newDueDate)} 
+              />
+            </div>
+
+            <div className="col-span-2 pt-2 border-t border-brand-border/50">
+              <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Labels (Optional)</p>
+              <LabelPicker 
+                boardId={boardId || undefined} 
+                selectedLabelIds={selectedLabelIds} 
+                onChangeSelectedLabelIds={setSelectedLabelIds} 
               />
             </div>
           </div>

@@ -358,9 +358,16 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
     "notification": { "id": 88, "activity_type": "TASK_ASSIGNED", "activity_target_reference": "ENG-24 Fix Auth Service" }
   }
   ```
-- **Connection Response**:
-  ```json
-  { "type": "pong" }
-  ```
+---
+
+## 26. Labels Router (`/api/v1`)
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/boards/{board_id}/labels` | `GET` | Cookie | Lists all labels configured for a board querying `v_labels_canonical`. |
+| `/boards/{board_id}/labels` | `POST` | Cookie (Edit) | Creates a new label on a board using `fn_create_label(board_id, name, color, user_id)`. Broadcasts `label_created` websocket event. Body: `{name, color}`. |
+| `/labels/{label_id}` | `DELETE` | Cookie (Edit) | Deletes a board label using `fn_delete_label(label_id, user_id)`. Cascades removal from tasks. |
+| `/tasks/{task_id}/labels/{label_id}` | `POST` | Cookie (Edit) | Attaches a label to a task using `fn_attach_label(task_id, label_id, user_id)` and logs an activity audit row. Broadcasts `task_updated` websocket event. |
+| `/tasks/{task_id}/labels/{label_id}` | `DELETE` | Cookie (Edit) | Detaches a label from a task using `fn_detach_label(task_id, label_id, user_id)` and logs an activity audit row. Broadcasts `task_updated` websocket event. |
 
 

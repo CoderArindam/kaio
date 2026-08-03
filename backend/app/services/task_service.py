@@ -7,6 +7,21 @@ from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, Canonic
 
 logger = logging.getLogger(__name__)
 
+import json
+
+def _format_task_row(row: Any) -> dict:
+    if not row:
+        return {}
+    d = dict(row)
+    if "labels" in d and isinstance(d["labels"], str):
+        try:
+            d["labels"] = json.loads(d["labels"])
+        except Exception:
+            d["labels"] = []
+    elif "labels" not in d or d["labels"] is None:
+        d["labels"] = []
+    return d
+
 class TaskService:
     def __init__(self, conn: asyncpg.Connection):
         self.conn = conn
@@ -22,7 +37,7 @@ class TaskService:
             if not has_access:
                 raise HTTPException(status_code=403, detail="Task not found or access denied")
                 
-            return CanonicalTaskResponse(**dict(row))
+            return CanonicalTaskResponse(**_format_task_row(row))
         except HTTPException:
             raise
         except Exception as e:
@@ -51,8 +66,12 @@ class TaskService:
                     task_in.priority, task_in.assigned_to, current_user["id"], task_in.due_date, task_in.reminder_at
                 )
                 
+                if task_in.label_ids:
+                    for label_id in task_in.label_ids:
+                        await self.conn.execute("SELECT fn_attach_label($1, $2, $3)", task_id, label_id, current_user["id"])
+
                 row = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
-                return CanonicalTaskResponse(**dict(row))
+                return CanonicalTaskResponse(**_format_task_row(row))
         except HTTPException:
             raise
         except Exception as e:
@@ -81,7 +100,7 @@ class TaskService:
             
             return BoardDataResponse(
                 columns=[dict(c) for c in columns_rows],
-                tasks=[CanonicalTaskResponse(**dict(t)) for t in tasks_rows]
+                tasks=[CanonicalTaskResponse(**_format_task_row(t)) for t in tasks_rows]
             )
         except HTTPException:
             raise

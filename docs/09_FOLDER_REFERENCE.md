@@ -35,8 +35,8 @@ This directory dictionary maps every major folder across the repository, explain
 | `backend/app/meeting/pipeline/` | Sequential post-processing stage engine + task extraction | `orchestrator.py`, `stages/`, `context.py` | Deepgram, FFmpeg, LLM |
 | `backend/app/meeting/providers/` | Speech (Deepgram) and presence providers | `speech/deepgram_provider.py`, `participant_presence/` | Deepgram SDK, asyncpg |
 | `backend/app/websockets/` | WebSocket connection subsystem | `auth.py`, `manager.py`, `router.py` | FastAPI WebSockets, PyJWT |
-| `backend/app/routers/` | **23** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, `timesheet_approvals.py`, `timesheet_admin.py`, `timesheet_errors.py`, etc. | FastAPI, Pydantic |
-| `backend/app/schemas/` | **21** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, `timesheet_approvals.py`, `timesheet_admin.py`, etc. | Pydantic v2 |
+| `backend/app/routers/` | **24** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `labels.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, etc. | FastAPI, Pydantic |
+| `backend/app/schemas/` | **22** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `label.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, etc. | Pydantic v2 |
 | `backend/app/services/` | Business logic services (one per domain) | `auth_service.py`, `board_service.py`, `task_service.py`, `dashboard_service.py`, `invitation_service.py`, `notification_service.py`, `email_service.py`, etc. | asyncpg, httpx |
 | `backend/storage/` | Local disk file storage for meeting artifacts | `meeting/recordings/`, `meeting/processed_audio/` | OS filesystem |
 | `backend/uploads/` | Uploaded task attachment files (served as static at `/uploads/`) | `.webm`, `.png`, `.pdf`, etc. | FastAPI StaticFiles |
@@ -49,7 +49,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **55** SQL migration files (versions 001–054) | `001_extensions.sql` … `054_task_deletion_notifications_cleanup.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **58** SQL migration files (versions 001–059) | `001_extensions.sql` … `059_labels_view.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -71,14 +71,14 @@ python database/scripts/rebuild.py --reset
 | `frontend/src/assets/` | Static graphics, SVG icons, logos | `*.svg`, `*.png` | — |
 | `frontend/src/components/common/` | Reusable domain-agnostic components (modals, avatars, empty states) | `Modal.tsx`, `UserAvatar.tsx`, `ConfirmDialog.tsx`, etc. | React 19, Lucide React |
 | `frontend/src/components/layout/` | Application shell layout components | `AppLayout.tsx`, `ApplicationSidebar.tsx`, `SettingsLayout.tsx`, `UserAvatarDropdown.tsx` | React Router DOM v7, Zustand |
-| `frontend/src/components/shared/` | Reusable domain-specific selector inputs | `AssigneeSelector.tsx`, `DueDatePicker.tsx`, `PrioritySelector.tsx`, `StatusSelector.tsx` | React 19 |
+| `frontend/src/components/shared/` | Reusable domain-specific selector inputs | `AssigneeSelector.tsx`, `DueDatePicker.tsx`, `LabelPicker.tsx`, `PrioritySelector.tsx`, `StatusSelector.tsx` | React 19 |
 | `frontend/src/components/ui/` | Low-level primitive UI components | `Button.tsx`, `Card.tsx`, `Skeleton.tsx`, `WidgetError.tsx` | Tailwind CSS v4 |
 | `frontend/src/constants/` | Application constants, route path definitions | `routes.ts`, `config.ts` | — |
 | `frontend/src/features/` | Feature-scoped page modules (14 features) | `auth/`, `boards/`, `dashboard/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
 | `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts`, `useWebSocket.ts` | React 19 |
 | `frontend/src/lib/` | Axios instance configuration with interceptors | `axios.ts` or similar | Axios v1 |
 | `frontend/src/routes/` | React Router route guard components | `ProtectedRoute.tsx`, `RequireRole.tsx` | React Router DOM v7, Zustand |
-| `frontend/src/services/` | API call functions (22 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, `timesheetApprovalService.ts`, `timesheetAdminService.ts`, `timesheetReportsApi.ts`, etc. | Axios v1 |
+| `frontend/src/services/` | API call functions (23 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `labelsApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, etc. | Axios v1 |
 | `frontend/src/store/` | Zustand v5 global state stores (10 stores) | `authStore.ts`, `boardStore.ts`, `taskStore.ts`, `adminStore.ts`, `notificationStore.ts`, `organizationStore.ts`, `preferencesStore.ts`, `projectSettingsStore.ts`, `activityStore.ts`, `uiStore.ts` | Zustand v5 |
 | `frontend/src/styles/` | Global CSS and Tailwind v4 customizations | `*.css` | Tailwind CSS v4 |
 | `frontend/src/utils/` | Utility helper functions | `*.ts` | — |

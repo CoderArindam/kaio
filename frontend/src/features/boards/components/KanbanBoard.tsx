@@ -22,6 +22,7 @@ import CreateTaskModal from '../modals/CreateTaskModal';
 import AddMemberModal from '../modals/AddMemberModal';
 import AssigneeFilter from './AssigneeFilter';
 import DueDateFilter, { type DueDateFilterOption } from './DueDateFilter';
+import LabelFilter from './LabelFilter';
 import { type Column, type Task, bulkMoveTasks, bulkDeleteTasks } from '../../../services/tasksApi';
 
 import { type User } from '../../../services/usersApi';
@@ -133,6 +134,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedDueDateFilter, setSelectedDueDateFilter] =
     useState<DueDateFilterOption>("All");
+  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -329,6 +331,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
             value={selectedDueDateFilter}
             onChange={setSelectedDueDateFilter}
           />
+          <LabelFilter
+            boardId={boardId}
+            selectedLabelId={selectedLabelId}
+            onChange={setSelectedLabelId}
+          />
         </div>
 
         {/* Board columns */}
@@ -346,6 +353,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                   if (
                     selectedAssigneeId !== null &&
                     task.assigned_to !== selectedAssigneeId
+                  )
+                    return false;
+
+                  if (
+                    selectedLabelId !== null &&
+                    (!task.labels || !task.labels.some((l: any) => l.id === selectedLabelId))
                   )
                     return false;
 
