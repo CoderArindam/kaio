@@ -43,8 +43,6 @@ import {
   CreditCard,
   Keyboard,
   Boxes,
-  Users,
-  Tag,
   Zap,
   Puzzle,
 } from 'lucide-react';

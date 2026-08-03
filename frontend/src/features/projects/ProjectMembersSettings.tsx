@@ -8,7 +8,6 @@ import {
   Shield,
   UserCheck,
   Trash2,
-  Check,
   X,
   Loader2,
   Mail,
@@ -440,12 +439,12 @@ export const ProjectMembersSettings: React.FC = () => {
         <ConfirmDialog
           isOpen={!!memberToRemove}
           title="Remove Member from Project"
-          message={`Are you sure you want to remove ${
+          description={`Are you sure you want to remove ${
             [memberToRemove.first_name, memberToRemove.last_name].filter(Boolean).join(' ') ||
             memberToRemove.email
           } from this project?`}
           confirmText="Remove Member"
-          confirmVariant="danger"
+          isDestructive={true}
           isLoading={isRemoving}
           onConfirm={handleRemoveMember}
           onClose={() => setMemberToRemove(null)}

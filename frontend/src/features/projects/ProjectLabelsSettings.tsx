@@ -9,7 +9,6 @@ import {
   Check,
   X,
   Loader2,
-  Palette,
 } from 'lucide-react';
 import { getBoardLabels, createLabel, updateLabel, deleteLabel, type Label } from '../../services/labelsApi';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -385,9 +384,9 @@ export const ProjectLabelsSettings: React.FC = () => {
         <ConfirmDialog
           isOpen={!!labelToDelete}
           title="Delete Label"
-          message={`Are you sure you want to delete the label "${labelToDelete.name}"? It will be removed from all tasks across this project.`}
+          description={`Are you sure you want to delete the label "${labelToDelete.name}"? It will be removed from all tasks across this project.`}
           confirmText="Delete Label"
-          confirmVariant="danger"
+          isDestructive={true}
           isLoading={isDeleting}
           onConfirm={handleDelete}
           onClose={() => setLabelToDelete(null)}
