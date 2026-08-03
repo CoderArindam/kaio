@@ -9,7 +9,10 @@ A short-lived (15-minute) httpOnly cookie named `access_token` containing the si
 A record in the `active_sessions` database table representing one authenticated login instance on one device. Created/updated by `fn_refresh_session()`. Revoked via `fn_revoke_session()` or `DELETE /auth/sessions/other`.
 
 ### Board Column
-A `board_columns` table record defining a stage in a Kanban workflow (e.g., "To Do", "In Progress", "Review", "Done"). Each column has a `column_type` enum (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`) used for KPI aggregation.
+A `board_columns` table record defining a stage in a Kanban workflow (e.g., "To Do", "In Progress", "Review", "Done"). Each column has a `column_type` enum (`TODO`, `IN_PROGRESS`, `DONE`) used for KPI aggregation.
+
+### Column Management
+Dynamic post-creation Kanban board column CRUD and reordering operations (adding columns via "+ Add Column" ghost card, inline title renaming, column type configuration, move left/right reordering, and soft-deletion with atomic card migration to a target destination column) restricted to Manager and Superadmin roles.
 
 ### Canonical View Layer
 PostgreSQL views named `v_*_canonical` (e.g., `v_tasks_canonical`, `v_dashboard_kpis_canonical`) that serve read requests from the backend without exposing raw table implementations. Application code **must only** read from these views — never from base tables directly.

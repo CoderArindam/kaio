@@ -372,12 +372,12 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
   ```
 
 #### Server Incoming Events:
-- **Board Task Mutations**:
+- **Board Task & Column Mutations**:
   ```json
   {
-    "type": "task_created" | "task_updated" | "task_moved" | "task_deleted",
+    "type": "task_created" | "task_updated" | "task_moved" | "task_deleted" | "column_created" | "column_updated" | "column_deleted" | "column_reordered",
     "board_id": 12,
-    "task": { "id": 105, "title": "Implement WebSockets", "column_id": 3, "position": 1000 }
+    "column": { "id": 4, "name": "In Review", "position": 3, "column_type": "IN_PROGRESS" }
   }
   ```
 - **Direct Notification Push**:
@@ -388,6 +388,17 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
   }
   ```
 ---
+
+## 27. Column Management Router (`/api/v1`)
+
+All column mutation endpoints are gated by **Manager or Superadmin** authorization (`require_manager_or_above`).
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/boards/{board_id}/columns` | `POST` | Cookie (Manager+) | Creates a new column on a board using `fn_add_column(board_id, name, column_type, position, user_id)`. Broadcasts `column_created` WS event. |
+| `/boards/{board_id}/columns/reorder` | `POST` | Cookie (Manager+) | Reorders columns on a board using `fn_reorder_columns(board_id, ordered_column_ids, user_id)`. Broadcasts `column_reordered` WS event. Body: `{ordered_column_ids: int[]}`. |
+| `/columns/{column_id}` | `PATCH` | Cookie (Manager+) | Updates column name or column_type using `fn_rename_column(column_id, name, column_type, user_id)`. Broadcasts `column_updated` WS event. |
+| `/columns/{column_id}` | `DELETE` | Cookie (Manager+) | Soft-deletes column using `fn_delete_column(column_id, target_column_id, user_id)` after migrating all existing tasks to `target_column_id`. Broadcasts `column_deleted` WS event. Body: `{target_column_id: int}`. |
 
 ## 26. Labels Router (`/api/v1`)
 

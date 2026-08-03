@@ -85,7 +85,7 @@ class TaskService:
                 raise HTTPException(status_code=403, detail="Board not found or access denied")
 
             columns_rows = await self.conn.fetch(
-                "SELECT id, name, position, column_type, (column_type = 'DONE') AS is_completed FROM board_columns WHERE board_id = $1 ORDER BY position",
+                "SELECT id, name, position, column_type, (column_type = 'DONE') AS is_completed FROM board_columns WHERE board_id = $1 AND deleted_at IS NULL ORDER BY position",
                 board_id
             )
             

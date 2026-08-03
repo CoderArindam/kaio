@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getBoardTasks, getTask, createTask, updateTaskStatus, deleteTask, updateTaskAssignee, updateTask, type Task, type Column } from '../services/tasksApi';
+import { createColumn, updateColumn, deleteColumn, reorderColumns, type CreateColumnPayload, type UpdateColumnPayload } from '../services/columnsApi';
 import { useActivityStore } from './activityStore';
 import { getUsers, getBoardMembers, type User, type BoardMember } from '../services/usersApi';
 import toast from 'react-hot-toast';
@@ -47,6 +48,12 @@ interface TaskState {
   removeTask: (taskId: number) => Promise<void>;
   assignTask: (taskId: number, assigneeId: number | null) => Promise<void>;
   updateTaskData: (taskId: number, data: Partial<Task>) => Promise<void>;
+
+  // Column actions
+  addColumn: (boardId: number, data: CreateColumnPayload) => Promise<Column | undefined>;
+  renameColumn: (columnId: number, data: UpdateColumnPayload) => Promise<void>;
+  removeColumn: (columnId: number, targetColumnId: number) => Promise<void>;
+  reorderBoardColumns: (boardId: number, orderedColumnIds: number[]) => Promise<void>;
 
   // Internal helpers
   _updateTaskEntity: (taskId: number, updater: (task: Task) => Partial<Task>) => void;
@@ -419,6 +426,117 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update task");
       get()._updateTaskEntity(taskId, () => prevTask); // rollback
+    }
+  },
+
+  // Column actions
+  addColumn: async (boardId, data) => {
+    if (!data.name?.trim()) return;
+    set({ isSubmitting: true });
+    try {
+      const newCol = await createColumn(boardId, data);
+      set((state) => ({
+        entities: {
+          ...state.entities,
+          columns: { ...state.entities.columns, [newCol.id]: newCol },
+        },
+        boardView: {
+          ...state.boardView,
+          columnIds: [...state.boardView.columnIds, newCol.id],
+        },
+      }));
+      toast.success("Column created successfully");
+      return newCol;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create column");
+    } finally {
+      set({ isSubmitting: false });
+    }
+  },
+
+  renameColumn: async (columnId, data) => {
+    const prevCol = get().entities.columns[columnId];
+    if (!prevCol) return;
+
+    // Optimistic update
+    set((state) => ({
+      entities: {
+        ...state.entities,
+        columns: {
+          ...state.entities.columns,
+          [columnId]: { ...prevCol, ...data },
+        },
+      },
+    }));
+
+    try {
+      const updatedCol = await updateColumn(columnId, data);
+      set((state) => ({
+        entities: {
+          ...state.entities,
+          columns: {
+            ...state.entities.columns,
+            [columnId]: updatedCol,
+          },
+        },
+      }));
+      toast.success("Column updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update column");
+      // Rollback
+      set((state) => ({
+        entities: {
+          ...state.entities,
+          columns: {
+            ...state.entities.columns,
+            [columnId]: prevCol,
+          },
+        },
+      }));
+    }
+  },
+
+  removeColumn: async (columnId, targetColumnId) => {
+    const { boardView } = get();
+    if (!boardView.boardId) return;
+
+    try {
+      await deleteColumn(columnId, targetColumnId);
+      toast.success("Column deleted");
+      // Refresh board to fetch migrated tasks and active column ordering
+      await get().initializeBoard(boardView.boardId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete column");
+    }
+  },
+
+  reorderBoardColumns: async (boardId, orderedColumnIds) => {
+    const snapshotColumnIds = [...get().boardView.columnIds];
+    const snapshotColumns = structuredClone(get().entities.columns);
+
+    // Optimistically reorder boardView columnIds and update column position properties
+    set((state) => {
+      const newColumns = { ...state.entities.columns };
+      orderedColumnIds.forEach((id, idx) => {
+        if (newColumns[id]) {
+          newColumns[id] = { ...newColumns[id], position: idx + 1 };
+        }
+      });
+      return {
+        entities: { ...state.entities, columns: newColumns },
+        boardView: { ...state.boardView, columnIds: orderedColumnIds },
+      };
+    });
+
+    try {
+      await reorderColumns(boardId, orderedColumnIds);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reorder columns");
+      // Rollback on failure
+      set((state) => ({
+        entities: { ...state.entities, columns: snapshotColumns },
+        boardView: { ...state.boardView, columnIds: snapshotColumnIds },
+      }));
     }
   },
 }));

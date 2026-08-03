@@ -78,7 +78,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.2 `KanbanBoard`
 
 - **Path**: `features/boards/components/KanbanBoard.tsx`
-- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` for task card reordering across columns. Manages column rendering, filter state (assignee, due date, label tags), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
+- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` for task card reordering across columns. Manages column rendering, dynamic column management (inline double-click title rename, column header dropdown menu with column type changes, move left/right reordering handles, target column selection modal on column deletion), "+ Add Column" ghost column creation card (Manager/Admin only), filter state (assignee, due date, label tags), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
 - **Child Components**: Column containers (inline), `TaskCard`, `LabelFilter`, `AssigneeFilter`, `DueDateFilter`, `ConfirmDialog`.
 
 ### 6.3 `TaskCard`

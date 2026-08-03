@@ -88,6 +88,8 @@ class ConnectionManager:
                 continue
             await self.send_to_user(uid, message)
 
+    broadcast_to_board = send_to_board
+
     async def send_to_org_role(
         self,
         org_id: int,

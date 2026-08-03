@@ -139,7 +139,11 @@ export function useWebSocket(): { isConnected: boolean } {
         case 'task_updated':
         case 'task_moved':
         case 'task_deleted':
-        case 'task.updated': {
+        case 'task.updated':
+        case 'column_created':
+        case 'column_updated':
+        case 'column_deleted':
+        case 'column_reordered': {
           const eventBoardId = msg.board_id as number | undefined;
           const activeBoardId = boardIdRef.current;
           if (eventBoardId && activeBoardId && eventBoardId === activeBoardId) {

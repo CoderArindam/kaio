@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Plus, UserPlus, CheckSquare, Trash2 } from 'lucide-react';
+import { Loader2, Plus, UserPlus, CheckSquare, Trash2, MoreVertical, MoveLeft, MoveRight, Edit2, Check, X } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -121,6 +121,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     assignTask,
     setSelectedAssigneeId,
     initializeBoard,
+    addColumn,
+    renameColumn,
+    removeColumn,
+    reorderBoardColumns,
   } = useTaskStore();
 
   const columns = getColumnsList();
@@ -130,6 +134,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
   const { openTaskModal, openCreateTaskModal } = useUiStore();
   const { user } = useAuthStore();
+  const canManageColumns = isManagerOrAdmin(user);
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedDueDateFilter, setSelectedDueDateFilter] =
@@ -146,6 +151,58 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const [isBulkMoving, setIsBulkMoving] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  // Column management state
+  const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
+  const [editingColumnName, setEditingColumnName] = useState('');
+  const [openMenuColumnId, setOpenMenuColumnId] = useState<number | null>(null);
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
+  const [newColumnType, setNewColumnType] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
+  const [columnToDelete, setColumnToDelete] = useState<{ id: number; name: string; taskCount: number } | null>(null);
+  const [targetColumnIdForDelete, setTargetColumnIdForDelete] = useState<number | ''>('');
+
+  const handleSaveColumnRename = async (columnId: number) => {
+    if (!editingColumnName.trim()) {
+      setEditingColumnId(null);
+      return;
+    }
+    await renameColumn(columnId, { name: editingColumnName.trim() });
+    setEditingColumnId(null);
+  };
+
+  const handleMoveColumn = async (currentIndex: number, delta: number) => {
+    const targetIndex = currentIndex + delta;
+    if (targetIndex < 0 || targetIndex >= columns.length) return;
+    const newOrderedIds = columns.map((c: any) => c.id);
+    const [movedColId] = newOrderedIds.splice(currentIndex, 1);
+    newOrderedIds.splice(targetIndex, 0, movedColId);
+    await reorderBoardColumns(boardId, newOrderedIds);
+  };
+
+  const handleConfirmDeleteColumn = async () => {
+    if (!columnToDelete) return;
+
+    let targetId = Number(targetColumnIdForDelete);
+    if (!targetId) {
+      const otherCol = columns.find((c: any) => c.id !== columnToDelete.id);
+      if (otherCol) targetId = otherCol.id;
+    }
+
+    if (targetId) {
+      await removeColumn(columnToDelete.id, targetId);
+    }
+    setColumnToDelete(null);
+    setTargetColumnIdForDelete('');
+  };
+
+  const handleAddColumnSubmit = async () => {
+    if (!newColumnName.trim()) return;
+    await addColumn(boardId, { name: newColumnName.trim(), column_type: newColumnType });
+    setNewColumnName('');
+    setNewColumnType('TODO');
+    setIsAddingColumn(false);
+  };
 
   const toggleTaskSelection = (taskId: number) => {
     setSelectedTaskIds((prev) =>
@@ -347,7 +404,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
             </div>
           ) : (
             <div className="flex gap-6 h-full">
-              {columns.map((column: any) => {
+              {columns.map((column: any, colIdx: number) => {
                 let columnTasks = tasks.filter((task: any) => {
                   if (task.column_id !== column.id) return false;
                   if (
@@ -413,16 +470,158 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                     key={column.id}
                     className="w-[340px] shrink-0 flex flex-col"
                   >
-                    <div className="flex justify-between items-center px-4 py-3 bg-brand-surface rounded-2xl border border-brand-border mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-brand-primary" />
-                        <h3 className="font-semibold text-brand-text">
-                          {column.name}
-                        </h3>
+                    <div className="flex justify-between items-center px-4 py-3 bg-brand-surface rounded-2xl border border-brand-border mb-4 relative">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-3 h-3 rounded-full bg-brand-primary shrink-0" />
+                        {editingColumnId === column.id ? (
+                          <div className="flex items-center gap-1.5 flex-1 mr-2">
+                            <input
+                              type="text"
+                              value={editingColumnName}
+                              onChange={(e) => setEditingColumnName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveColumnRename(column.id);
+                                if (e.key === 'Escape') setEditingColumnId(null);
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-sm bg-brand-surface-low border border-brand-border rounded text-brand-text focus:outline-none focus:border-brand-primary"
+                            />
+                            <button
+                              onClick={() => handleSaveColumnRename(column.id)}
+                              className="p-1 hover:bg-brand-surface-container rounded text-emerald-500 cursor-pointer"
+                              title="Save"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              onClick={() => setEditingColumnId(null)}
+                              className="p-1 hover:bg-brand-surface-container rounded text-brand-text-muted cursor-pointer"
+                              title="Cancel"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <h3
+                            onDoubleClick={() => {
+                              if (canManageColumns) {
+                                setEditingColumnId(column.id);
+                                setEditingColumnName(column.name);
+                              }
+                            }}
+                            className={`font-semibold text-brand-text truncate ${
+                              canManageColumns ? 'cursor-pointer hover:text-brand-primary' : ''
+                            }`}
+                            title={canManageColumns ? 'Double-click to rename' : undefined}
+                          >
+                            {column.name}
+                          </h3>
+                        )}
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-brand-surface-low text-xs">
-                        {columnTasks.length}
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full bg-brand-surface-low text-xs shrink-0">
+                          {columnTasks.length}
+                        </span>
+
+                        {canManageColumns && (
+                          <div className="relative">
+                            <button
+                              onClick={() =>
+                                setOpenMenuColumnId(openMenuColumnId === column.id ? null : column.id)
+                              }
+                              className="p-1 text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-low rounded-lg transition-colors cursor-pointer"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+
+                            {openMenuColumnId === column.id && (
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-brand-surface border border-brand-border rounded-xl shadow-xl z-30 py-1 text-sm">
+                                <button
+                                  onClick={() => {
+                                    setEditingColumnId(column.id);
+                                    setEditingColumnName(column.name);
+                                    setOpenMenuColumnId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-brand-surface-low flex items-center gap-2 text-brand-text cursor-pointer"
+                                >
+                                  <Edit2 size={14} />
+                                  <span>Rename</span>
+                                </button>
+
+                                <div className="px-3 py-1.5 border-t border-brand-border text-xs text-brand-text-muted font-medium">
+                                  Column Type
+                                </div>
+                                {(['TODO', 'IN_PROGRESS', 'DONE'] as const).map((type) => (
+                                  <button
+                                    key={type}
+                                    onClick={async () => {
+                                      setOpenMenuColumnId(null);
+                                      await renameColumn(column.id, { column_type: type });
+                                    }}
+                                    className={`w-full text-left px-4 py-1.5 text-xs flex items-center justify-between hover:bg-brand-surface-low cursor-pointer ${
+                                      column.column_type === type ? 'text-brand-primary font-semibold' : 'text-brand-text'
+                                    }`}
+                                  >
+                                    <span>{type}</span>
+                                    {column.column_type === type && <Check size={12} />}
+                                  </button>
+                                ))}
+
+                                <div className="border-t border-brand-border my-1" />
+
+                                <div className="flex items-center justify-between px-3 py-1.5">
+                                  <span className="text-xs text-brand-text-muted font-medium">Move</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      disabled={colIdx === 0}
+                                      onClick={() => {
+                                        setOpenMenuColumnId(null);
+                                        handleMoveColumn(colIdx, -1);
+                                      }}
+                                      className="p-1 hover:bg-brand-surface-low rounded disabled:opacity-30 cursor-pointer"
+                                      title="Move left"
+                                    >
+                                      <MoveLeft size={14} />
+                                    </button>
+                                    <button
+                                      disabled={colIdx === columns.length - 1}
+                                      onClick={() => {
+                                        setOpenMenuColumnId(null);
+                                        handleMoveColumn(colIdx, 1);
+                                      }}
+                                      className="p-1 hover:bg-brand-surface-low rounded disabled:opacity-30 cursor-pointer"
+                                      title="Move right"
+                                    >
+                                      <MoveRight size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="border-t border-brand-border my-1" />
+
+                                <button
+                                  disabled={columns.length <= 1}
+                                  onClick={() => {
+                                    setOpenMenuColumnId(null);
+                                    const target = columns.find((c: any) => c.id !== column.id);
+                                    setTargetColumnIdForDelete(target ? target.id : '');
+                                    setColumnToDelete({
+                                      id: column.id,
+                                      name: column.name,
+                                      taskCount: columnTasks.length,
+                                    });
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-500 flex items-center gap-2 disabled:opacity-40 cursor-pointer"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Delete Column</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <DroppableColumn column={column}>
@@ -463,6 +662,75 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                   </div>
                 );
               })}
+
+              {/* + Add Column Ghost Column (Manager/Admin Only) */}
+              {canManageColumns && (
+                <div className="w-[340px] shrink-0 flex flex-col">
+                  {!isAddingColumn ? (
+                    <button
+                      onClick={() => setIsAddingColumn(true)}
+                      className="w-full h-[120px] border-2 border-dashed border-brand-border hover:border-brand-primary rounded-2xl bg-brand-surface-low/50 hover:bg-brand-surface-container flex flex-col items-center justify-center gap-2 text-brand-text-muted hover:text-brand-primary transition-all group cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-brand-surface-low border border-brand-border group-hover:border-brand-primary flex items-center justify-center">
+                        <Plus size={18} />
+                      </div>
+                      <span className="font-semibold text-sm">+ Add Column</span>
+                    </button>
+                  ) : (
+                    <div className="p-4 bg-brand-surface border border-brand-border rounded-2xl shadow-xl flex flex-col gap-3">
+                      <h4 className="font-semibold text-brand-text text-sm">Add New Column</h4>
+                      <div>
+                        <label className="text-xs text-brand-text-muted mb-1 block">Column Name</label>
+                        <input
+                          type="text"
+                          value={newColumnName}
+                          onChange={(e) => setNewColumnName(e.target.value)}
+                          placeholder="e.g. In Review, QA..."
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddColumnSubmit();
+                            if (e.key === 'Escape') {
+                              setIsAddingColumn(false);
+                              setNewColumnName('');
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-brand-text-muted mb-1 block">Type</label>
+                        <select
+                          value={newColumnType}
+                          onChange={(e) => setNewColumnType(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary cursor-pointer"
+                        >
+                          <option value="TODO">TODO</option>
+                          <option value="IN_PROGRESS">IN_PROGRESS</option>
+                          <option value="DONE">DONE</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2 justify-end mt-1">
+                        <button
+                          onClick={() => {
+                            setIsAddingColumn(false);
+                            setNewColumnName('');
+                          }}
+                          className="px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-surface-low rounded-lg cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddColumnSubmit}
+                          disabled={!newColumnName.trim()}
+                          className="px-4 py-1.5 text-xs bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 cursor-pointer transition-colors"
+                        >
+                          Add Column
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -587,6 +855,61 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         isDestructive={true}
         isLoading={isDeleting}
       />
+
+      {columnToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-brand-surface border border-brand-border rounded-2xl shadow-2xl p-6">
+            <h3 className="text-lg font-bold text-brand-text mb-2">
+              Delete Column "{columnToDelete.name}"
+            </h3>
+            {columnToDelete.taskCount > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-brand-text-muted">
+                  This column currently contains <strong className="text-brand-text">{columnToDelete.taskCount}</strong> task card(s). Select a destination column to migrate all existing cards into before deleting:
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-brand-text-muted mb-1">
+                    Destination Column
+                  </label>
+                  <select
+                    value={targetColumnIdForDelete}
+                    onChange={(e) => setTargetColumnIdForDelete(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary cursor-pointer"
+                  >
+                    {columns
+                      .filter((c: any) => c.id !== columnToDelete.id)
+                      .map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.column_type})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-brand-text-muted">
+                Are you sure you want to delete this column? This action will soft-delete the column.
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setColumnToDelete(null)}
+                className="px-4 py-2 text-sm text-brand-text-muted hover:bg-brand-surface-low rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteColumn}
+                disabled={columnToDelete.taskCount > 0 && !targetColumnIdForDelete}
+                className="px-4 py-2 text-sm bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {columnToDelete.taskCount > 0 ? 'Migrate Cards & Delete' : 'Delete Column'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   );
 };

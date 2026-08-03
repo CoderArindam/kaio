@@ -322,11 +322,23 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 048_timesheet_row_locking.sql
 049_meeting_session_fail_status.sql
 050_meeting_session_rerun.sql
-051_global_search_view.sql
-052_bulk_task_operations.sql
-053_notification_target_reference_with_title.sql
 054_task_deletion_notifications_cleanup.sql
+055_password_reset_email_verification.sql
+056_dashboard_performance_optimization.sql
+057_labels_schema.sql
+058_labels_functions.sql
+059_labels_view.sql
+060_subtasks_schema.sql
+061_subtasks_functions.sql
+062_subtasks_view.sql
+063_column_management_functions.sql
 ```
+
+### Stored Procedures for Column Management (`063_column_management_functions.sql`)
+- `fn_add_column(p_board_id, p_name, p_column_type, p_position, p_user_id)`: Creates a new column for a board, setting position and logging activity. Manager/Superadmin authorized.
+- `fn_rename_column(p_column_id, p_name, p_column_type, p_user_id)`: Updates name and/or column_type of a column, logging activity. Manager/Superadmin authorized.
+- `fn_delete_column(p_column_id, p_target_column_id, p_user_id)`: Atomically migrates all tasks from the column to `p_target_column_id`, soft-deletes the column row (`deleted_at = CURRENT_TIMESTAMP`), re-indexes active column positions, and logs activity.
+- `fn_reorder_columns(p_board_id, p_ordered_column_ids[], p_user_id)`: Reorders columns according to array order and updates position values atomically.
 
 > [!NOTE]
 > File `032_revoke_invitation_function.sql` and `032_seed_techinnovators.sql` share the `032_` prefix. They are both applied; the rebuild script sorts alphabetically so `032_revoke_invitation_function.sql` runs before `032_seed_techinnovators.sql`.
