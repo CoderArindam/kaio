@@ -12,3 +12,8 @@ class LabelResponse(BaseModel):
 class LabelCreate(BaseModel):
     name: str
     color: str
+
+class LabelUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+

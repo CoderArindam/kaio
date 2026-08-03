@@ -18,9 +18,15 @@ export const createLabel = async (boardId: number, data: { name: string; color: 
   return response.data.data;
 };
 
+export const updateLabel = async (labelId: number, data: { name?: string; color?: string }): Promise<Label> => {
+  const response = await api.patch(`/labels/${labelId}`, data);
+  return response.data.data;
+};
+
 export const deleteLabel = async (labelId: number): Promise<void> => {
   await api.delete(`/labels/${labelId}`);
 };
+
 
 export const attachLabel = async (taskId: number, labelId: number): Promise<void> => {
   await api.post(`/tasks/${taskId}/labels/${labelId}`);

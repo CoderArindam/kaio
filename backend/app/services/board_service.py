@@ -143,3 +143,45 @@ class BoardService:
         except Exception as e:
             logger.error(f'Unexpected error in get_board_members: {e}')
             raise HTTPException(status_code=400, detail='An unexpected error occurred')
+
+    async def add_board_member(self, board_id: int, user_id: int, permission: str, current_user: dict):
+        has_access = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+        role = current_user.get("role", "MEMBER")
+        if not has_access and role not in ("SUPER_ADMIN", "MANAGER"):
+            raise HTTPException(status_code=403, detail="Not authorized to manage members on this board")
+
+        try:
+            await self.conn.execute(
+                "SELECT assign_user_to_board($1, $2, $3, $4)",
+                current_user["id"],
+                board_id,
+                user_id,
+                permission
+            )
+        except asyncpg.exceptions.RaiseError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except asyncpg.exceptions.ForeignKeyViolationError:
+            raise HTTPException(status_code=404, detail="Board or User not found")
+        except Exception as e:
+            logger.error(f"Error adding member to board: {e}")
+            raise HTTPException(status_code=400, detail="Failed to add member to board")
+
+    async def remove_board_member(self, board_id: int, user_id: int, current_user: dict):
+        has_access = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+        role = current_user.get("role", "MEMBER")
+        if not has_access and role not in ("SUPER_ADMIN", "MANAGER"):
+            raise HTTPException(status_code=403, detail="Not authorized to remove members from this board")
+
+        try:
+            result = await self.conn.fetchval(
+                "SELECT remove_user_from_board($1, $2)",
+                board_id,
+                user_id
+            )
+            if not result:
+                raise HTTPException(status_code=404, detail="User not found on this board")
+        except asyncpg.exceptions.RaiseError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Error removing member from board: {e}")
+            raise HTTPException(status_code=400, detail="Failed to remove member from board")

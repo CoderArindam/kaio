@@ -34,6 +34,9 @@ import TimesheetAdminPage from '../features/timesheets/admin/TimesheetAdminPage'
 import { ProjectSettingsLayout } from '../features/projects/ProjectSettingsLayout';
 import { ProjectSettingsPage } from '../features/projects/ProjectSettingsPage';
 import { ProjectWorkflowSettings } from '../features/projects/ProjectWorkflowSettings';
+import { ProjectMembersSettings } from '../features/projects/ProjectMembersSettings';
+import { ProjectLabelsSettings } from '../features/projects/ProjectLabelsSettings';
+
 
 import {
   Key,
@@ -88,30 +91,9 @@ export const AppRoutes: React.FC = () => {
               element={<ProjectSettingsLayout />}
             >
               <Route index element={<ProjectSettingsPage />} />
-              <Route
-                path="members"
-                element={
-                  <PlaceholderSetting
-                    title="Members"
-                    description="Manage project access."
-                    Icon={Users}
-                  />
-                }
-              />
-              <Route
-                path="workflow"
-                element={<ProjectWorkflowSettings />}
-              />
-              <Route
-                path="labels"
-                element={
-                  <PlaceholderSetting
-                    title="Labels"
-                    description="Manage project tags and labels."
-                    Icon={Tag}
-                  />
-                }
-              />
+              <Route path="members" element={<ProjectMembersSettings />} />
+              <Route path="workflow" element={<ProjectWorkflowSettings />} />
+              <Route path="labels" element={<ProjectLabelsSettings />} />
               <Route
                 path="automation"
                 element={
@@ -138,8 +120,32 @@ export const AppRoutes: React.FC = () => {
               element={<ProjectSettingsLayout />}
             >
               <Route index element={<ProjectSettingsPage />} />
+              <Route path="members" element={<ProjectMembersSettings />} />
+              <Route path="workflow" element={<ProjectWorkflowSettings />} />
+              <Route path="labels" element={<ProjectLabelsSettings />} />
+              <Route
+                path="automation"
+                element={
+                  <PlaceholderSetting
+                    title="Automation"
+                    description="Create rules to automate repetitive tasks."
+                    Icon={Zap}
+                  />
+                }
+              />
+              <Route
+                path="integrations"
+                element={
+                  <PlaceholderSetting
+                    title="Integrations"
+                    description="Connect this project to other tools."
+                    Icon={Puzzle}
+                  />
+                }
+              />
             </Route>
           </Route>
+
           {/* Settings Routes */}
           <Route path="/settings" element={<SettingsLayout />}>
             <Route path="account" element={<MyAccount />} />

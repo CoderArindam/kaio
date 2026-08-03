@@ -23,6 +23,16 @@ export const getBoardMembers = async (boardId: number): Promise<BoardMember[]> =
   return response.data.data;
 };
 
+export const addBoardMember = async (boardId: number, userId: number, permission: string = 'EDITOR'): Promise<void> => {
+  await api.post(`/boards/${boardId}/members`, { user_id: userId, permission });
+};
+
+export const removeBoardMember = async (boardId: number, userId: number): Promise<void> => {
+  await api.delete(`/boards/${boardId}/members/${userId}`);
+};
+
+
+
 export interface UserUpdatePayload {
   first_name?: string | null;
   last_name?: string | null;

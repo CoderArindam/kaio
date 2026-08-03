@@ -3,7 +3,7 @@ from typing import List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.label import LabelCreate, LabelResponse
+from app.schemas.label import LabelCreate, LabelUpdate, LabelResponse
 from app.schemas.envelope import DataEnvelope
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
@@ -68,6 +68,41 @@ async def create_label(
             raise HTTPException(status_code=409, detail=f"Label '{label_in.name}' already exists on this board")
         logger.error(f"Error creating label: {e}")
         raise HTTPException(status_code=400, detail="Failed to create label")
+
+
+@router.patch("/labels/{label_id}", response_model=DataEnvelope[LabelResponse])
+async def update_label(
+    label_id: int,
+    label_in: LabelUpdate,
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    try:
+        row = await conn.fetchrow(
+            "SELECT * FROM fn_update_label($1, $2, $3, $4)",
+            label_id, label_in.name, label_in.color, current_user["id"]
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Label not found")
+
+        label = LabelResponse(**dict(row))
+
+        await connection_manager.send_to_board(
+            board_id=label.board_id,
+            message={"type": "label_updated", "board_id": label.board_id, "label": label.model_dump(mode="json")}
+        )
+
+        return DataEnvelope(data=label)
+    except HTTPException:
+        raise
+    except Exception as e:
+        err_msg = str(e)
+        if "Access denied" in err_msg:
+            raise HTTPException(status_code=403, detail=err_msg)
+        elif "unique constraint" in err_msg.lower() or "labels_board_name_unique_idx" in err_msg:
+            raise HTTPException(status_code=409, detail=f"Label name already exists on this board")
+        logger.error(f"Error updating label: {e}")
+        raise HTTPException(status_code=400, detail="Failed to update label")
 
 
 @router.delete("/labels/{label_id}", response_model=DataEnvelope[dict])
