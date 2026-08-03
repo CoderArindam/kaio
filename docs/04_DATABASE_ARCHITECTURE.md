@@ -192,9 +192,11 @@ erDiagram
 | `052_bulk_task_operations.sql` | Bulk Task Operations | Adds `fn_bulk_move_tasks` for multi-select task moves across columns and `fn_bulk_delete_tasks` for multi-task atomic soft-deletion. |
 | `053_notification_target_reference_with_title.sql` | Target Reference Titles | Enhances `v_activities_canonical` to format task `target_reference` with project key, sequence ID, and task title (e.g. `ENG-24 Fix Auth Service`), and rebuilds `v_notifications_canonical`. |
 | `054_task_deletion_notifications_cleanup.sql` | Task Deletion & Notification Cleanup | Adds `fn_delete_task` procedure for atomic task soft deletion, comment soft deletion, and notification purging; updates `v_activities_canonical` & `v_notifications_canonical` to exclude soft-deleted tasks/comments. |
-| `057_labels_schema.sql` | `labels`, `task_labels` | Board labels table and task_labels junction table schema. |
-| `058_labels_functions.sql` | Label Functions | `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`, and `fn_check_board_access` stored functions. |
-| `059_labels_view.sql` | Label Views | `v_labels_canonical`, `v_task_labels_canonical`, and updated `v_tasks_canonical` with aggregated labels JSON array. |
+| `055_password_reset_email_verification.sql` | Password Reset & Email Verification | `password_reset_tokens` & `email_verification_tokens` tables schema, `fn_create_password_reset_token`, `fn_reset_password`, `fn_create_email_verification_token`, `fn_verify_email` procedures. |
+| `056_dashboard_performance_optimization.sql` | Dashboard Performance Indexes | Creates composite indexes on tasks, activities, and board memberships for instant dashboard KPI rendering. |
+| `057_labels_schema.sql` | `labels`, `task_labels` | Board labels taxonomy table (`labels`) and task-label mapping junction table (`task_labels`). |
+| `058_labels_functions.sql` | Label Procedures | Stored functions: `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label` with board ownership & permissions check. |
+| `059_labels_view.sql` | Label Canonical Views | `v_labels_canonical`, `v_task_labels_canonical`, and updated `v_tasks_canonical` aggregating array of assigned label objects. |
 
 ---
 

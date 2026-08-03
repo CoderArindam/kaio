@@ -62,6 +62,7 @@ This document provides a reference catalog of the primary React UI components wi
 | ------------------ | ---------------------------------------- | ------------------------------------------------------- |
 | `AssigneeSelector` | `components/shared/AssigneeSelector.tsx` | Dropdown for selecting a board member as task assignee. |
 | `DueDatePicker`    | `components/shared/DueDatePicker.tsx`    | Date picker input for task due dates.                   |
+| `LabelPicker`      | `components/shared/LabelPicker.tsx`      | Color-coded label selector dropdown & board label creator for task tagging. |
 | `PrioritySelector` | `components/shared/PrioritySelector.tsx` | Priority badge selector (LOW, MEDIUM, HIGH).            |
 | `StatusSelector`   | `components/shared/StatusSelector.tsx`   | Column status selector for task editing.                |
 
@@ -77,20 +78,25 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.2 `KanbanBoard`
 
 - **Path**: `features/boards/components/KanbanBoard.tsx`
-- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` for task card reordering across columns. Manages column rendering, filter state (assignee, due date), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
-- **Child Components**: Column containers (inline), `TaskCard`, filter bars, `ConfirmDialog`.
+- **Purpose**: Main drag-and-drop board workspace. Uses `@dnd-kit/core` `DndContext` + `@dnd-kit/sortable` for task card reordering across columns. Manages column rendering, filter state (assignee, due date, label tags), optimistic UI updates, and floating multi-select toolbar supporting batch column migration (`POST /tasks/bulk-move`) and multi-task deletion (`POST /tasks/bulk-delete`) with confirmation prompts.
+- **Child Components**: Column containers (inline), `TaskCard`, `LabelFilter`, `AssigneeFilter`, `DueDateFilter`, `ConfirmDialog`.
 
 ### 6.3 `TaskCard`
 
 - **Path**: `features/boards/components/TaskCard.tsx`
-- **Purpose**: Draggable task card preview. Displays title, assignee avatar, due date, priority badge, and comment count. Clicking opens the task detail modal.
+- **Purpose**: Draggable task card preview. Displays title, assignee avatar, due date, priority badge, comment count, and color-coded label tag pills. Clicking opens the task detail modal.
 
-### 6.4 `AssigneeFilter`
+### 6.4 `LabelFilter`
+
+- **Path**: `features/boards/components/LabelFilter.tsx`
+- **Purpose**: Filter bar pill selector for filtering board task cards by color-coded board labels.
+
+### 6.5 `AssigneeFilter`
 
 - **Path**: `features/boards/components/AssigneeFilter.tsx`
 - **Purpose**: Filter bar dropdown for filtering task cards by board member.
 
-### 6.5 `DueDateFilter`
+### 6.6 `DueDateFilter`
 
 - **Path**: `features/boards/components/DueDateFilter.tsx`
 - **Purpose**: Filter bar dropdown for filtering task cards by due date range (today, this week, overdue).

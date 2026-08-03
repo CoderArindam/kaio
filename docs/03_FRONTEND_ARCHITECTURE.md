@@ -58,6 +58,7 @@ frontend/src/
 │   ├── shared/                 # Domain-shared selector components
 │   │   ├── AssigneeSelector.tsx
 │   │   ├── DueDatePicker.tsx
+│   │   ├── LabelPicker.tsx     # Color-coded board label selection dropdown & tag management
 │   │   ├── PrioritySelector.tsx
 │   │   └── StatusSelector.tsx
 │   └── ui/                     # Low-level primitive UI components
@@ -66,7 +67,7 @@ frontend/src/
 │       ├── Skeleton.tsx        # Loading skeleton placeholder
 │       └── WidgetError.tsx     # Error state display for dashboard widgets
 ├── constants/                  # Application constants, route paths, config
-├── features/                   # Feature-scoped modules (page + components + hooks)
+├── features/                   # 15 Feature-scoped modules (page + components + hooks)
 │   ├── activity/               # Activity log components
 │   ├── admin/                  # Superadmin panel (user management, board permissions, system status & audit export)
 │   │   ├── AdminDashboard.tsx  # System health status monitoring, audit log exporter, security logs
@@ -74,64 +75,34 @@ frontend/src/
 │   │   ├── BoardPermissions.tsx
 │   │   └── UsersManagement.tsx
 │   ├── ai/                     # KAI AI agent UI (chat, tools, store)
-│   ├── auth/                   # Login, Signup, AcceptInvitation, LandingPage
+│   ├── auth/                   # Login, Signup, ForgotPassword, ResetPassword, VerifyEmail, AcceptInvitation
 │   ├── boards/                 # Kanban board feature
 │   │   ├── BoardPage.tsx       # Board page wrapper
 │   │   ├── components/
 │   │   │   ├── KanbanBoard.tsx     # Main board with @dnd-kit drag-and-drop & multi-select bulk move/delete toolbar
-│   │   │   ├── TaskCard.tsx        # Individual task card preview with selection checkbox
-
-...
-
-### 6.2 Kanban Board Feature (`src/features/boards/`)
-- **`BoardPage`**: Page wrapper — loads board data, renders header and `KanbanBoard`.
-- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Renders column containers, task cards, multi-select checkboxes, and floating toolbar supporting bulk column move and multi-task deletion with confirm dialog.
-
+│   │   │   ├── TaskCard.tsx        # Individual task card preview with selection checkbox & label tag pills
+│   │   │   ├── LabelFilter.tsx     # Board label filtering pills bar
 │   │   │   ├── AssigneeFilter.tsx  # Board assignee filter bar
 │   │   │   └── DueDateFilter.tsx   # Board due date filter bar
 │   │   └── modals/
 │   │       ├── AddMemberModal.tsx      # Add/invite members to board
 │   │       ├── ArchiveProjectDialog.tsx
 │   │       ├── CreateTaskModal.tsx
-│   │       └── task-details/           # Full task detail modal (comments, attachments)
+│   │       └── task-details/           # Full task detail modal (comments, attachments, color label tags)
 │   ├── dashboard/              # Manager/Superadmin dashboard
 │   │   ├── DashboardPage.tsx
 │   │   ├── DashboardView.tsx   # Full dashboard layout, orchestrates widgets & polling fallback
-│   │   └── components/         # 9 dashboard widgets:
-│   │       ├── KpiCardsRow.tsx             # Org KPI metrics cards
-│   │       ├── BoardsOverviewWidget.tsx    # Board completion progress grid
-│   │       ├── StrategicProjectsWidget.tsx # Strategic project insights
-│   │       ├── FocusTasksWidget.tsx        # Focus task summary
-│   │       ├── PendingProposalsWidget.tsx  # Pending AI proposals count
-│   │       ├── QuickActionsWidget.tsx      # Quick action shortcuts
-│   │       ├── RecentActivityWidget.tsx    # Recent org activity feed
-│   │       ├── RecentMeetingsWidget.tsx    # Recent meeting sessions with rerun pipeline button & error preview
-│   │       └── SmartSuggestionsWidget.tsx  # AI-powered smart suggestions
+│   │   └── components/         # 9 dashboard widgets
+│   ├── landing/                # Public marketing landing page (React 19 + Tailwind v4 live transcript visualizer)
 │   ├── meeting/                # Meeting join controls, active status bar, & TranscriptEditor
 │   │   └── TranscriptEditor.tsx # Interactive transcript text & speaker attribution editor
 │   ├── my-work/                # Personal task aggregation view
 │   ├── notifications/          # Notification bell, panel, and item components
-│   │   ├── NotificationBell.tsx    # Header bell icon with unread badge
-│   │   ├── NotificationPanel.tsx   # Slide-in notification list panel
-│   │   └── NotificationItem.tsx    # Single notification with deep-link resolver
 │   ├── projects/               # Project settings layout & pages
-│   │   ├── ProjectSettingsPage.tsx
-│   │   └── ProjectSettingsLayout.tsx
 │   ├── proposals/              # Task proposal review components
 │   ├── search/                 # Global workspace search (Cmd+K modal)
-│   │   ├── SearchModal.tsx     # Cmd+K global search dialog with navigation catalog & results list
-│   │   └── navigationCatalog.ts # Static catalog of workspace navigation shortcut destinations
 │   ├── settings/               # User & org settings pages
-│   │   ├── MyAccount.tsx           # Profile name, avatar, email settings
-│   │   ├── Security.tsx            # Active sessions, security event log, password change
-│   │   ├── Appearance.tsx          # Theme & UI appearance preferences
-│   │   ├── NotificationSettings.tsx
-│   │   └── Organization.tsx        # Org profile, invitations management (invite + revoke)
 │   └── timesheets/             # Enterprise Timesheet Management Module
-│       ├── admin/              # TimesheetAdminPage (row-level locking, policy, approvers, CSV export), TimesheetPolicyForm, ApproverAssignmentManager
-│       ├── approvals/          # ApprovalQueuePage, ApprovalQueueSummaryCards, TimesheetReviewModal
-│       ├── member/             # MyTimesheetsPage, TimesheetWeekView, TimesheetSummaryBar, TimeEntryRow, Modals
-│       └── shared/             # TimesheetErrorBanner (TASK_ASSIGNMENT_CHANGED mapping), TaskSearchSelector, utils, hooks
 ├── hooks/                      # Custom React hooks
 │   ├── useDebounce.ts
 │   ├── usePageTitle.ts
@@ -140,11 +111,11 @@ frontend/src/
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
 │   └── RequireRole.tsx         # RBAC role guard — redirects unauthorized roles to /dashboard
-├── services/                   # API call functions wrapping Axios (22 service files: auth, boards, tasks, searchApi, timesheetService, timesheetApprovalService, timesheetAdminService, timesheetReportsApi, etc.)
+├── services/                   # API call functions wrapping Axios (23 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetReportsApi, timesheetService, usersApi)
 ├── store/                      # Zustand global state stores
 │   ├── authStore.ts            # isAuthenticated, user, login(), logout(), initAuth()
 │   ├── boardStore.ts           # Active board metadata
-│   ├── taskStore.ts            # Task CRUD, drag-and-drop state, bulk task selection & move
+│   ├── taskStore.ts            # Task CRUD, drag-and-drop state, bulk task selection & move, label tagging
 │   ├── adminStore.ts           # Admin user/board management state
 │   ├── notificationStore.ts    # Notifications list, unread count
 │   ├── organizationStore.ts    # Active organization profile

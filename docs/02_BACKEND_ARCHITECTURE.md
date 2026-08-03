@@ -68,17 +68,18 @@ backend/
 │   │   ├── auth.py                 # WebSocket connection JWT query parameter authentication
 │   │   ├── manager.py              # In-memory ConnectionManager (user connections, board room subscriptions, broadcasts)
 │   │   └── router.py               # /ws endpoint handler, message routing (ping/subscribe_board/unsubscribe_board)
-│   ├── routers/                    # 23 REST API & WebSocket route handlers:
+│   ├── routers/                    # 24 REST API & WebSocket route handlers:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
 │   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads & downloads
-│   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, sessions, security events
+│   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, password reset, email verification, sessions, security events
 │   │   ├── board_members.py        # /boards/{id}/members — membership queries
 │   │   ├── boards.py               # /boards — CRUD, archiving
 │   │   ├── comments.py             # /tasks/{id}/comments — create, list, delete
 │   │   ├── dashboard.py            # /dashboard/summary — Manager/Superadmin KPI dashboard
 │   │   ├── invitations.py          # /invitations — invite, list, verify, accept, revoke
+│   │   ├── labels.py               # /boards/{id}/labels, /labels/{id}, /tasks/{id}/labels — board label management & task tagging (WS broadcast)
 │   │   ├── my_work.py              # /my-work — user task aggregation & summary
 │   │   ├── notifications.py        # /notifications — list, mark read, mark all read
 │   │   ├── organization.py         # /organization — org profile & settings
@@ -92,17 +93,17 @@ backend/
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 21 Pydantic request/response DTO schema files
+│   ├── schemas/                    # 22 Pydantic request/response DTO schema files (including label.py)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
 │       ├── attachment_service.py
-│       ├── auth_service.py
+│       ├── auth_service.py         # Registration, login, password reset token creation & verification, email verification tokens
 │       ├── board_service.py
 │       ├── comment_service.py
 │       ├── dashboard_service.py    # Reads v_dashboard_kpis_canonical, v_dashboard_board_summaries_canonical
-│       ├── email_service.py        # SMTP email dispatch wrapper
-│       ├── email_templates.py      # HTML email template generators
+│       ├── email_service.py        # Async background SMTP email dispatch wrapper
+│       ├── email_templates.py      # HTML email templates for invitations, password reset & email verification
 │       ├── invitation_service.py   # Full invitation lifecycle (invite → verify → accept → revoke)
 │       ├── my_work_service.py
 │       ├── notification_service.py # Dispatches real-time WS notification alerts to connected target users

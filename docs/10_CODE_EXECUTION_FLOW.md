@@ -448,13 +448,70 @@ sequenceDiagram
     User->>Board: Click Task Card or Notification Link (/boards/12?taskId=45)
     Board->>Store: openTaskModal(45)
     Store->>Modal: isTaskModalOpen = true, selectedTaskId = 45
-    Modal->>Modal: Sync useEffect checks URL param vs store state
-    Modal->>User: Update URL searchParams to include ?taskId=45 without page reload
-    User->>Modal: User clicks modal backdrop close button
+    Modal->>User: Render task details dialog & push ?taskId=45 to browser URL history
+    User->>Modal: Click Close or click backdrop
     Modal->>Store: closeTaskModal()
-    Store->>Modal: isTaskModalOpen = false, selectedTaskId = null
-    Modal->>User: Remove ?taskId parameter from URL via setSearchParams({ replace: true })
+    Store->>Board: isTaskModalOpen = false, selectedTaskId = null
+    Board->>User: Remove ?taskId query param from URL without page reload
 ```
 
+---
 
+## 18. Sequence Diagram 17: Task Label Creation, Attachment & Tagging Flow
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as React SPA (TaskDetailsModal / LabelPicker)
+    participant API as FastAPI Labels Router (/api/v1)
+    participant DB as PostgreSQL DB
+    participant WS as ConnectionManager (WebSockets)
+    participant OtherUser as React SPA (Viewing Board)
+
+    alt Create New Board Label
+        User->>API: POST /api/v1/boards/12/labels {name: "Frontend", color: "#3B82F6"}
+        API->>DB: SELECT * FROM fn_create_label(12, 'Frontend', '#3B82F6', user_id)
+        DB-->>API: Label record {id: 7, board_id: 12, name: 'Frontend', color: '#3B82F6'}
+        API->>WS: send_to_board(12, {type: "label_created", board_id: 12, label: ...})
+        API-->>User: 200 OK {data: Label}
+    else Attach Label to Task
+        User->>API: POST /api/v1/tasks/45/labels/7
+        API->>DB: SELECT fn_attach_label(45, 7, user_id)
+        DB-->>API: True
+        API->>WS: send_to_board(12, {type: "task_updated", task_id: 45, action: "attach_label", label_id: 7})
+        API-->>User: 200 OK {data: {success: true}}
+        WS-->>OtherUser: Socket Push task_updated -> re-renders task card with color label tag
+    end
+```
+
+---
+
+## 19. Sequence Diagram 18: Password Reset & Email Verification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User / Browser
+    participant API as FastAPI Auth Router (/auth)
+    participant Service as AuthService
+    participant DB as PostgreSQL DB
+    participant Mail as Async Email Service (SMTP)
+
+    alt Forgot Password Request
+        User->>API: POST /api/v1/auth/forgot-password {email: "user@example.com"}
+        API->>Service: create_password_reset_token(email)
+        Service->>DB: SELECT * FROM fn_create_password_reset_token(...)
+        DB-->>Service: Token record {raw_token: "xyz123...", user_first_name: "Alex"}
+        Service-->>API: Raw token details
+        API->>Mail: background_tasks.add_task(send_email, reset_url)
+        API-->>User: 200 OK {"data": {"message": "If registered, reset link sent."}}
+        Mail-->>User: Delivers HTML Email with single-use reset URL
+    else Reset Password Execution
+        User->>API: POST /api/v1/auth/reset-password {token: "xyz123...", new_password: "..."}
+        API->>Service: reset_password(token, hashed_password)
+        Service->>DB: SELECT * FROM fn_reset_password(...)
+        DB-->>Service: {success: true, user_id: 5}
+        Service-->>API: Reset Success
+        API-->>User: 200 OK {"data": {"message": "Password reset successfully."}}
+    end
+```

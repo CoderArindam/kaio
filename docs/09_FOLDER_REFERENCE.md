@@ -49,7 +49,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **58** SQL migration files (versions 001–059) | `001_extensions.sql` … `059_labels_view.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **60** SQL migration files (versions 001–059) | `001_extensions.sql` … `059_labels_view.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -74,7 +74,7 @@ python database/scripts/rebuild.py --reset
 | `frontend/src/components/shared/` | Reusable domain-specific selector inputs | `AssigneeSelector.tsx`, `DueDatePicker.tsx`, `LabelPicker.tsx`, `PrioritySelector.tsx`, `StatusSelector.tsx` | React 19 |
 | `frontend/src/components/ui/` | Low-level primitive UI components | `Button.tsx`, `Card.tsx`, `Skeleton.tsx`, `WidgetError.tsx` | Tailwind CSS v4 |
 | `frontend/src/constants/` | Application constants, route path definitions | `routes.ts`, `config.ts` | — |
-| `frontend/src/features/` | Feature-scoped page modules (14 features) | `auth/`, `boards/`, `dashboard/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
+| `frontend/src/features/` | Feature-scoped page modules (15 features) | `auth/`, `boards/`, `dashboard/`, `landing/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
 | `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts`, `useWebSocket.ts` | React 19 |
 | `frontend/src/lib/` | Axios instance configuration with interceptors | `axios.ts` or similar | Axios v1 |
 | `frontend/src/routes/` | React Router route guard components | `ProtectedRoute.tsx`, `RequireRole.tsx` | React Router DOM v7, Zustand |

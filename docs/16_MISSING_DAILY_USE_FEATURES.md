@@ -10,7 +10,9 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 | Feature Area | Current State | Expected State | Impact |
 |---|---|---|---|
-| **Labels / Tags** | Hardcoded placeholder UI (`backend`, `auth`, `bug`), no database support | Dynamic CRUD labels with colors, assignable to tasks, filterable | **Critical** |
+| Feature Area | Current State | Expected State | Impact |
+|---|---|---|---|
+| **Labels / Tags** | **IMPLEMENTED (Migrations 057–059)** | Dynamic board-scoped CRUD labels (`057`-`059`), color picker, tag attachment, real-time WS events, board filter pills bar | **Resolved (Completed)** |
 | **Subtasks / Checklists** | Not implemented | Nested subtasks or checkbox checklists within a task | **Critical** |
 | **Task Duplication** | Not implemented | One-click "Duplicate Task" action | **High** |
 | **Comment Editing** | Create and delete only | Edit existing comments inline | **High** |
@@ -20,8 +22,8 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 | **Column Management** | Fixed columns from board creation, no UI to add/rename/delete/reorder | Dynamic column CRUD + drag-to-reorder | **Critical** |
 | **Board Favorites / Pinning** | Not implemented | Star/pin boards to sidebar top | **Medium** |
 | **Task Sorting** | No sort controls | Sort by priority, due date, created date, assignee | **High** |
-| **Password Reset / Forgot** | Not implemented — no recovery flow | Email-based "Forgot Password" + reset token | **Critical** |
-| **Email Verification** | Not implemented | Verify email on signup before granting access | **High** |
+| **Password Reset / Forgot** | **IMPLEMENTED (Migration 055)** | Single-use cryptographic reset tokens via async SMTP email (`/auth/forgot-password`, `/auth/reset-password`) | **Resolved (Completed)** |
+| **Email Verification** | **IMPLEMENTED (Migration 055)** | Email verification tokens and async email link dispatch (`/auth/send-verification-email`, `/auth/verify-email`) | **Resolved (Completed)** |
 | **File Upload for Attachments** | URL-based `AttachmentCreate` only | Drag-and-drop file upload to task | **High** |
 | **WIP Limits** | Not implemented | Configurable work-in-progress limits per column | **Medium** |
 | **Task Estimation** | Not implemented | Story points / time estimates on tasks | **Medium** |
@@ -38,30 +40,16 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ## 3. Detailed Feature Specifications
 
-### 3.1 Labels / Tags System (Critical)
+### 3.1 Labels / Tags System (IMPLEMENTED)
 
-**Current State**: [TaskSidebar.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/task-details/TaskSidebar.tsx#L77-L91) renders hardcoded labels (`backend`, `authentication`, `bug`) with `cursor-not-allowed` and `opacity-70`. The "Add Label" button is disabled. No database table, no API, no stored function.
+**Current Implementation**: Implemented across database migrations `057_labels_schema.sql`, `058_labels_functions.sql`, `059_labels_view.sql`, backend FastAPI router `labels.py`, frontend API client `labelsApi.ts`, shared components `LabelPicker.tsx`, `LabelFilter.tsx`, and task cards rendering.
 
-**Required Implementation**:
-
-#### Database
-- `labels` table: `id`, `board_id`, `name`, `color` (hex), `created_at`
-- `task_labels` junction table: `task_id`, `label_id`
-- Canonical view: `v_task_labels_canonical`
-- Functions: `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`
-
-#### Backend
-- `POST /boards/{board_id}/labels` — create label
-- `DELETE /labels/{label_id}` — delete label
-- `POST /tasks/{task_id}/labels/{label_id}` — attach
-- `DELETE /tasks/{task_id}/labels/{label_id}` — detach
-- Include labels array in `CanonicalTaskResponse`
-
-#### Frontend
-- Label picker dropdown in task sidebar replacing hardcoded list
-- Label pills rendered on `TaskCard` in board view
-- Board-level label management UI (create, edit color, delete)
-- Filter tasks by label in board toolbar
+#### Implemented Components & Specs:
+- **Database Tables**: `labels` (`id`, `board_id`, `name`, `color`, `created_at`), `task_labels` (`task_id`, `label_id`)
+- **Canonical Views**: `v_labels_canonical`, `v_task_labels_canonical`, and updated `v_tasks_canonical`
+- **Stored Functions**: `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`
+- **Backend Endpoints**: `GET/POST /boards/{board_id}/labels`, `DELETE /labels/{id}`, `POST/DELETE /tasks/{task_id}/labels/{label_id}` with real-time WebSocket event broadcasting
+- **Frontend UI**: Color-coded label tag pills on task cards, `LabelPicker` dropdown in task modal, and `LabelFilter` pills bar on Kanban boards
 
 ---
 

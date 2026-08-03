@@ -34,6 +34,10 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/auth/me` | `GET` | Cookie | Returns full user profile — id, email, first_name, last_name, role, organization_id, avatar_url, is_email_verified. |
 | `/auth/refresh` | `POST` | Cookie (`refresh_token`) | Reads `refresh_token` cookie, issues new `access_token` + `refresh_token` cookies. |
 | `/auth/logout` | `POST` | Cookie | Revokes current session, clears both cookies. Body is empty. |
+| `/auth/forgot-password` | `POST` | Public | Requests password reset email link. Generates single-use token and dispatches async email. Body: `{email}`. |
+| `/auth/reset-password` | `POST` | Public | Resets user password using single-use token. Body: `{token, new_password}`. |
+| `/auth/send-verification-email` | `POST` | Cookie | Dispatches email verification link to logged-in user. |
+| `/auth/verify-email` | `GET` | Public | Verifies email address using query parameter token (`?token=...`). |
 | `/auth/sessions` | `GET` | Cookie | Lists all active multi-device sessions for current user (`v_user_active_sessions_canonical`). Marks current session. |
 | `/auth/sessions/other` | `DELETE` | Cookie | Revokes all sessions except the currently active one. Logs security event. |
 | `/auth/security-events` | `GET` | Cookie | Retrieves user security event audit history (`v_user_security_events_canonical`). |
@@ -54,7 +58,19 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 
 ---
 
-## 4. Board Members Router (`/api/v1/boards`)
+## 4. Labels Router (`/api/v1`)
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/boards/{board_id}/labels` | `GET` | Cookie | Lists all customizable color-coded labels created for a specific board (`v_labels_canonical`). |
+| `/boards/{board_id}/labels` | `POST` | Cookie | Creates a new board label (`fn_create_label`). Broadcasts `label_created` WS event to board members. Body: `{name, color}`. |
+| `/labels/{label_id}` | `DELETE` | Cookie | Deletes a board label (`fn_delete_label`). Requires board membership access. |
+| `/tasks/{task_id}/labels/{label_id}` | `POST` | Cookie | Attaches a label tag to a task (`fn_attach_label`). Broadcasts `task_updated` WS event. |
+| `/tasks/{task_id}/labels/{label_id}` | `DELETE` | Cookie | Detaches a label tag from a task (`fn_detach_label`). Broadcasts `task_updated` WS event. |
+
+---
+
+## 5. Board Members Router (`/api/v1/boards`)
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
@@ -62,7 +78,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 
 ---
 
-## 5. Tasks Router (`/api/v1/tasks`)
+## 6. Tasks Router (`/api/v1/tasks`)
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|

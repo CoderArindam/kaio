@@ -111,4 +111,11 @@ A frontend pattern in `TaskDetailsModal` that synchronizes Zustand modal state (
 ### Interactive Transcript Editor (TranscriptEditor.tsx)
 A post-meeting React component (`src/features/meeting/TranscriptEditor.tsx`) enabling users to manually edit speech-to-text utterance text and reassign speaker turn attributions post-meeting.
 
+### Board & Task Labels (v_labels_canonical & v_task_labels_canonical)
+Customizable color-coded label taxonomy created per board (`labels` table) and attached to tasks (`task_labels` table). Managed via `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label` and real-time WebSocket event broadcasting.
 
+### Password Reset Token (password_reset_tokens)
+Single-use cryptographic token table (`password_reset_tokens`) generated via `fn_create_password_reset_token` and sent in async email links. Expiration checked during `fn_reset_password`.
+
+### Email Verification Token (email_verification_tokens)
+Single-use verification token table (`email_verification_tokens`) generated via `fn_create_email_verification_token` to confirm user email ownership. Checked via `fn_verify_email`.
