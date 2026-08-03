@@ -203,6 +203,7 @@ erDiagram
 | `062_subtasks_view.sql` | Subtask Canonical Views | `v_subtasks_canonical` view and updated `v_tasks_canonical` exposing aggregated `subtask_count` and `completed_subtask_count`. |
 | `063_column_management_functions.sql` | Column Management Functions | Stored functions for adding, renaming, deleting (with task re-assignment), and reordering board columns. |
 | `064_comment_editing.sql` | Comment Editing & Hard Delete | Adds `edited_at` timestamp to `task_comments`, updates `v_comments_canonical`, adds `fn_update_comment` procedure, and updates `fn_delete_comment` for hard delete & owner-only check. |
+| `065_comment_mentions.sql` | `comment_mentions` | Table schema for user @mentions in task comments (`comment_id`, `mentioned_user_id`, `created_at`), `v_comment_mentions_canonical` view, `fn_create_comment_mentions` procedure, `fn_get_comment_mentions` function, and activity/notification triggers. |
 
 ---
 
@@ -214,10 +215,12 @@ erDiagram
 |---|---|---|
 | `v_users_canonical` | `008_views.sql` | User profile combined with organization role. |
 | `v_boards_canonical` | `008_views.sql` | Board details with member counts and task counts. |
-| `v_tasks_canonical` | `008_views.sql` | Task attributes combined with assignee details, comment/attachment counts. |
+| `v_tasks_canonical` | `008_views.sql` | Task attributes combined with assignee details, comment/attachment counts, label objects array, subtask counts. |
+| `v_comments_canonical` | `008_views.sql` / `064_*.sql` / `065_*.sql` | Task comments with author metadata, parent comment reference, `edited_at` timestamp, and `mentioned_users` JSON array. |
+| `v_comment_mentions_canonical` | `065_comment_mentions.sql` | User @mentions in comments joined with mentioned user details and comment metadata. |
 | `v_task_proposals_canonical` | `022_task_proposals_view.sql` | Proposal details with confidence scores and source transcript snippets. |
-| `v_notifications_canonical` | `031_*.sql` / `054_*.sql` | Notifications with target entity type, deep-link payload, and target title reference (strictly excludes deleted tasks/comments). |
-| `v_activities_canonical` | `030_*.sql` / `054_*.sql` | Org-scoped activity log with actor names, action descriptions, and task titles in `target_reference` (strictly excludes deleted tasks/comments). |
+| `v_notifications_canonical` | `031_*.sql` / `054_*.sql` / `065_*.sql` | Notifications with target entity type, deep-link payload, and target title reference (includes `COMMENT_MENTIONED` events; strictly excludes deleted tasks/comments). |
+| `v_activities_canonical` | `030_*.sql` / `054_*.sql` / `065_*.sql` | Org-scoped activity log with actor names, action descriptions, and task titles in `target_reference` (strictly excludes deleted tasks/comments). |
 | `v_user_active_sessions_canonical` | `035_*.sql` | Multi-device active JWT session details (user agent, IP, last active). |
 | `v_user_security_events_canonical` | `034_*.sql` | Security audit log of authentication and authorization events. |
 | `v_dashboard_kpis_canonical` | `036_*.sql` | Org-wide KPIs: total tasks by status, overdue, boards, team size, pending proposals, active meetings. |
@@ -231,6 +234,8 @@ erDiagram
 | `v_timesheet_board_hours_canonical` | `044_*.sql` | Board-level hours logging distribution report. |
 | `v_timesheet_member_summary_canonical` | `044_*.sql` | Member-level compliance, logged hours, and submission timeliness metrics. |
 | `v_global_search_canonical` | `051_global_search_view.sql` | Global workspace search index combining tasks, boards, and meetings with full-text search vector and title matching. |
+| `v_labels_canonical` | `059_labels_view.sql` | Board taxonomy labels with usage counts across active tasks. |
+| `v_subtasks_canonical` | `062_subtasks_view.sql` | Task subtasks/checklists with completion status, position, and author info. |
 
 ### 4.2 Authz & Mutation Functions
 
@@ -248,6 +253,8 @@ erDiagram
 | `fn_create_comment(...)` | `029_*.sql` | Creates a comment on a task. |
 | `fn_update_comment(comment_id, content, user_id, org_id)` | `064_comment_editing.sql` | Updates a comment's text and sets `edited_at = NOW()` (owner-only check). |
 | `fn_delete_comment(comment_id, user_id, user_role, org_id)` | `029_*.sql` / `064_*.sql` | Permanently deletes a comment record from database (owner-only check). |
+| `fn_create_comment_mentions(...)` | `065_comment_mentions.sql` | Inserts comment mention records, creates `COMMENT_MENTIONED` notification and activity log records for each mentioned user. |
+| `fn_get_comment_mentions(comment_id)` | `065_comment_mentions.sql` | Returns JSON array of mentioned users for a specific comment. |
 | `fn_log_security_event(...)` | `034_*.sql` | Logs a security event (login, logout, session revoke, password change). |
 | `fn_refresh_session(user_id, token, user_agent, ip)` | `035_*.sql` | Upserts an active session record. |
 | `fn_revoke_session(session_id, user_id)` | `035_*.sql` | Marks session as revoked. |
@@ -335,6 +342,8 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 061_subtasks_functions.sql
 062_subtasks_view.sql
 063_column_management_functions.sql
+064_comment_editing.sql
+065_comment_mentions.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)
@@ -343,6 +352,8 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 - `fn_delete_column(p_column_id, p_target_column_id, p_user_id)`: Atomically migrates all tasks from the column to `p_target_column_id`, soft-deletes the column row (`deleted_at = CURRENT_TIMESTAMP`), re-indexes active column positions, and logs activity.
 - `fn_reorder_columns(p_board_id, p_ordered_column_ids[], p_user_id)`: Reorders columns according to array order and updates position values atomically.
 
+### Stored Procedures for Comment Mentions (`065_comment_mentions.sql`)
+- `fn_create_comment_mentions(comment_id, mentioned_user_ids[], actor_id)`: Inserts rows in `comment_mentions`, generates `COMMENT_MENTIONED` notification events, and logs user activity.
+
 > [!NOTE]
 > File `032_revoke_invitation_function.sql` and `032_seed_techinnovators.sql` share the `032_` prefix. They are both applied; the rebuild script sorts alphabetically so `032_revoke_invitation_function.sql` runs before `032_seed_techinnovators.sql`.
-

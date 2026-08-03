@@ -10,16 +10,14 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 | Feature Area | Current State | Expected State | Impact |
 |---|---|---|---|
-| Feature Area | Current State | Expected State | Impact |
-|---|---|---|---|
 | **Labels / Tags** | **IMPLEMENTED (Migrations 057–059)** | Dynamic board-scoped CRUD labels (`057`-`059`), color picker, tag attachment, real-time WS events, board filter pills bar | **Resolved (Completed)** |
-| **Subtasks / Checklists** | Not implemented | Nested subtasks or checkbox checklists within a task | **Critical** |
+| **Subtasks / Checklists** | **IMPLEMENTED (Migrations 060–062)** | Nested subtasks checklist inside task modal (`060`-`062`), progress bar ratio, drag-to-reorder, instant toggle, task card ratio badge | **Resolved (Completed)** |
 | **Task Duplication** | Not implemented | One-click "Duplicate Task" action | **High** |
-| **Comment Editing** | Create and delete only | Edit existing comments inline | **High** |
-| **@Mentions in Comments** | Not implemented | Tag users with `@name`, trigger notifications | **High** |
+| **Comment Editing** | **IMPLEMENTED (Migration 064)** | Inline comment editing (`064`), owner-only check, `PATCH /tasks/{id}/comments/{id}`, auto-focus textarea, `(edited)` timestamp | **Resolved (Completed)** |
+| **@Mentions in Comments** | **IMPLEMENTED (Migration 065)** | `@user` autocomplete dropdown (`065`), `comment_mentions` junction table, styled chips, real-time WS & in-app notification dispatch | **Resolved (Completed)** |
 | **Rich Text Descriptions** | Plain `<textarea>` | Markdown or WYSIWYG editor for task descriptions | **High** |
 | **Board Views (List/Calendar)** | Kanban board only | List view, calendar view, table view toggle | **High** |
-| **Column Management** | Fixed columns from board creation, no UI to add/rename/delete/reorder | Dynamic column CRUD + drag-to-reorder | **Critical** |
+| **Column Management** | **IMPLEMENTED (Migration 063)** | Dynamic column CRUD (`063`), inline rename, column type selector, reordering handles, ghost card "+ Add Column", atomic card migration on delete | **Resolved (Completed)** |
 | **Board Favorites / Pinning** | Not implemented | Star/pin boards to sidebar top | **Medium** |
 | **Task Sorting** | No sort controls | Sort by priority, due date, created date, assignee | **High** |
 | **Password Reset / Forgot** | **IMPLEMENTED (Migration 055)** | Single-use cryptographic reset tokens via async SMTP email (`/auth/forgot-password`, `/auth/reset-password`) | **Resolved (Completed)** |
@@ -53,90 +51,53 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.2 Subtasks / Checklists (Critical)
+### 3.2 Subtasks / Checklists (IMPLEMENTED)
 
-**Current State**: No subtask concept exists anywhere in the codebase.
+**Current Implementation**: Implemented across database migrations `060_subtasks_schema.sql`, `061_subtasks_functions.sql`, `062_subtasks_view.sql`, backend router `subtasks.py`, frontend API client `subtasksApi.ts`, component `SubtaskChecklist.tsx`, and `TaskCard.tsx` subtask ratio badge.
 
-**Required Implementation**:
-
-#### Database
-- `subtasks` table: `id`, `task_id`, `title`, `is_completed`, `position`, `created_by`, `created_at`
-- Function: `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`
-
-#### Backend
-- CRUD endpoints under `/tasks/{task_id}/subtasks`
-- Include `subtask_count` and `completed_subtask_count` in `CanonicalTaskResponse`
-
-#### Frontend
-- Checklist section in task detail modal (between description and tabs)
-- Progress bar showing `3/5 completed`
-- Subtask completion count badge on `TaskCard`
-- Drag-to-reorder subtask items
+#### Implemented Features:
+- **Database**: `subtasks` table schema, stored procedures `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`, view `v_subtasks_canonical`, and `v_tasks_canonical` aggregated `subtask_count` & `completed_subtask_count`.
+- **Backend**: `/tasks/{task_id}/subtasks` CRUD and reorder endpoints with real-time WebSocket event broadcasting.
+- **Frontend**: Interactive checklist in `TaskDetailsModal` with progress bar, drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter, instant completion toggles, and ratio badge (`3/5`) on `TaskCard`.
 
 ---
 
-### 3.3 Column Management (Critical)
+### 3.3 Column Management (IMPLEMENTED)
 
-**Current State**: Columns are created during board creation via [fn_create_board](file:///d:/kanban-project/database/migrations/003_schema_core.sql) with fixed defaults (To Do, In Progress, Done). No UI exists to add, rename, delete, or reorder columns after board creation.
+**Current Implementation**: Implemented across database migration `063_column_management_functions.sql`, backend FastAPI router `columns.py`, frontend API client `columnsApi.ts`, and `KanbanBoard.tsx` workspace.
 
-**Required Implementation**:
-
-#### Database
-- Functions: `fn_add_column`, `fn_rename_column`, `fn_delete_column` (with task migration), `fn_reorder_columns`
-
-#### Backend
-- `POST /boards/{board_id}/columns` — add column
-- `PATCH /columns/{column_id}` — rename + set `column_type`
-- `DELETE /columns/{column_id}` — delete (must specify target column for existing tasks)
-- `POST /boards/{board_id}/columns/reorder` — update positions
-
-#### Frontend
-- "Add Column" button at end of kanban board
-- Column header inline rename on double-click
-- Column header dropdown: rename, change type (TODO/IN_PROGRESS/DONE), delete, set WIP limit
-- Drag columns to reorder
+#### Implemented Features:
+- **Database**: Stored procedures `fn_add_column`, `fn_rename_column`, `fn_delete_column` (with atomic task card migration to target column), and `fn_reorder_columns`.
+- **Backend**: `/boards/{board_id}/columns`, `/boards/{board_id}/columns/reorder`, `/columns/{column_id}` (PATCH/DELETE) endpoints gated by Manager/Superadmin RBAC with real-time WebSocket event broadcasting.
+- **Frontend**: Inline column title rename on double-click, column header dropdown menu with type selection, move left/right reordering handles, ghost card "+ Add Column" container, and target column migration selector modal on column deletion.
 
 ---
 
-### 3.4 Forgot Password / Password Reset (Critical)
+### 3.4 Forgot Password / Password Reset (IMPLEMENTED)
 
-**Current State**: [auth.py](file:///d:/kanban-project/backend/app/routers/auth.py) has login, register, refresh, logout, sessions, and security events — but **no password reset or forgot password flow**. No matching grep results for `forgot_password` or `reset_password`.
-
-**Required Implementation**:
-
-#### Database
-- `password_reset_tokens` table: `id`, `user_id`, `token_hash`, `expires_at`, `used_at`, `created_at`
-- Function: `fn_create_password_reset_token`, `fn_consume_password_reset_token`
-
-#### Backend
-- `POST /auth/forgot-password` — accepts email, sends reset link via email service
-- `POST /auth/reset-password` — accepts token + new password, validates token, updates password hash
-
-#### Frontend
-- "Forgot Password?" link on login page
-- Reset password form (enter email → check inbox → enter new password)
+**Current Implementation**: Implemented across migration `055_password_reset_email_verification.sql`, backend `auth.py` router (`/auth/forgot-password`, `/auth/reset-password`), `auth_service.py`, and email notification service.
 
 ---
 
-### 3.5 Comment Editing (High)
+### 3.5 Comment Editing (IMPLEMENTED)
 
-**Current State**: [comments.py](file:///d:/kanban-project/backend/app/routers/comments.py) supports `POST` (create) and `DELETE` only. No `PATCH` endpoint for editing.
+**Current Implementation**: Implemented across database migration `064_comment_editing.sql`, backend FastAPI router `comments.py` (`PATCH /tasks/{task_id}/comments/{comment_id}`), `comment_service.py`, and `CommentsTab.tsx`.
 
-**Required Implementation**:
-- `PATCH /comments/{comment_id}` — update comment content
-- `fn_update_comment` stored function with `edited_at` timestamp
-- Frontend: edit button on own comments, inline editing, "edited" indicator
+#### Implemented Features:
+- **Database**: `fn_update_comment` stored procedure, `edited_at` timestamp in `v_comments_canonical`, and hard delete permissions enforcement in `fn_delete_comment`.
+- **Backend**: `PATCH /tasks/{task_id}/comments/{comment_id}` endpoint with owner authorization check and WebSocket `comment_updated` event broadcasting.
+- **Frontend**: Pencil edit icon visible for comment author, inline auto-focused textarea editor, keyboard shortcuts (`Enter` to save, `Esc` to cancel), optimistic UI updates, and `(edited)` timestamp badge.
 
 ---
 
-### 3.6 @Mentions in Comments (High)
+### 3.6 @Mentions in Comments (IMPLEMENTED)
 
-**Current State**: Comments are plain text. [CommentsTab.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/task-details/tabs/CommentsTab.tsx) has no mention parsing or autocomplete.
+**Current Implementation**: Implemented across database migration `065_comment_mentions.sql`, backend `comments.py` router, `comment_service.py`, `notification_service.py`, and frontend `CommentsTab.tsx`.
 
-**Required Implementation**:
-- `@username` autocomplete dropdown in comment input, sourced from board members
-- Parse `@` references on submit, create notification for mentioned users
-- Render mentions as styled, clickable chips in comment display
+#### Implemented Features:
+- **Database**: `comment_mentions` table, `v_comment_mentions_canonical` view, `fn_create_comment_mentions` procedure, `fn_get_comment_mentions` function, and activity/notification triggers (`COMMENT_MENTIONED`).
+- **Backend**: `POST /tasks/{task_id}/comments` parsing `mentioned_user_ids`, real-time WebSocket notification dispatch, and email dispatch to mentioned users.
+- **Frontend**: `@` autocomplete suggestions dropdown sourced from board members (`GET /boards/{board_id}/members`), structured token format `@[Full Name](user:id)`, styled clickable chip rendering for mentioned users in comment text, and deep linking from notification items.
 
 ---
 

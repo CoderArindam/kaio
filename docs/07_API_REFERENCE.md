@@ -373,12 +373,14 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
   ```
 
 #### Server Incoming Events:
-- **Board Task & Column Mutations**:
+- **Board Task, Column & Comment Mutations**:
   ```json
   {
-    "type": "task_created" | "task_updated" | "task_moved" | "task_deleted" | "column_created" | "column_updated" | "column_deleted" | "column_reordered",
+    "type": "task_created" | "task_updated" | "task_moved" | "task_deleted" | "column_created" | "column_updated" | "column_deleted" | "column_reordered" | "comment_updated",
     "board_id": 12,
-    "column": { "id": 4, "name": "In Review", "position": 3, "column_type": "IN_PROGRESS" }
+    "task_id": 105,
+    "comment_id": 42,
+    "action": "created" | "updated" | "deleted"
   }
   ```
 - **Direct Notification Push**:
