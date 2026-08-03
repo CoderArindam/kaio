@@ -24,9 +24,15 @@ class CommentService:
                     task_id, current_user["id"], comment_in.parent_comment_id, comment_in.content, current_user["organization_id"]
                 )
 
-                task_row = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
-                parent_user = None
+                notified_user_ids = []
+                if comment_in.mentioned_user_ids:
+                    notified_user_ids = await self.conn.fetchval(
+                        "SELECT fn_create_comment_mentions($1, $2, $3)",
+                        comment_id, comment_in.mentioned_user_ids, current_user["id"]
+                    ) or []
 
+                task_row = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
+                root_user_id = None
                 if comment_in.parent_comment_id:
                     parent_user = await self.conn.fetchrow(
                         """
@@ -38,12 +44,35 @@ class CommentService:
                         comment_in.parent_comment_id
                     )
 
+                    curr_id = comment_in.parent_comment_id
+                    while curr_id:
+                        p_row = await self.conn.fetchrow("SELECT id, parent_comment_id, user_id FROM v_comments_canonical WHERE id = $1", curr_id)
+                        if not p_row:
+                            break
+                        if p_row["parent_comment_id"]:
+                            curr_id = p_row["parent_comment_id"]
+                        else:
+                            root_user_id = p_row["user_id"]
+                            break
+
                 row = await self.conn.fetchrow(
                     "SELECT * FROM v_comments_canonical WHERE id = $1",
                     comment_id
                 )
 
-                return CommentResponse(**dict(row)), dict(task_row) if task_row else None, dict(parent_user) if parent_user else None
+            # Dispatch real-time WebSocket notifications to mentioned users, parent comment author, and thread root author
+            from app.services.notification_service import _dispatch_notification_event
+            if notified_user_ids:
+                for user_id in notified_user_ids:
+                    await _dispatch_notification_event(self.conn, user_id)
+
+            if parent_user and parent_user["id"] != current_user["id"]:
+                await _dispatch_notification_event(self.conn, parent_user["id"])
+
+            if root_user_id and root_user_id != current_user["id"] and (not parent_user or root_user_id != parent_user["id"]):
+                await _dispatch_notification_event(self.conn, root_user_id)
+
+            return CommentResponse(**dict(row)), dict(task_row) if task_row else None, dict(parent_user) if parent_user else None
         except HTTPException:
             raise
         except Exception as e:
@@ -71,14 +100,26 @@ class CommentService:
             logger.error(f'Unexpected error: {e}')
             raise HTTPException(status_code=400, detail='An unexpected error occurred')
 
-    async def delete_comment(self, comment_id: int, current_user: dict):
+    async def delete_comment(self, comment_id: int, current_user: dict) -> Tuple[Optional[int], Optional[int]]:
         try:
+            comment_row = await self.conn.fetchrow(
+                "SELECT task_id FROM v_comments_canonical WHERE id = $1", comment_id
+            )
+            task_id = comment_row["task_id"] if comment_row else None
+            board_id = None
+            if task_id:
+                task_row = await self.conn.fetchrow(
+                    "SELECT board_id FROM v_tasks_canonical WHERE id = $1", task_id
+                )
+                board_id = task_row["board_id"] if task_row else None
+
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
                 await self.conn.execute(
                     "SELECT fn_delete_comment($1, $2, $3, $4)",
                     comment_id, current_user["id"], current_user.get("role", "MEMBER"), current_user["organization_id"]
                 )
+            return task_id, board_id
         except HTTPException:
             raise
         except Exception as e:
@@ -90,7 +131,7 @@ class CommentService:
                 raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
             raise HTTPException(status_code=400, detail=err_msg if isinstance(e, asyncpg.exceptions.PostgresError) else 'An unexpected error occurred')
 
-    async def update_comment(self, comment_id: int, comment_in: CommentUpdate, current_user: dict) -> CommentResponse:
+    async def update_comment(self, comment_id: int, comment_in: CommentUpdate, current_user: dict) -> Tuple[CommentResponse, Optional[int]]:
         try:
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
@@ -104,7 +145,12 @@ class CommentService:
                 )
                 if not row:
                     raise HTTPException(status_code=404, detail="Comment not found")
-                return CommentResponse(**dict(row))
+                
+                task_row = await self.conn.fetchrow(
+                    "SELECT board_id FROM v_tasks_canonical WHERE id = $1", row["task_id"]
+                )
+                board_id = task_row["board_id"] if task_row else None
+                return CommentResponse(**dict(row)), board_id
         except HTTPException:
             raise
         except Exception as e:

@@ -207,6 +207,22 @@ export const formatActivity = (
         accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
       };
 
+    case ACTIVITY_TYPES.MENTIONED_IN_COMMENT:
+      return {
+        icon: MessageCircle,
+        title: 'Mentioned in comment',
+        description: `${actorName} mentioned you in a comment`,
+        accentColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20'
+      };
+
+    case ACTIVITY_TYPES.COMMENT_REPLIED:
+      return {
+        icon: MessageCircle,
+        title: 'Comment replied',
+        description: `${actorName} replied to your comment`,
+        accentColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+      };
+
     case ACTIVITY_TYPES.ATTACHMENT_ADDED:
       return {
         icon: Paperclip,

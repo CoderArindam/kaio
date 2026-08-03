@@ -19,7 +19,7 @@ BEGIN
 
     IF v_board_org_id IS NULL OR v_board_org_id != v_org_id THEN RETURN FALSE; END IF;
 
-    IF v_role IN ('MANAGER', 'SUPER_ADMIN') THEN RETURN TRUE; END IF;
+    IF v_role = 'SUPER_ADMIN' THEN RETURN TRUE; END IF;
     IF v_is_owner THEN RETURN TRUE; END IF;
 
     SELECT EXISTS (

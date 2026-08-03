@@ -119,7 +119,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.8 `CommentsTab`
 
 - **Path**: `features/boards/modals/task-details/tabs/CommentsTab.tsx`
-- **Purpose**: Task comments discussion tab embedded inside task detail modal. Supports adding comments with @mentions autocomplete dropdown, nested comment replies, inline comment editing (pencil icon visible for comment author only, auto-focused inline textarea, keyboard shortcuts `Enter` to save and `Esc` to cancel, optimistic UI updates, `(edited)` timestamp label), and hard deletion (trash icon visible for comment author only with `ConfirmDialog` confirmation).
+- **Purpose**: Task comments discussion tab embedded inside task detail modal. Supports adding comments with @mentions autocomplete dropdown sourced from board members (`GET /boards/{board_id}/members`), structured token format `@[Full Name](user:id)` sent as `mentioned_user_ids: number[]` in payload, styled clickable chip rendering for mentions in comment text, nested comment replies, inline comment editing (pencil icon visible for comment author only, auto-focused inline textarea, keyboard shortcuts `Enter` to save and `Esc` to cancel, optimistic UI updates, `(edited)` timestamp label), and hard deletion (trash icon visible for comment author only with `ConfirmDialog` confirmation).
 
 ### 6.8 `ArchiveProjectDialog`
 

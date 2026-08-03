@@ -140,4 +140,18 @@ SELECT
     b.created_at as joined_at
 FROM boards b
 JOIN users u ON b.owner_id = u.id
+WHERE u.deleted_at IS NULL
+
+UNION
+
+SELECT 
+    b.id as board_id,
+    u.id, 
+    u.email, 
+    u.first_name, 
+    u.last_name, 
+    u.avatar_url, 
+    u.created_at as joined_at
+FROM boards b
+JOIN users u ON u.organization_id = b.organization_id AND u.role = 'SUPER_ADMIN'
 WHERE u.deleted_at IS NULL;

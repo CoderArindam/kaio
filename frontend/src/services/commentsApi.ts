@@ -21,7 +21,7 @@ export const getTaskComments = async (taskId: number): Promise<Comment[]> => {
 
 export const createComment = async (
   taskId: number,
-  data: { content: string; parent_comment_id?: number }
+  data: { content: string; parent_comment_id?: number; mentioned_user_ids?: number[] }
 ): Promise<Comment> => {
   const response = await api.post(`/tasks/${taskId}/comments`, data);
   return response.data.data;

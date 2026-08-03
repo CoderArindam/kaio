@@ -8,6 +8,7 @@ from app.services.notification_service import dispatch_task_email
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
 from app.services.comment_service import CommentService
+from app.websockets.manager import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,18 @@ async def create_comment(
                 assignee_name=parent_user["first_name"],
                 comment=comment_in.content
             )
+
+    if task_row and task_row.get("board_id"):
+        await connection_manager.send_to_board(
+            board_id=task_row["board_id"],
+            message={
+                "type": "comment_updated",
+                "board_id": task_row["board_id"],
+                "task_id": task_id,
+                "comment_id": comment.id,
+                "action": "created"
+            }
+        )
             
     return DataEnvelope(data=comment)
 
@@ -63,7 +76,18 @@ async def update_comment(
     current_user: dict = Depends(get_current_user),
     comment_service: CommentService = Depends(get_comment_service)
 ):
-    comment = await comment_service.update_comment(comment_id, comment_in, current_user)
+    comment, board_id = await comment_service.update_comment(comment_id, comment_in, current_user)
+    if board_id:
+        await connection_manager.send_to_board(
+            board_id=board_id,
+            message={
+                "type": "comment_updated",
+                "board_id": board_id,
+                "task_id": task_id,
+                "comment_id": comment_id,
+                "action": "updated"
+            }
+        )
     return DataEnvelope(data=comment)
 
 @router.get("/tasks/{task_id}/comments", response_model=DataEnvelope[List[CommentResponse]])
@@ -81,5 +105,16 @@ async def delete_comment(
     current_user: dict = Depends(get_current_user),
     comment_service: CommentService = Depends(get_comment_service)
 ):
-    await comment_service.delete_comment(comment_id, current_user)
+    task_id, board_id = await comment_service.delete_comment(comment_id, current_user)
+    if board_id and task_id:
+        await connection_manager.send_to_board(
+            board_id=board_id,
+            message={
+                "type": "comment_updated",
+                "board_id": board_id,
+                "task_id": task_id,
+                "comment_id": comment_id,
+                "action": "deleted"
+            }
+        )
     return None

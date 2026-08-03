@@ -158,6 +158,12 @@ export function useWebSocket(): { isConnected: boolean } {
           break;
         }
 
+        case 'comment_updated': {
+          window.dispatchEvent(new CustomEvent('kaio:comment_updated', { detail: msg }));
+          fetchNotifications();
+          break;
+        }
+
         case 'proposal.ready': {
           toast.success('New meeting proposals are ready for review.', { duration: 5000 });
           break;

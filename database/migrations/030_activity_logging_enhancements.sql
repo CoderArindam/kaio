@@ -131,7 +131,7 @@ BEGIN
                 INSERT INTO notifications (user_id, activity_id) VALUES (v_new_assignee, NEW.id);
             END IF;
 
-        ELSIF NEW.activity_type IN ('DUE_DATE_CHANGED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'PRIORITY_CHANGED', 'TITLE_CHANGED', 'DESCRIPTION_CHANGED') THEN
+        ELSIF NEW.activity_type IN ('DUE_DATE_CHANGED', 'STATUS_CHANGED', 'PRIORITY_CHANGED', 'TITLE_CHANGED', 'DESCRIPTION_CHANGED') THEN
             IF v_task_record.assigned_to IS NOT NULL AND v_task_record.assigned_to != COALESCE(NEW.user_id, -1) THEN
                 INSERT INTO notifications (user_id, activity_id) VALUES (v_task_record.assigned_to, NEW.id);
             END IF;

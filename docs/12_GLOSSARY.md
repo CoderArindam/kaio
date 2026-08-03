@@ -122,3 +122,6 @@ Single-use cryptographic token table (`password_reset_tokens`) generated via `fn
 
 ### Email Verification Token (email_verification_tokens)
 Single-use verification token table (`email_verification_tokens`) generated via `fn_create_email_verification_token` to confirm user email ownership. Checked via `fn_verify_email`.
+
+### @Mention
+A user tag feature in task comments allowing authors to mention team members using `@` autocomplete sourced from board members (`GET /boards/{board_id}/members`). Mentions are formatted as structured tokens `@[Full Name](user:id)`, recorded in `comment_mentions` junction table via `fn_create_comment_mentions`, rendered as styled clickable chips in comment text, and trigger real-time `MENTIONED_IN_COMMENT` in-app notifications and WebSocket updates.

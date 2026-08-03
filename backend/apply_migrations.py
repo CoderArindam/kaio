@@ -32,6 +32,18 @@ async def main():
         await conn.execute(f.read())
     print('Applied 064_comment_editing.sql')
 
+    with open('../database/migrations/012_authz_refinements.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 012_authz_refinements.sql')
+
+    with open('../database/migrations/030_activity_logging_enhancements.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 030_activity_logging_enhancements.sql')
+
+    with open('../database/migrations/065_comment_mentions.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 065_comment_mentions.sql')
+
     await conn.close()
 
 if __name__ == '__main__':

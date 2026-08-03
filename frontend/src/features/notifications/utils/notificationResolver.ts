@@ -18,7 +18,9 @@ export const resolveNotificationDestination = (notification: Notification): Noti
     entityType === 'COMMENT' ||
     activityType === 'COMMENT_ADDED' ||
     activityType === 'COMMENT_DELETED' ||
-    activityType === 'MENTION'
+    activityType === 'MENTION' ||
+    activityType === 'MENTIONED_IN_COMMENT' ||
+    activityType === 'COMMENT_REPLIED'
   ) {
     return {
       type: 'TASK',
