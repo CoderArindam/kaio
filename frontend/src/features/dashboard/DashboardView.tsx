@@ -72,7 +72,7 @@ export const DashboardView: React.FC = () => {
   const [hasSummaryError, setHasSummaryError] = useState<boolean>(false);
 
   const canAccessAdminFeatures = isManagerOrAdmin(user);
-  const userName = user?.first_name || user?.email?.split('@')[0] || 'User';
+  const userName = user?.first_name || (user?.last_name ? user.last_name : null) || 'there';
 
   // --- Single aggregated fetch ---
   const fetchSummaryData = React.useCallback(async () => {

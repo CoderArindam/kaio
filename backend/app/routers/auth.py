@@ -87,13 +87,13 @@ async def register_organization(
     """Step 1: Init registration & send 6-digit OTP to Admin Email."""
     result = await auth_service.request_registration_otp(org_in)
 
-    subject, email_body = generate_otp_email(
+    subject, text_body, html_body = generate_otp_email(
         first_name=result["first_name"],
         otp_code=result["raw_otp"],
         purpose_title="Organization Registration",
         expiry_minutes=10
     )
-    background_tasks.add_task(send_email, result["email"], subject, email_body)
+    background_tasks.add_task(send_email, result["email"], subject, text_body, html_body)
 
     return {
         "otp_required": True,
@@ -151,13 +151,13 @@ async def login(
     result = await auth_service.login(user_in, ua_string, ip_address)
 
     if result.get("otp_required"):
-        subject, email_body = generate_otp_email(
+        subject, text_body, html_body = generate_otp_email(
             first_name=result.get("user_first_name") or "there",
             otp_code=result["raw_otp"],
             purpose_title="2FA Login",
             expiry_minutes=10
         )
-        background_tasks.add_task(send_email, result["email"], subject, email_body)
+        background_tasks.add_task(send_email, result["email"], subject, text_body, html_body)
 
         return {
             "message": result["message"],
@@ -223,13 +223,13 @@ async def resend_otp(
     elif result["purpose"] == "ENABLE_2FA":
         purpose_title = "2FA Activation"
 
-    subject, email_body = generate_otp_email(
+    subject, text_body, html_body = generate_otp_email(
         first_name=result.get("first_name") or "there",
         otp_code=result["raw_otp"],
         purpose_title=purpose_title,
         expiry_minutes=10
     )
-    background_tasks.add_task(send_email, result["email"], subject, email_body)
+    background_tasks.add_task(send_email, result["email"], subject, text_body, html_body)
 
     return {
         "message": result["message"],
@@ -246,13 +246,13 @@ async def request_enable_2fa(
 ):
     result = await auth_service.request_enable_2fa(current_user, body.password)
 
-    subject, email_body = generate_otp_email(
+    subject, text_body, html_body = generate_otp_email(
         first_name=result.get("first_name") or "there",
         otp_code=result["raw_otp"],
         purpose_title="2FA Activation",
         expiry_minutes=10
     )
-    background_tasks.add_task(send_email, result["email"], subject, email_body)
+    background_tasks.add_task(send_email, result["email"], subject, text_body, html_body)
 
     return {
         "message": result["message"],
@@ -403,8 +403,8 @@ async def forgot_password(
 
     if result is not None:
         reset_url = f"{settings.FRONTEND_ORIGINS.split(',')[0].strip()}/reset-password?token={result['raw_token']}"
-        subject, email_body = generate_password_reset_email(result["user_first_name"] or "there", reset_url)
-        background_tasks.add_task(send_email, body.email, subject, email_body)
+        subject, text_body, html_body = generate_password_reset_email(result["user_first_name"] or "there", reset_url)
+        background_tasks.add_task(send_email, body.email, subject, text_body, html_body)
 
     return {"data": {"message": "If that email is registered, a reset link has been sent."}}
 
@@ -443,8 +443,8 @@ async def send_verification_email(
     verify_url = f"{settings.FRONTEND_ORIGINS.split(',')[0].strip()}/verify-email?token={raw_token}"
 
     user_row = await auth_service.get_me(current_user)
-    subject, email_body = generate_email_verification_email(user_row.get("first_name") or "there", verify_url)
-    background_tasks.add_task(send_email, user_row["email"], subject, email_body)
+    subject, text_body, html_body = generate_email_verification_email(user_row.get("first_name") or "there", verify_url)
+    background_tasks.add_task(send_email, user_row["email"], subject, text_body, html_body)
 
     return {"data": {"message": "Verification email sent."}}
 

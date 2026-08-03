@@ -6,23 +6,19 @@ export interface BaseUser {
 
 /**
  * Standardized function to format a user's display name.
- * Hierarchy: Full Name -> First Name -> Email -> Fallback
+ * Hierarchy: Full Name -> First Name -> Fallback (never exposes raw email)
  */
 export const formatUserName = (user: BaseUser | null | undefined, fallback: string = 'Unknown User'): string => {
   if (!user) return fallback;
-  
+
   if (user.first_name && user.last_name) {
     return `${user.first_name} ${user.last_name}`.trim();
   }
-  
+
   if (user.first_name) {
     return user.first_name;
   }
-  
-  if (user.email) {
-    return user.email;
-  }
-  
+
   return fallback;
 };
 
@@ -32,18 +28,18 @@ export const formatUserName = (user: BaseUser | null | undefined, fallback: stri
  */
 export const getInitials = (user: BaseUser | null | undefined): string => {
   if (!user) return '?';
-  
+
   if (user.first_name && user.last_name) {
     return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
   }
-  
+
   if (user.first_name) {
     return user.first_name[0].toUpperCase();
   }
-  
+
   if (user.email) {
     return user.email[0].toUpperCase();
   }
-  
+
   return '?';
 };

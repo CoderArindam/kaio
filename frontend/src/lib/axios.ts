@@ -28,13 +28,17 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // Prevent infinite loop if /auth/refresh fails or if it's a login attempt
-    if ((originalRequest.url === '/auth/refresh' || originalRequest.url?.includes('/auth/login')) && error.response?.status === 401) {
+    // Prevent infinite loop if /auth/refresh fails, login attempt, or registration flow
+    const isAuthBypassUrl =
+      originalRequest.url === '/auth/refresh' ||
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register');
+    if (isAuthBypassUrl && error.response?.status === 401) {
        let msg = error.response?.data?.detail || error.response?.data?.error?.message || "Invalid email or password";
        return Promise.reject(new Error(typeof msg === 'string' ? msg : JSON.stringify(msg)));
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login')) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthBypassUrl) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({resolve, reject});

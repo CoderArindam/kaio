@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerOrganization, verifyRegistrationOtp, resendOtp } from '../../services/authApi';
-import { LayoutGrid, Eye, EyeOff, Loader2, Mail, ArrowLeft, KeyRound } from 'lucide-react';
+import { LayoutGrid, Eye, EyeOff, Loader2, ArrowLeft, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
-import { getMe } from '../../services/authApi';
 import { OTPInput } from '../../components/shared/OTPInput';
 
 export const Signup: React.FC = () => {
@@ -61,16 +60,21 @@ export const Signup: React.FC = () => {
     setOtpError(null);
 
     try {
-      await verifyRegistrationOtp(registrationToken, code);
-      const userData = await getMe();
+      const result = await verifyRegistrationOtp(registrationToken, code);
 
+      // Use the user data returned directly from verify-otp.
+      // Calling getMe() immediately after would race against cookie commit and
+      // trigger the /auth/refresh interceptor with no cookie yet — causing
+      // "Refresh token missing".
       useAuthStore.setState({
         isAuthenticated: true,
         user: {
-          id: userData.id,
-          email: userData.email,
-          role: userData.role || 'SUPER_ADMIN',
-          organization_id: userData.organization_id,
+          id: result.user?.id,
+          email: result.user?.email ?? email,
+          first_name: result.user?.first_name ?? firstName,
+          last_name: result.user?.last_name ?? lastName,
+          role: result.user?.role ?? 'SUPER_ADMIN',
+          organization_id: result.user?.organization_id,
           is_email_verified: true
         }
       });
