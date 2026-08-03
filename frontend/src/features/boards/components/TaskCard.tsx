@@ -141,7 +141,7 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
   return (
     <div
-      className={`group bg-brand-surface rounded-3xl border p-5 flex flex-col gap-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition cursor-pointer relative ${
+      className={`group bg-brand-surface rounded-3xl border p-5 flex flex-col gap-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow,border-color,opacity] duration-150 ease-out cursor-pointer relative ${
         isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30 bg-brand-primary/5' : 'border-brand-border'
       }`}
       onClick={handleCardClick}

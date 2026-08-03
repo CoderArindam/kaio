@@ -57,6 +57,13 @@ interface TaskState {
 
   // Internal helpers
   _updateTaskEntity: (taskId: number, updater: (task: Task) => Partial<Task>) => void;
+
+  // Drag state guard (used by WS handler to avoid interrupting active drag)
+  isDragging: boolean;
+  setIsDragging: (val: boolean) => void;
+
+  // Surgical WS event application — no full board refetch
+  applyWsEvent: (type: string, payload: Record<string, unknown>) => void;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -81,6 +88,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   isSubmitting: false,
+
+  isDragging: false,
+  setIsDragging: (val) => set({ isDragging: val }),
 
   // --- SELECTORS ---
   getTaskById: (taskId) => get().entities.tasks[taskId],
@@ -136,6 +146,172 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         }
       };
     });
+  },
+
+  // Surgical WS event handler — never calls initializeBoard, never sets isFetching
+  applyWsEvent: (type, payload) => {
+    const state = get();
+    const activeBoardId = state.boardView.boardId;
+    const eventBoardId = payload.board_id as number | undefined;
+    if (!activeBoardId || (eventBoardId && eventBoardId !== activeBoardId)) return;
+
+    switch (type) {
+      case 'task_created': {
+        const taskId = payload.task_id as number;
+        if (!taskId || state.entities.tasks[taskId]) return; // already present
+        // Fetch the single task — lightweight, no board reload
+        getTask(taskId).then((task) => {
+          set((s) => {
+            if (s.boardView.taskIds.includes(taskId)) return s; // guard race
+            return {
+              entities: {
+                ...s.entities,
+                tasks: { ...s.entities.tasks, [task.id]: task },
+              },
+              boardView: {
+                ...s.boardView,
+                taskIds: [...s.boardView.taskIds, task.id],
+              },
+            };
+          });
+        }).catch(() => { /* ignore stale events */ });
+        break;
+      }
+
+      case 'task_updated':
+      case 'task.updated': {
+        const taskId = payload.task_id as number;
+        if (!taskId) return;
+        // Fetch just this task to get authoritative data
+        getTask(taskId).then((task) => {
+          get()._updateTaskEntity(taskId, () => task);
+        }).catch(() => {});
+        break;
+      }
+
+      case 'task_moved': {
+        // bulk_move_tasks sends task_ids array
+        const taskIds = (payload.task_ids as number[] | undefined) ?? [];
+        const columnId = payload.column_id as number | undefined;
+        if (taskIds.length === 0) return;
+        if (columnId !== undefined) {
+          // column_id is known — patch in place
+          taskIds.forEach((id) => {
+            if (state.isDragging && id === (state.entities.tasks[id]?.id)) {
+              // Skip patching the actively dragged task to avoid interrupting drag
+              return;
+            }
+            get()._updateTaskEntity(id, () => ({ column_id: columnId }));
+          });
+        } else {
+          // Fallback: column_id not in payload, fetch each task
+          taskIds.forEach((id) => {
+            getTask(id).then((task) => get()._updateTaskEntity(id, () => task)).catch(() => {});
+          });
+        }
+        break;
+      }
+
+      case 'task_deleted': {
+        const taskId = payload.task_id as number | undefined;
+        const taskIds = (payload.task_ids as number[] | undefined) ?? (taskId ? [taskId] : []);
+        if (taskIds.length === 0) return;
+        set((s) => {
+          const newTasks = { ...s.entities.tasks };
+          taskIds.forEach((id) => delete newTasks[id]);
+          return {
+            entities: { ...s.entities, tasks: newTasks },
+            boardView: {
+              ...s.boardView,
+              taskIds: s.boardView.taskIds.filter((id) => !taskIds.includes(id)),
+            },
+            myWorkView: {
+              ...s.myWorkView,
+              taskIds: s.myWorkView.taskIds.filter((id) => !taskIds.includes(id)),
+            },
+          };
+        });
+        break;
+      }
+
+      case 'column_created': {
+        const col = payload.column as Column | undefined;
+        if (!col) return;
+        set((s) => {
+          if (s.entities.columns[col.id]) return s; // already present
+          return {
+            entities: {
+              ...s.entities,
+              columns: { ...s.entities.columns, [col.id]: col },
+            },
+            boardView: {
+              ...s.boardView,
+              columnIds: [...s.boardView.columnIds, col.id],
+            },
+          };
+        });
+        break;
+      }
+
+      case 'column_updated': {
+        const col = payload.column as Column | undefined;
+        if (!col) return;
+        set((s) => ({
+          entities: {
+            ...s.entities,
+            columns: { ...s.entities.columns, [col.id]: col },
+          },
+        }));
+        break;
+      }
+
+      case 'column_deleted': {
+        const colId = payload.column_id as number;
+        const targetColId = payload.target_column_id as number | undefined;
+        if (!colId) return;
+        set((s) => {
+          const newColumns = { ...s.entities.columns };
+          delete newColumns[colId];
+          // Re-parent tasks that were in this column
+          const newTasks = { ...s.entities.tasks };
+          if (targetColId) {
+            Object.keys(newTasks).forEach((key) => {
+              const t = newTasks[Number(key)];
+              if (t.column_id === colId) {
+                newTasks[Number(key)] = { ...t, column_id: targetColId };
+              }
+            });
+          }
+          return {
+            entities: { ...s.entities, columns: newColumns, tasks: newTasks },
+            boardView: {
+              ...s.boardView,
+              columnIds: s.boardView.columnIds.filter((id) => id !== colId),
+            },
+          };
+        });
+        break;
+      }
+
+      case 'column_reordered': {
+        const orderedIds = payload.ordered_column_ids as number[] | undefined;
+        if (!orderedIds?.length) return;
+        set((s) => {
+          const newCols = { ...s.entities.columns };
+          orderedIds.forEach((id, idx) => {
+            if (newCols[id]) newCols[id] = { ...newCols[id], position: idx + 1 };
+          });
+          return {
+            entities: { ...s.entities, columns: newCols },
+            boardView: { ...s.boardView, columnIds: orderedIds },
+          };
+        });
+        break;
+      }
+
+      default:
+        break;
+    }
   },
 
   // --- ACTIONS ---

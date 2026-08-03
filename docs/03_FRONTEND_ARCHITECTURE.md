@@ -111,7 +111,7 @@ frontend/src/
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
 │   └── RequireRole.tsx         # RBAC role guard — redirects unauthorized roles to /dashboard
-├── services/                   # API call functions wrapping Axios (23 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetReportsApi, timesheetService, usersApi)
+├── services/                   # API call functions wrapping Axios (25 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, columnsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, subtasksApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetReportsApi, timesheetService, usersApi)
 ├── store/                      # Zustand global state stores
 │   ├── authStore.ts            # isAuthenticated, user, login(), logout(), initAuth()
 │   ├── boardStore.ts           # Active board metadata
@@ -201,7 +201,7 @@ export const RequireRole: React.FC<{ allowedRoles: string[] }> = ({ allowedRoles
 All HTTP communication passes through an **Axios client instance** configured in `src/lib/`:
 - **Cookie-based Auth**: No manual `Authorization` header attachment — cookies are sent automatically with every request (`withCredentials: true`).
 - **Response Interceptor**: Intercepts `401 Unauthorized` responses and triggers `authStore.logout({ forced: true })` to clear local state and show session-expired toast.
-- **22 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
+- **25 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
 
 ```mermaid
 sequenceDiagram
@@ -232,10 +232,12 @@ sequenceDiagram
 - **`navigationCatalog.ts`**: Static registry of top-level workspace pages and settings routes for instant navigation.
 
 ### 6.2 Kanban Board Feature (`src/features/boards/`)
-- **`BoardPage`**: Page wrapper — loads board data, renders header and `KanbanBoard`.
-- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Renders column containers, task cards, multi-select checkboxes, and floating bulk move toolbar.
-- **`TaskCard`**: Individual task card preview — title, assignee avatar, due date, priority badge, comment count, and multi-select checkbox.
-- **`task-details/`**: Full task detail modal — Markdown description, comment thread, attachment list, inline status/priority/assignee/due date editing.
+- **`BoardPage`**: Page wrapper — loads board data, renders header and `KanbanBoard`. Manages real-time WebSocket board room subscriptions (`subscribe_board`/`unsubscribe_board`).
+- **`KanbanBoard`**: Main drag-and-drop workspace using `@dnd-kit/core` + `@dnd-kit/sortable`. Manages dynamic column management (inline rename, column type selector, add/delete/reorder columns, ghost "+ Add Column" card for Manager/Admin), task card rendering, filter bar (assignee, due date, label pills), multi-select checkboxes, and floating bulk move/delete toolbar with confirmation dialog.
+- **`TaskCard`**: Individual task card preview — title, assignee avatar, due date, priority badge, comment count, **subtask ratio badge** (`3/5`), **color-coded label tag pills**, and multi-select checkbox.
+- **`task-details/`**: Full task detail modal — Markdown description, `SubtaskChecklist` (collapsible, drag-to-reorder, progress bar), `CommentsTab` with @mention autocomplete and inline editing, attachment list, `LabelPicker` sidebar, and bidirectional URL `?taskId=...` deep linking.
+- **`SubtaskChecklist`**: Collapsible checklist with progress bar, drag-to-reorder, inline add, checkbox toggles, and delete.
+- **`CommentsTab`**: Comment thread with `@` autocomplete (board members), styled mention chips, inline editing (`Enter`/`Esc`), `(edited)` label, and owner-only delete with confirmation.
 - **`AddMemberModal`**: Invite members to a board; supports searching by email and assigning board roles.
 - **`CreateTaskModal`**: Quick task creation form with title, description, assignee, priority, due date.
 

@@ -124,6 +124,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     renameColumn,
     removeColumn,
     reorderBoardColumns,
+    setIsDragging,
   } = useTaskStore();
 
   const columns = getColumnsList();
@@ -285,11 +286,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task;
     setActiveTask(task ?? null);
+    setIsDragging(true);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { over, active } = event;
     setActiveTask(null);
+    setIsDragging(false);
 
     if (!over) return;
 

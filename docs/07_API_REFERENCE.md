@@ -100,7 +100,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 |---|---|---|---|
 | `/tasks/{task_id}/comments` | `POST` | Cookie | Creates a comment on a task (`fn_create_comment`). Accepts optional `mentioned_user_ids: number[]`. Inserts mention history into `comment_mentions` (`fn_create_comment_mentions`), dispatches `MENTIONED_IN_COMMENT` notifications, real-time WebSocket events, and email notifications to assignees/parents. |
 | `/tasks/{task_id}/comments/{comment_id}` | `PATCH` | Cookie | Updates an existing comment (`fn_update_comment`). Owner-only access, sets `edited_at = NOW()`. Body: `{content: string}`. |
-| `/tasks/{task_id}/comments` | `GET` | Cookie | Lists all comments for a task (surfaces `edited_at` timestamp). |
+| `/tasks/{task_id}/comments` | `GET` | Cookie | Lists all comments for a task (surfaces `edited_at` timestamp and `mentioned_users` JSON array). |
 | `/comments/{comment_id}` | `DELETE` | Cookie | Permanently deletes a comment from database (`fn_delete_comment`, owner-only access). |
 
 ---
@@ -392,7 +392,7 @@ All approval endpoints require **Superadmin or Manager** role (`_check_superadmi
   ```
 ---
 
-## 27. Column Management Router (`/api/v1`)
+## 26. Column Management Router (`/api/v1`)
 
 All column mutation endpoints are gated by **Manager or Superadmin** authorization (`require_manager_or_above`).
 
@@ -402,15 +402,4 @@ All column mutation endpoints are gated by **Manager or Superadmin** authorizati
 | `/boards/{board_id}/columns/reorder` | `POST` | Cookie (Manager+) | Reorders columns on a board using `fn_reorder_columns(board_id, ordered_column_ids, user_id)`. Broadcasts `column_reordered` WS event. Body: `{ordered_column_ids: int[]}`. |
 | `/columns/{column_id}` | `PATCH` | Cookie (Manager+) | Updates column name or column_type using `fn_rename_column(column_id, name, column_type, user_id)`. Broadcasts `column_updated` WS event. |
 | `/columns/{column_id}` | `DELETE` | Cookie (Manager+) | Soft-deletes column using `fn_delete_column(column_id, target_column_id, user_id)` after migrating all existing tasks to `target_column_id`. Broadcasts `column_deleted` WS event. Body: `{target_column_id: int}`. |
-
-## 26. Labels Router (`/api/v1`)
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/boards/{board_id}/labels` | `GET` | Cookie | Lists all labels configured for a board querying `v_labels_canonical`. |
-| `/boards/{board_id}/labels` | `POST` | Cookie (Edit) | Creates a new label on a board using `fn_create_label(board_id, name, color, user_id)`. Broadcasts `label_created` websocket event. Body: `{name, color}`. |
-| `/labels/{label_id}` | `DELETE` | Cookie (Edit) | Deletes a board label using `fn_delete_label(label_id, user_id)`. Cascades removal from tasks. |
-| `/tasks/{task_id}/labels/{label_id}` | `POST` | Cookie (Edit) | Attaches a label to a task using `fn_attach_label(task_id, label_id, user_id)` and logs an activity audit row. Broadcasts `task_updated` websocket event. |
-| `/tasks/{task_id}/labels/{label_id}` | `DELETE` | Cookie (Edit) | Detaches a label from a task using `fn_detach_label(task_id, label_id, user_id)` and logs an activity audit row. Broadcasts `task_updated` websocket event. |
-
 

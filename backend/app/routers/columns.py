@@ -29,7 +29,8 @@ async def create_column(
             "type": "column_created",
             "board_id": board_id,
             "column": column.model_dump(mode="json")
-        }
+        },
+        exclude_user_id=current_user["id"],
     )
     return DataEnvelope(data=column)
 
@@ -47,7 +48,8 @@ async def reorder_columns(
             "type": "column_reordered",
             "board_id": board_id,
             "ordered_column_ids": reorder_in.ordered_column_ids
-        }
+        },
+        exclude_user_id=current_user["id"],
     )
     return DataEnvelope(data=result)
 
@@ -65,7 +67,8 @@ async def rename_column(
             "type": "column_updated",
             "board_id": column.board_id,
             "column": column.model_dump(mode="json")
-        }
+        },
+        exclude_user_id=current_user["id"],
     )
     return DataEnvelope(data=column)
 
@@ -91,6 +94,7 @@ async def delete_column(
                 "board_id": board_id,
                 "column_id": column_id,
                 "target_column_id": delete_in.target_column_id
-            }
+            },
+            exclude_user_id=current_user["id"],
         )
     return DataEnvelope(data=result)

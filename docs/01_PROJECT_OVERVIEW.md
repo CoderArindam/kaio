@@ -108,7 +108,7 @@ graph TD
 ### 4.1 Backend Engine (`backend/app`)
 - Built with **Python 3.12+** and **FastAPI**.
 - Uses `asyncpg` connection pooling for non-blocking database operations.
-- **24 REST API & WebSocket routers** covering auth (including password reset & email verification), boards, tasks, labels, comments, attachments, notifications, activity, board members, admin, invitations, my-work, preferences, organization, AI, task proposals, dashboard, users, timesheets, timesheet approvals, timesheet admin, search, websockets (`/ws`), and the meeting subsystem.
+- **27 REST API & WebSocket routers** covering auth (including password reset & email verification), boards, tasks, labels, comments, subtasks, attachments, notifications, activity, board members, admin, invitations, my-work, preferences, organization, AI, task proposals, dashboard, users, timesheets, timesheet approvals, timesheet admin, search, columns, websockets (`/ws`), and the meeting subsystem.
 - In-memory WebSocket manager (`ConnectionManager`) supporting topic/board subscriptions and targeted user notification broadcasting.
 - Enforces a strict architectural constraint: **NO raw SQL in backend Python services**. All reads use `v_*_canonical` views, and writes call PostgreSQL stored functions.
 - Authentication uses **httpOnly cookie-based JWT** — `access_token` (15 min) and `refresh_token` (7 days) set as server-side cookies; no tokens are exposed in response bodies.
@@ -120,15 +120,15 @@ graph TD
 - Includes manual transcript editor and speaker attribution override support.
 
 ### 4.3 Database Engine (`database/`)
-- Pure PostgreSQL schema managed via **60 SQL migration files** across 59 version numbers (`001_*.sql` → `059_labels_view.sql`).
-- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, row locking, meeting failure/rerun handling, global search indexing, bulk task move, atomic task deletion with notification cleanup (`fn_delete_task`), target reference formatting with task titles, labels management (`fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`), password reset & email verification (`fn_create_password_reset_token`, `fn_reset_password`, `fn_create_email_verification_token`, `fn_verify_email`), and canonical views (`v_labels_canonical`, `v_task_labels_canonical`).
+- Pure PostgreSQL schema managed via **65 SQL migration files** (`001_*.sql` → `065_comment_mentions.sql`).
+- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, row locking, meeting failure/rerun handling, global search indexing, bulk task move, atomic task deletion with notification cleanup (`fn_delete_task`), target reference formatting with task titles, labels management (`fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`), subtasks checklist management (`fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`), column management (`fn_add_column`, `fn_rename_column`, `fn_delete_column`, `fn_reorder_columns`), comment editing & mentions (`fn_update_comment`, `fn_create_comment_mentions`), password reset & email verification, and canonical views (`v_labels_canonical`, `v_subtasks_canonical`, `v_comment_mentions_canonical`).
 - Rebuild script: `database/scripts/rebuild.py` — supports incremental apply (`python rebuild.py`) or full reset (`python rebuild.py --reset`).
 
 ### 4.4 Frontend SPA (`frontend/`)
 - Built with **React 19**, **TypeScript**, **Vite**, and **Tailwind CSS v4**.
 - State managed via **Zustand** stores (10 stores + WebSocket `wsConnected` state: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `uiStore`).
 - **15 Feature Modules** (`activity`, `admin`, `ai`, `auth`, `boards`, `dashboard`, `landing`, `meeting`, `my-work`, `notifications`, `projects`, `proposals`, `search`, `settings`, `timesheets`).
-- **23 API Service files** (`activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`).
+- **25 API Service files** (`activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`).
 - Custom `useWebSocket` hook maintaining connection heartbeat, auto-reconnect, sidebar connection status dot, and board-level event subscriptions.
 - Drag-and-drop powered by **@dnd-kit** (core + sortable) with optimistic rollbacks.
 - Route guards: `ProtectedRoute` (auth check) and `RequireRole` (RBAC role check).
@@ -158,7 +158,8 @@ gantt
     Phase 4.8 (Row Locking, Rerun & Admin Audit):done,  p85, 2026-07-25, 2026-07-28
     Phase 4.9 (Global Search & Bulk Task Operations) :done,  p89, 2026-07-29, 2026-07-30
     Phase 4.95 (Real-Time WebSockets & Task Sync):done, p895, 2026-07-30, 2026-07-30
-    Phase 4.96 (Task Labels, Password Reset & Landing Page):done, p896, 2026-08-01, 2026-08-03
+    Phase 4.96 (Task Labels, Password Reset & Landing Page):done, p896, 2026-08-01, 2026-08-01
+    Phase 4.97 (Subtasks, Column Mgmt, Comment Editing & @Mentions):done, p897, 2026-08-02, 2026-08-03
     section Upcoming
     Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-08-04, 2026-11-01
 ```
@@ -177,4 +178,5 @@ gantt
 | **4.9** | Global Search & Bulk Tasks | Cmd+K global search, multi-select task move & multi-task deletion, and transcript editor | **Completed** |
 | **4.95** | Real-Time WebSockets & Task Sync | WebSockets live event stream, sidebar connection status indicator, and task modal URL deep linking | **Completed** |
 | **4.96** | Task Labels, Security & Landing Page | Board-scoped customizable task labels/tags, password reset & email verification, and landing page redesign | **Completed** |
+| **4.97** | Subtasks, Column Mgmt & Comment Features | Task subtask checklists (drag-to-reorder, progress bar), dynamic Kanban column management (add/rename/delete/reorder), inline comment editing with `(edited)` label, and @mention autocomplete with `MENTIONED_IN_COMMENT` notifications | **Completed** |
 | **5.0** | Knowledge Graph & Insights | Cross-board relationships, smart meeting analytics & insights | **In Progress** |

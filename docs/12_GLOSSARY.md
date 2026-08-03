@@ -125,3 +125,19 @@ Single-use verification token table (`email_verification_tokens`) generated via 
 
 ### @Mention
 A user tag feature in task comments allowing authors to mention team members using `@` autocomplete sourced from board members (`GET /boards/{board_id}/members`). Mentions are formatted as structured tokens `@[Full Name](user:id)`, recorded in `comment_mentions` junction table via `fn_create_comment_mentions`, rendered as styled clickable chips in comment text, and trigger real-time `MENTIONED_IN_COMMENT` in-app notifications and WebSocket updates.
+
+### Comment Editing (fn_update_comment)
+An inline comment editing feature in `CommentsTab` allowing comment authors to click a pencil icon, edit the text in an auto-focused inline textarea, and save with `Enter` (cancel with `Esc`). The backend calls `fn_update_comment(comment_id, content, user_id, org_id)` which sets `edited_at = NOW()`. Edited comments display an `(edited)` timestamp label. Migration: `064_comment_editing.sql`.
+
+### Collapsible Subtask Checklist
+A UI toggle in `SubtaskChecklist.tsx` allowing users to expand or collapse the subtask section in the task detail modal using a chevron arrow. When expanded, displays progress bar (\"3/5 completed\"), drag-to-reorder subtask rows, inline addition, checkbox toggles, and delete actions.
+
+### Column Management Functions
+Four PostgreSQL stored procedures in `063_column_management_functions.sql` enabling dynamic Kanban board column operations restricted to Manager/Superadmin roles:
+- `fn_add_column`: Creates a new column at a specified position.
+- `fn_rename_column`: Updates column name and/or `column_type`.
+- `fn_delete_column`: Atomically migrates all tasks to a target column, then soft-deletes the column.
+- `fn_reorder_columns`: Reorders all columns for a board atomically based on an ordered ID array.
+
+### comment_mentions Table
+A junction table (`comment_mentions`) introduced in `065_comment_mentions.sql` recording which users were @mentioned in each comment. Joined into `v_comments_canonical` as a `mentioned_users` JSON array. Backed by `fn_create_comment_mentions` and `fn_get_comment_mentions` stored functions.

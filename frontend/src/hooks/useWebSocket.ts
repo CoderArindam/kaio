@@ -46,7 +46,7 @@ export function useWebSocket(): { isConnected: boolean } {
   const setWsConnected = useUiStore((s) => s.setWsConnected);
   const wsConnected = useUiStore((s) => s.wsConnected);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
-  const initializeBoard = useTaskStore((s) => s.initializeBoard);
+  const applyWsEvent = useTaskStore((s) => s.applyWsEvent);
   const boardId = useTaskStore((s) => s.boardView.boardId);
 
   const backoffRef = useRef<number>(MIN_BACKOFF_MS);
@@ -147,7 +147,7 @@ export function useWebSocket(): { isConnected: boolean } {
           const eventBoardId = msg.board_id as number | undefined;
           const activeBoardId = boardIdRef.current;
           if (eventBoardId && activeBoardId && eventBoardId === activeBoardId) {
-            initializeBoard(activeBoardId);
+            applyWsEvent(type, msg);
           }
           fetchNotifications();
           break;
@@ -189,7 +189,7 @@ export function useWebSocket(): { isConnected: boolean } {
           break;
       }
     };
-  }, [setWsConnected, startPing, stopPing, fetchNotifications, initializeBoard]);
+  }, [setWsConnected, startPing, stopPing, fetchNotifications, applyWsEvent]);
 
   // Keep connectRef current so onclose closures always call the latest version
   useEffect(() => {

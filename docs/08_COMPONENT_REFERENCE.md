@@ -89,7 +89,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.4 `SubtaskChecklist`
 
 - **Path**: `features/boards/modals/task-details/SubtaskChecklist.tsx`
-- **Purpose**: Interactive subtask checklist embedded inside task detail modal. Displays progress bar and ratio ("3/5 completed"), drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter key, instant checkbox completion toggles, and delete-on-hover actions.
+- **Purpose**: Interactive subtask checklist embedded inside task detail modal. Features a **collapsible toggle arrow** to expand/collapse the subtask section. Displays progress bar and ratio ("3/5 completed"), drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter key, instant checkbox completion toggles, and delete-on-hover actions.
 
 ### 6.5 `LabelFilter`
 

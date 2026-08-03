@@ -68,7 +68,7 @@ backend/
 │   │   ├── auth.py                 # WebSocket connection JWT query parameter authentication
 │   │   ├── manager.py              # In-memory ConnectionManager (user connections, board room subscriptions, broadcasts)
 │   │   └── router.py               # /ws endpoint handler, message routing (ping/subscribe_board/unsubscribe_board)
-│   ├── routers/                    # 24 REST API & WebSocket route handlers:
+│   ├── routers/                    # 27 REST API & WebSocket route handlers:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
@@ -76,7 +76,8 @@ backend/
 │   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, password reset, email verification, sessions, security events
 │   │   ├── board_members.py        # /boards/{id}/members — membership queries
 │   │   ├── boards.py               # /boards — CRUD, archiving
-│   │   ├── comments.py             # /tasks/{id}/comments — create, list, delete
+│   │   ├── columns.py              # /boards/{id}/columns, /columns/{id} — dynamic column management (add, rename, delete with card migration, reorder)
+│   │   ├── comments.py             # /tasks/{id}/comments — create, update (inline edit), list, delete
 │   │   ├── dashboard.py            # /dashboard/summary — Manager/Superadmin KPI dashboard
 │   │   ├── invitations.py          # /invitations — invite, list, verify, accept, revoke
 │   │   ├── labels.py               # /boards/{id}/labels, /labels/{id}, /tasks/{id}/labels — board label management & task tagging (WS broadcast)
@@ -85,6 +86,7 @@ backend/
 │   │   ├── organization.py         # /organization — org profile & settings
 │   │   ├── preferences.py          # /preferences — user UI & notification preferences
 │   │   ├── search.py               # /search — workspace-wide full-text search across tasks, boards, and meetings
+│   │   ├── subtasks.py             # /tasks/{id}/subtasks — subtask checklist CRUD, toggle completion, reorder
 │   │   ├── task_proposals.py       # /proposals — AI proposal review, approve, reject
 │   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move, bulk-delete (broadcasts WS events on mutations)
 │   │   ├── timesheets.py           # /timesheets — draft grid, entry upsert/delete, submit, recall
@@ -93,18 +95,19 @@ backend/
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 22 Pydantic request/response DTO schema files (including label.py)
+│   ├── schemas/                    # 24 Pydantic request/response DTO schema files (including label.py, subtask.py, column.py)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
 │       ├── attachment_service.py
 │       ├── auth_service.py         # Registration, login, password reset token creation & verification, email verification tokens
 │       ├── board_service.py
-│       ├── comment_service.py
+│       ├── column_service.py       # Column management: add, rename, delete (with task migration), reorder
+│       ├── comment_service.py      # Comment create, update (inline edit via fn_update_comment), delete, @mention dispatch
 │       ├── dashboard_service.py    # Reads v_dashboard_kpis_canonical, v_dashboard_board_summaries_canonical
 │       ├── email_service.py        # Async background SMTP email dispatch wrapper
 │       ├── email_templates.py      # HTML email templates for invitations, password reset & email verification
-│       ├── invitation_service.py   # Full invitation lifecycle (invite → verify → accept → revoke)
+│       ├── invitation_service.py   # Full invitation lifecycle (invite → email → verify token → accept → revoke)
 │       ├── my_work_service.py
 │       ├── notification_service.py # Dispatches real-time WS notification alerts to connected target users
 │       ├── organization_service.py
@@ -218,3 +221,5 @@ sequenceDiagram
 | `InvitationService` | `app/services/invitation_service.py` | Service | Full invitation lifecycle: invite → email → verify token → accept → revoke |
 | `TaskProposalsRouter` | `app/routers/task_proposals.py` | API Router | Manages AI proposal queues, edits, approvals (`fn_approve_task_proposal`), and rejections |
 | `AuthService` | `app/services/auth_service.py` | Service | Login, registration, token refresh, session management, security events |
+| `CommentService` | `app/services/comment_service.py` | Service | Comment create, inline edit (`fn_update_comment`), delete, and @mention dispatch (`fn_create_comment_mentions`) |
+| `ColumnService` | `app/services/column_service.py` | Service | Dynamic column management: add, rename, delete with task migration (`fn_delete_column`), and reorder |

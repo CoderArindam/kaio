@@ -52,7 +52,7 @@ async def create_task(
         await connection_manager.send_to_board(
             board_id=task.board_id,
             message={"type": "task_created", "board_id": task.board_id, "task_id": task.id, "action": "created"},
-            exclude_user_id=None,
+            exclude_user_id=current_user["id"],
         )
         # Notify dashboard listeners to refresh KPI counts
         await connection_manager.send_to_org(
@@ -119,7 +119,7 @@ async def update_task(
         await connection_manager.send_to_board(
             board_id=new_task.board_id,
             message={"type": "task_updated", "board_id": new_task.board_id, "task_id": new_task.id, "action": "updated"},
-            exclude_user_id=None,
+            exclude_user_id=current_user["id"],
         )
     except Exception:
         pass
@@ -194,7 +194,7 @@ async def delete_task(
             await connection_manager.send_to_board(
                 board_id=board_id,
                 message={"type": "task_deleted", "board_id": board_id, "task_id": task_id, "action": "deleted"},
-                exclude_user_id=None,
+                exclude_user_id=current_user["id"],
             )
         except Exception:
             pass
@@ -287,7 +287,7 @@ async def bulk_move_tasks(
             await connection_manager.send_to_board(
                 board_id=board_id,
                 message={"type": "task_moved", "board_id": board_id, "task_ids": body.task_ids, "action": "moved"},
-                exclude_user_id=None,
+                exclude_user_id=current_user["id"],
             )
             await connection_manager.send_to_org(
                 org_id=current_user["organization_id"],
@@ -320,7 +320,7 @@ async def bulk_delete_tasks(
             await connection_manager.send_to_board(
                 board_id=board_id,
                 message={"type": "task_deleted", "board_id": board_id, "task_ids": body.task_ids, "action": "deleted"},
-                exclude_user_id=None,
+                exclude_user_id=current_user["id"],
             )
             await connection_manager.send_to_org(
                 org_id=current_user["organization_id"],

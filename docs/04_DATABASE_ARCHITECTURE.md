@@ -51,11 +51,16 @@ erDiagram
     boards ||--o{ board_columns : "contains columns"
     boards ||--o{ tasks : "contains tasks"
     boards ||--o{ meeting_sessions : "linked to"
+    boards ||--o{ labels : "defines"
     board_columns ||--o{ tasks : "holds"
     tasks ||--o{ comments : "has"
     tasks ||--o{ attachments : "has"
     tasks ||--o{ subtasks : "contains"
+    tasks ||--o{ task_labels : "tagged with"
     tasks ||--o{ activity : "logged by"
+    labels ||--o{ task_labels : "applied via"
+    comments ||--o{ comment_mentions : "mentions"
+    users ||--o{ comment_mentions : "mentioned in"
     meeting_sessions ||--o{ task_proposals : "generates"
 
     users {
@@ -95,6 +100,7 @@ erDiagram
         string name
         string column_type
         int position
+        timestamp deleted_at
     }
 
     tasks {
@@ -110,6 +116,36 @@ erDiagram
         timestamp deleted_at
     }
 
+    labels {
+        int id PK
+        int board_id FK
+        string name
+        string color
+        timestamp deleted_at
+    }
+
+    task_labels {
+        int task_id FK
+        int label_id FK
+    }
+
+    subtasks {
+        int id PK
+        int task_id FK
+        string title
+        bool is_completed
+        int position
+        int created_by FK
+        timestamp deleted_at
+    }
+
+    comment_mentions {
+        int id PK
+        int comment_id FK
+        int mentioned_user_id FK
+        timestamp created_at
+    }
+
     meeting_sessions {
         int id PK
         string session_id
@@ -117,6 +153,7 @@ erDiagram
         string meeting_url
         string status
         timestamp started_at
+        timestamp failed_at
     }
 
     task_proposals {
@@ -245,7 +282,8 @@ erDiagram
 | `fn_create_task(...)` | `006_*.sql` | Atomically creates a task card and records audit log. |
 | `fn_move_task(task_id, new_column_id, new_position)` | `006_*.sql` | Atomically moves task to column and position. |
 | `fn_delete_task(task_id, user_id)` | `054_task_deletion_notifications_cleanup.sql` | Atomically soft-deletes a task and its comments, and purges all associated notifications across all users. |
-| `fn_bulk_update_tasks(task_ids, target_column_id, user_id)` | `052_bulk_task_operations.sql` | Atomically moves multiple selected task cards into a target board column. |
+| `fn_bulk_move_tasks(task_ids, target_column_id, user_id)` | `052_bulk_task_operations.sql` | Atomically moves multiple selected task cards into a target board column. |
+| `fn_bulk_delete_tasks(task_ids, user_id)` | `052_bulk_task_operations.sql` | Atomically soft-deletes multiple task cards, their comments, and purges associated notifications. |
 | `fn_approve_task_proposal(proposal_id, board_id, reviewer_id)` | `023_*.sql` | Converts approved proposal into a Kanban task card. |
 | `fn_reject_task_proposal(proposal_id, reviewer_id)` | `023_*.sql` | Marks proposal status as `rejected`. |
 | `fn_check_proposal_review_access(user_id, org_id)` | `024_*.sql` | Boolean: is this user a Manager or Superadmin in this org? |
@@ -255,10 +293,18 @@ erDiagram
 | `fn_delete_comment(comment_id, user_id, user_role, org_id)` | `029_*.sql` / `064_*.sql` | Permanently deletes a comment record from database (owner-only check). |
 | `fn_create_comment_mentions(...)` | `065_comment_mentions.sql` | Inserts comment mention records, creates `COMMENT_MENTIONED` notification and activity log records for each mentioned user. |
 | `fn_get_comment_mentions(comment_id)` | `065_comment_mentions.sql` | Returns JSON array of mentioned users for a specific comment. |
-| `fn_log_security_event(...)` | `034_*.sql` | Logs a security event (login, logout, session revoke, password change). |
+| `fn_create_subtask(task_id, title, user_id)` | `061_subtasks_functions.sql` | Creates a new subtask row for a task. |
+| `fn_toggle_subtask(subtask_id, user_id)` | `061_subtasks_functions.sql` | Toggles `is_completed` on a subtask row. |
+| `fn_delete_subtask(subtask_id, user_id)` | `061_subtasks_functions.sql` | Soft-deletes a subtask row. |
+| `fn_reorder_subtasks(task_id, ordered_ids, user_id)` | `061_subtasks_functions.sql` | Reorders subtask positions for a task. |
+| `fn_add_column(board_id, name, column_type, position, user_id)` | `063_column_management_functions.sql` | Creates a new column on a board at a specified position. |
+| `fn_rename_column(column_id, name, column_type, user_id)` | `063_column_management_functions.sql` | Updates column name and/or type. |
+| `fn_delete_column(column_id, target_column_id, user_id)` | `063_column_management_functions.sql` | Migrates tasks to target column, then soft-deletes the column. |
+| `fn_reorder_columns(board_id, ordered_column_ids, user_id)` | `063_column_management_functions.sql` | Reorders all board columns atomically. |
 | `fn_refresh_session(user_id, token, user_agent, ip)` | `035_*.sql` | Upserts an active session record. |
 | `fn_revoke_session(session_id, user_id)` | `035_*.sql` | Marks session as revoked. |
 | `fn_is_session_revoked(session_id)` | `035_*.sql` | Returns `true` if session is revoked (called on every authenticated request). |
+| `fn_log_security_event(...)` | `034_*.sql` | Logs a security event (login, logout, session revoke, password change, role update). |
 | `revoke_invitation(p_invitation_id, p_org_id)` | `032_revoke_invitation_function.sql` | Deletes a pending invitation by ID (org-scoped). |
 | `fn_create_timesheet(user_id, org_id, week_start_date)` | `041_*.sql` | Creates a draft timesheet record for the specified week. |
 | `fn_upsert_timesheet_entry(...)` | `041_*.sql` | Creates or updates a time entry row on a draft timesheet. |

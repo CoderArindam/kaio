@@ -515,3 +515,64 @@ sequenceDiagram
         API-->>User: 200 OK {"data": {"message": "Password reset successfully."}}
     end
 ```
+
+---
+
+## 20. Sequence Diagram 19: Inline Comment Editing Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Comment Author (React SPA)
+    participant Modal as TaskDetailsModal / CommentsTab
+    participant API as /api/v1/tasks/{id}/comments/{id}
+    participant Service as CommentService
+    participant DB as PostgreSQL DB
+    participant WS as ConnectionManager (WebSockets)
+
+    User->>Modal: Click pencil edit icon on own comment
+    Modal->>Modal: Render inline textarea with existing content (auto-focused)
+    User->>Modal: Edit text, press Enter (or Esc to cancel)
+    Modal->>API: PATCH /api/v1/tasks/{task_id}/comments/{comment_id} {content: "updated text"}
+    API->>Service: comment_service.update_comment(...)
+    Service->>DB: SELECT fn_update_comment(comment_id, content, user_id, org_id)
+    DB->>DB: Owner check, SET content = $2, edited_at = NOW()
+    DB-->>Service: Updated comment record
+    Service->>WS: broadcast_to_board(board_id, {type: "comment_updated", comment_id})
+    API-->>Modal: 200 OK {comment with edited_at timestamp}
+    Modal->>Modal: Replace comment text, show "(edited)" label, exit edit mode
+```
+
+---
+
+## 21. Sequence Diagram 20: @Mention Autocomplete & MENTIONED_IN_COMMENT Notification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Comment Author (CommentsTab)
+    participant API as FastAPI Comments Router
+    participant Service as CommentService
+    participant DB as PostgreSQL DB
+    participant Notif as NotificationService
+    participant WS as ConnectionManager (WebSockets)
+    participant Mentioned as Mentioned User Client
+
+    User->>User: Type "@" in comment textarea
+    User->>User: Dropdown renders board member list (from GET /boards/{id}/members)
+    User->>User: Select member — token inserted: "@[Full Name](user:42)"
+    User->>API: POST /api/v1/tasks/{task_id}/comments {content: "...", mentioned_user_ids: [42]}
+    API->>Service: comment_service.create_comment(...)
+    Service->>DB: SELECT fn_create_comment(task_id, author_id, content, ...)
+    DB-->>Service: Comment record {id: 88, ...}
+    Service->>DB: SELECT fn_create_comment_mentions(88, [42], author_id)
+    DB->>DB: INSERT INTO comment_mentions (comment_id, mentioned_user_id)
+    DB->>DB: INSERT MENTIONED_IN_COMMENT notification for user 42
+    DB->>DB: INSERT activity log row for mention action
+    DB-->>Service: Mentions created
+    Service->>WS: broadcast_to_board(board_id, {type: "task_updated", comment_id: 88})
+    Service->>Notif: send_personal_message(42, {type: "notification", ...})
+    Notif->>Mentioned: WebSocket push — MENTIONED_IN_COMMENT notification
+    API-->>User: 201 Created {comment with mentioned_users array}
+    User->>User: Comment renders @mention token as styled clickable chip
+```
