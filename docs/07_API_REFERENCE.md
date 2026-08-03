@@ -104,6 +104,19 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 
 ---
 
+## 7. Subtasks Router (`/api/v1`)
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/tasks/{task_id}/subtasks` | `GET` | Cookie | Lists all subtasks for a task ordered by position (`v_subtasks_canonical`). |
+| `/tasks/{task_id}/subtasks` | `POST` | Cookie | Creates a new subtask row (`fn_create_subtask`). Broadcasts `task_updated` WS event to board members. Body: `{title}`. |
+| `/subtasks/{subtask_id}/toggle` | `PATCH` | Cookie | Toggles `is_completed` status of a subtask (`fn_toggle_subtask`). Broadcasts `task_updated` WS event. |
+| `/subtasks/{subtask_id}` | `DELETE` | Cookie | Soft-deletes a subtask (`fn_delete_subtask`). Broadcasts `task_updated` WS event. |
+| `/tasks/{task_id}/subtasks/reorder` | `POST` | Cookie | Reorders subtasks position (`fn_reorder_subtasks`). Broadcasts `task_updated` WS event. Body: `{ordered_ids: number[]}`. |
+
+
+---
+
 ## 7. Notifications Router (`/api/v1/notifications`)
 
 | Endpoint | Method | Auth | Description |

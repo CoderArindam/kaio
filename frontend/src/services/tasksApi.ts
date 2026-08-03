@@ -34,6 +34,8 @@ export interface Task {
   creator_avatar_url?: string;
   labels?: Label[];
   label_ids?: number[];
+  subtask_count?: number;
+  completed_subtask_count?: number;
 }
 
 export interface Column {

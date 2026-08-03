@@ -84,9 +84,14 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.3 `TaskCard`
 
 - **Path**: `features/boards/components/TaskCard.tsx`
-- **Purpose**: Draggable task card preview. Displays title, assignee avatar, due date, priority badge, comment count, and color-coded label tag pills. Clicking opens the task detail modal.
+- **Purpose**: Draggable task card preview. Displays title, assignee avatar, due date, priority badge, comment count, subtask ratio badge (`3/5`), and color-coded label tag pills. Clicking opens the task detail modal.
 
-### 6.4 `LabelFilter`
+### 6.4 `SubtaskChecklist`
+
+- **Path**: `features/boards/modals/task-details/SubtaskChecklist.tsx`
+- **Purpose**: Interactive subtask checklist embedded inside task detail modal. Displays progress bar and ratio ("3/5 completed"), drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter key, instant checkbox completion toggles, and delete-on-hover actions.
+
+### 6.5 `LabelFilter`
 
 - **Path**: `features/boards/components/LabelFilter.tsx`
 - **Purpose**: Filter bar pill selector for filtering board task cards by color-coded board labels.

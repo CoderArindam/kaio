@@ -54,6 +54,7 @@ erDiagram
     board_columns ||--o{ tasks : "holds"
     tasks ||--o{ comments : "has"
     tasks ||--o{ attachments : "has"
+    tasks ||--o{ subtasks : "contains"
     tasks ||--o{ activity : "logged by"
     meeting_sessions ||--o{ task_proposals : "generates"
 
@@ -197,6 +198,9 @@ erDiagram
 | `057_labels_schema.sql` | `labels`, `task_labels` | Board labels taxonomy table (`labels`) and task-label mapping junction table (`task_labels`). |
 | `058_labels_functions.sql` | Label Procedures | Stored functions: `fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label` with board ownership & permissions check. |
 | `059_labels_view.sql` | Label Canonical Views | `v_labels_canonical`, `v_task_labels_canonical`, and updated `v_tasks_canonical` aggregating array of assigned label objects. |
+| `060_subtasks_schema.sql` | `subtasks` | Subtasks table schema for task checklists (`task_id`, `title`, `is_completed`, `position`, `created_by`, `deleted_at`). |
+| `061_subtasks_functions.sql` | Subtask Procedures | Stored functions: `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks` with board access check. |
+| `062_subtasks_view.sql` | Subtask Canonical Views | `v_subtasks_canonical` view and updated `v_tasks_canonical` exposing aggregated `subtask_count` and `completed_subtask_count`. |
 
 ---
 

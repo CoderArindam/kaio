@@ -57,6 +57,8 @@ class CanonicalTaskResponse(BaseModel):
     creator_last_name: Optional[str] = None
     creator_avatar_url: Optional[str] = None
     labels: List[LabelResponse] = []
+    subtask_count: int = 0
+    completed_subtask_count: int = 0
 
 class ColumnResponse(BaseModel):
     id: int

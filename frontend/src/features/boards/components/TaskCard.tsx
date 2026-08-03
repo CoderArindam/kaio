@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, UserRound, CalendarClock } from 'lucide-react';
+import { Trash2, UserRound, CalendarClock, CheckSquare } from 'lucide-react';
 import { type Task, type Column } from '../../../services/tasksApi';
 import { type User } from '../../../services/usersApi';
 import { UserAvatar } from '../../../components/common/UserAvatar';
@@ -201,19 +201,36 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
       )}
 
       <div className="flex justify-between items-center pt-4 border-t border-brand-border">
-        {task.priority && (
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              task.priority === "High"
-                ? "bg-red-50 text-red-600"
-                : task.priority === "Medium"
-                  ? "bg-orange-50 text-orange-600"
-                  : "bg-green-50 text-green-600"
-            }`}
-          >
-            {task.priority} Priority
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {task.priority && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                task.priority === "High"
+                  ? "bg-red-50 text-red-600"
+                  : task.priority === "Medium"
+                    ? "bg-orange-50 text-orange-600"
+                    : "bg-green-50 text-green-600"
+              }`}
+            >
+              {task.priority} Priority
+            </span>
+          )}
+          {task.subtask_count !== undefined && task.subtask_count > 0 && (
+            <span
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                task.completed_subtask_count === task.subtask_count
+                  ? "bg-green-50 text-green-700"
+                  : "bg-brand-surface-low text-brand-text-muted"
+              }`}
+              title={`${task.completed_subtask_count}/${task.subtask_count} subtasks completed`}
+            >
+              <CheckSquare size={13} />
+              <span>
+                {task.completed_subtask_count ?? 0}/{task.subtask_count}
+              </span>
+            </span>
+          )}
+        </div>
 
         {/* Assignee Avatar Dropdown */}
 
