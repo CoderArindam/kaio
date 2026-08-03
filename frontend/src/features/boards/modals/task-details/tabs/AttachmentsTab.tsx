@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Paperclip, UploadCloud, Loader2, Image as ImageIcon, FileText, Download, Trash2, ExternalLink } from 'lucide-react';
+import { Paperclip, UploadCloud, Loader2, FileText, Download, Trash2, ExternalLink } from 'lucide-react';
 import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachment, type Attachment } from '../../../../../services/attachmentsApi';
 import { type Task } from '../../../../../services/tasksApi';
 import toast from 'react-hot-toast';

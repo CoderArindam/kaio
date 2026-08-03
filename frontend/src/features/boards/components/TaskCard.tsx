@@ -9,7 +9,7 @@ interface TaskCardProps {
   task: Task & { board_name?: string; column_name?: string };
   columns: Column[];
   users: User[];
-  onStatusChange: (newColumnId: number) => void;
+  onStatusChange?: (newColumnId: number) => void;
   onDelete: () => void;
   onAssigneeChange: (assignedTo: number | null) => void;
   onOpen: () => void;
@@ -25,7 +25,6 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
   task,
   columns,
   users,
-  onStatusChange,
   onDelete,
   onAssigneeChange,
   onOpen,
