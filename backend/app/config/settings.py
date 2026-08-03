@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     FRONTEND_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
     COOKIE_SECURE: bool = False
 
+    # Cloudinary Integration
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
+    CLOUDINARY_URL: Optional[str] = None
+
     # Production Hardening Controls
     MAX_REQUEST_SIZE_BYTES: int = 52_428_800  # 50 MB
     RATE_LIMIT_PER_MINUTE: int = 300           # 300 requests per IP per min

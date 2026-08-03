@@ -141,30 +141,30 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
   return (
     <div
-      className={`group bg-brand-surface rounded-3xl border p-5 flex flex-col gap-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow,border-color,opacity] duration-150 ease-out cursor-pointer relative ${
+      className={`group bg-brand-surface rounded-2xl border p-3.5 sm:p-4 flex flex-col gap-3 shadow-2xs hover:-translate-y-0.5 hover:shadow-xs transition-[transform,box-shadow,border-color,opacity] duration-150 ease-out cursor-pointer relative ${
         isSelected ? 'border-brand-primary ring-2 ring-brand-primary/30 bg-brand-primary/5' : 'border-brand-border'
       }`}
       onClick={handleCardClick}
     >
-      <div className="flex justify-between items-start gap-3">
+      <div className="flex justify-between items-start gap-2.5">
         {isMultiSelect && (
           <input
             type="checkbox"
             checked={isSelected}
             onChange={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
-            className="w-4 h-4 text-brand-primary rounded border-brand-border focus:ring-brand-primary cursor-pointer mt-1"
+            className="w-4 h-4 text-brand-primary rounded border-brand-border focus:ring-brand-primary cursor-pointer mt-0.5"
           />
         )}
-        <h4 className="text-base font-semibold text-brand-text leading-tight flex-1">
+        <h4 className="text-sm font-semibold text-brand-text leading-snug flex-1 break-words">
           {task.title}
         </h4>
 
         {canEdit && !isMultiSelect && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="opacity-0 group-hover:opacity-100 bg-brand-surface-low text-brand-outline hover:text-brand-error w-8 h-8 rounded-full flex items-center justify-center transition"
+            className="opacity-0 group-hover:opacity-100 bg-brand-surface-low text-brand-outline hover:text-brand-error w-7 h-7 rounded-full flex items-center justify-center transition"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
           </button>
         )}
       </div>
@@ -217,16 +217,16 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
         </div>
       )}
 
-      <div className="flex justify-between items-center pt-4 border-t border-brand-border">
-        <div className="flex items-center gap-2">
+      <div className="flex justify-between items-center pt-3 border-t border-brand-border/50 mt-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {task.priority && (
             <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold ${
                 task.priority === "High"
-                  ? "bg-red-50 text-red-600"
+                  ? "bg-red-50 text-red-600 border border-red-200/50"
                   : task.priority === "Medium"
-                    ? "bg-orange-50 text-orange-600"
-                    : "bg-green-50 text-green-600"
+                    ? "bg-orange-50 text-orange-600 border border-orange-200/50"
+                    : "bg-green-50 text-green-600 border border-green-200/50"
               }`}
             >
               {task.priority} Priority
@@ -234,14 +234,14 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
           )}
           {task.subtask_count !== undefined && task.subtask_count > 0 && (
             <span
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                 task.completed_subtask_count === task.subtask_count
                   ? "bg-green-50 text-green-700"
                   : "bg-brand-surface-low text-brand-text-muted"
               }`}
               title={`${task.completed_subtask_count}/${task.subtask_count} subtasks completed`}
             >
-              <CheckSquare size={13} />
+              <CheckSquare size={12} />
               <span>
                 {task.completed_subtask_count ?? 0}/{task.subtask_count}
               </span>
@@ -249,18 +249,17 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
           )}
         </div>
 
-        {/* Assignee Avatar Dropdown */}
-
-        <div className="relative">
+        {/* Assignee Avatar Dropdown with Tooltip */}
+        <div className="relative shrink-0" title={assignee ? `Assigned to: ${formatUserName(assignee)}` : "Unassigned"}>
           {canReassign && (
             <select
               value={task.assigned_to ?? ""}
               onChange={handleAssigneeSelect}
               onClick={(e) => e.stopPropagation()}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+              title={assignee ? `Assigned to: ${formatUserName(assignee)}` : "Assign user"}
             >
               <option value="">Unassigned</option>
-
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {formatUserName(u)}
@@ -271,36 +270,14 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
           <div className="relative">
             {assignee ? (
-              <UserAvatar user={assignee} size="md" />
+              <UserAvatar user={assignee} size="sm" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-brand-surface-low border border-brand-border flex items-center justify-center overflow-hidden cursor-pointer">
-                <UserRound size={15} className="text-brand-outline" />
+              <div className="w-7 h-7 rounded-full bg-brand-surface-low border border-brand-border flex items-center justify-center overflow-hidden cursor-pointer">
+                <UserRound size={13} className="text-brand-text-muted" />
               </div>
             )}
           </div>
         </div>
-      </div>
-
-      {assignee && (
-        <p className="text-xs text-brand-text-muted">
-          Assigned to:{" "}
-          <span className="font-medium text-brand-text">{formatUserName(assignee)}</span>
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        {canEdit && columns.map(
-          (col) =>
-            col.id !== task.column_id && (
-              <button
-                key={col.id}
-                onClick={(e) => { e.stopPropagation(); onStatusChange(col.id); }}
-                className="text-xs px-2 py-1 rounded-lg bg-brand-surface-low hover:bg-brand-surface-container"
-              >
-                Move {col.name}
-              </button>
-            ),
-        )}
       </div>
     </div>
   );

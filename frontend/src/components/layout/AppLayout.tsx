@@ -92,7 +92,7 @@ export const AppLayout: React.FC = () => {
         </header>
 
         <ActiveMeetingBar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <Outlet />
         </main>
       </div>

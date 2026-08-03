@@ -3,6 +3,7 @@ import { getBoardTasks, getTask, createTask, updateTaskStatus, deleteTask, updat
 import { createColumn, updateColumn, deleteColumn, reorderColumns, type CreateColumnPayload, type UpdateColumnPayload } from '../services/columnsApi';
 import { useActivityStore } from './activityStore';
 import { getUsers, getBoardMembers, type User, type BoardMember } from '../services/usersApi';
+import { useAuthStore } from './authStore';
 import toast from 'react-hot-toast';
 
 interface TaskState {
@@ -326,14 +327,17 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set((state) => ({ boardView: { ...state.boardView, boardId, isFetching: true } }));
     
     const saved = localStorage.getItem(`kanban_selected_assignee_${boardId}`);
-    let initialAssigneeId = null;
+    let initialAssigneeId: number | null = null;
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
         initialAssigneeId = typeof parsed === 'number' ? parsed : null;
       } catch {
-        // ignore
+        initialAssigneeId = null;
       }
+    } else {
+      const currentUser = useAuthStore.getState().user;
+      initialAssigneeId = currentUser ? currentUser.id : null;
     }
 
     try {

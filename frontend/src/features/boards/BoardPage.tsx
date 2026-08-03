@@ -63,8 +63,8 @@ export const Board: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 px-4 sm:px-8 py-3.5 sm:py-6 bg-brand-surface border-b border-brand-border shrink-0">
+    <div className="h-full flex flex-col min-h-0 overflow-hidden bg-brand-bg">
+      <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 px-4 sm:px-8 py-2.5 sm:py-3.5 bg-brand-surface border-b border-brand-border shrink-0">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link
             to="/dashboard"
@@ -135,7 +135,7 @@ export const Board: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 overflow-x-auto bg-brand-bg flex flex-col">
+      <main className="flex-1 min-h-0 flex flex-col overflow-hidden bg-brand-bg">
         {!boardId ? (
           <div className="h-full flex items-center justify-center text-brand-text-muted">
             Invalid Board ID

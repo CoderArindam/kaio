@@ -43,7 +43,9 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 overflow-y-auto space-y-4 min-h-[200px] rounded-2xl transition-colors ${isOver ? "bg-brand-surface-container" : ""}`}
+      className={`flex-1 overflow-y-auto space-y-3 min-h-[160px] p-1.5 rounded-xl transition-all duration-150 custom-scrollbar ${
+        isOver ? "bg-brand-primary/10 ring-2 ring-brand-primary/40" : ""
+      }`}
     >
       {children}
     </div>
@@ -358,7 +360,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </header>
 
         {/* Filters */}
-        <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-2">
+        <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-2 shrink-0">
           <AssigneeFilter
             users={boardMembers}
             selectedAssigneeId={selectedAssigneeId}
@@ -376,14 +378,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </div>
 
         {/* Board columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-8 pb-32 sm:pb-40 pt-2 sm:pt-4 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-8 pb-4 pt-2 custom-scrollbar">
           {isFetching ? (
             <div className="h-full flex flex-col items-center justify-center text-brand-text-muted">
               <Loader2 className="w-10 h-10 animate-spin text-brand-primary opacity-50 mb-4" />
               <p>Loading board...</p>
             </div>
           ) : (
-            <div className="flex gap-4 sm:gap-6 h-full">
+            <div className="flex gap-3 sm:gap-4.5 h-full items-stretch pb-1">
               {columns.map((column: any, colIdx: number) => {
                 let columnTasks = tasks.filter((task: any) => {
                   if (task.column_id !== column.id) return false;
@@ -448,11 +450,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                 return (
                   <div
                     key={column.id}
-                    className="w-[82vw] max-w-[340px] sm:w-[320px] md:w-[340px] shrink-0 flex flex-col"
+                    className="flex-1 min-w-[220px] sm:min-w-[230px] md:min-w-[240px] max-w-[340px] shrink-0 flex flex-col bg-brand-surface border border-brand-border/80 rounded-2xl p-2 sm:p-2.5 h-full shadow-2xs transition-all overflow-hidden"
                   >
-                    <div className="flex justify-between items-center px-4 py-3 bg-brand-surface rounded-2xl border border-brand-border mb-4 relative">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-3 h-3 rounded-full bg-brand-primary shrink-0" />
+                    <div className="flex justify-between items-center px-2 py-2 mb-2 relative border-b border-brand-border/40 pb-2.5">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                            column.column_type === 'DONE'
+                              ? 'bg-emerald-500 shadow-xs'
+                              : column.column_type === 'IN_PROGRESS'
+                              ? 'bg-amber-500 shadow-xs'
+                              : 'bg-brand-primary shadow-xs'
+                          }`}
+                        />
                         {editingColumnId === column.id ? (
                           <div className="flex items-center gap-1.5 flex-1 mr-2">
                             <input
@@ -483,24 +493,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                           </div>
                         ) : (
                           <h3
-                            onDoubleClick={() => {
-                              if (canManageColumns) {
-                                setEditingColumnId(column.id);
-                                setEditingColumnName(column.name);
-                              }
-                            }}
-                            className={`font-semibold text-brand-text truncate ${
-                              canManageColumns ? 'cursor-pointer hover:text-brand-primary' : ''
-                            }`}
-                            title={canManageColumns ? 'Double-click to rename' : undefined}
-                          >
-                            {column.name}
-                          </h3>
+                              onDoubleClick={() => {
+                                if (canManageColumns) {
+                                  setEditingColumnId(column.id);
+                                  setEditingColumnName(column.name);
+                                }
+                              }}
+                              className={`font-bold text-xs sm:text-sm tracking-wide text-brand-text uppercase truncate ${
+                                canManageColumns ? 'cursor-pointer hover:text-brand-primary' : ''
+                              }`}
+                              title={canManageColumns ? 'Double-click to rename' : undefined}
+                            >
+                              {column.name}
+                            </h3>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 rounded-full bg-brand-surface-low text-xs shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2.5 py-0.5 rounded-full bg-brand-surface-low text-brand-text-muted border border-brand-border text-xs font-semibold shrink-0">
                           {columnTasks.length}
                         </span>
 
@@ -606,8 +616,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
                     <DroppableColumn column={column}>
                       {columnTasks.length === 0 ? (
-                        <div className="h-[200px] flex flex-col items-center justify-center text-brand-text-muted border-2 border-dashed border-brand-border rounded-xl bg-brand-surface-low opacity-60">
-                          <p className="text-sm">No tasks</p>
+                        <div className="h-36 flex flex-col items-center justify-center text-brand-text-muted border-2 border-dashed border-brand-border/70 rounded-xl bg-brand-surface-low/50 opacity-60">
+                          <p className="text-xs font-medium">No tasks</p>
                         </div>
                       ) : (
                         columnTasks.map((task: any) => {
@@ -645,7 +655,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
 
               {/* + Add Column Ghost Column (Manager/Admin Only) */}
               {canManageColumns && (
-                <div className="w-[82vw] max-w-[340px] sm:w-[320px] md:w-[340px] shrink-0 flex flex-col">
+                <div className="flex-1 min-w-[200px] sm:min-w-[220px] max-w-[280px] shrink-0 flex flex-col">
                   {!isAddingColumn ? (
                     <button
                       onClick={() => setIsAddingColumn(true)}

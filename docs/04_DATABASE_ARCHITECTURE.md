@@ -241,6 +241,7 @@ erDiagram
 | `063_column_management_functions.sql` | Column Management Functions | Stored functions for adding, renaming, deleting (with task re-assignment), and reordering board columns. |
 | `064_comment_editing.sql` | Comment Editing & Hard Delete | Adds `edited_at` timestamp to `task_comments`, updates `v_comments_canonical`, adds `fn_update_comment` procedure, and updates `fn_delete_comment` for hard delete & owner-only check. |
 | `065_comment_mentions.sql` | `comment_mentions` | Table schema for user @mentions in task comments (`comment_id`, `mentioned_user_id`, `created_at`), `v_comment_mentions_canonical` view, `fn_create_comment_mentions` procedure, `fn_get_comment_mentions` function, and activity/notification triggers. |
+| `066_attachment_file_metadata.sql` | `task_attachments` | Migration adding `file_size` (BIGINT) and `mime_type` (VARCHAR(100)) columns to `task_attachments` table, along with `fn_create_attachment`, `fn_get_task_attachments`, and `fn_delete_attachment` stored functions. |
 
 ---
 

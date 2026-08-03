@@ -90,7 +90,10 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/tasks/bulk-delete` | `POST` | Cookie (Manager+) | Atomically soft-deletes multiple tasks, task comments, and associated notifications (`fn_bulk_delete_tasks`). Body: `{task_ids: number[]}`. |
 | `/tasks/{id}` | `DELETE` | Cookie | Soft-deletes a task card (`fn_delete_task`). |
 
-| `/tasks/{id}/attachments` | `POST` | Cookie | Uploads a file attachment to a task. Stored on local disk at `uploads/`. |
+| `/tasks/{id}/attachments/upload` | `POST` | Cookie | Accepts `multipart/form-data` file upload (`UploadFile`), stores via `StorageService` (Cloudinary or `uploads/attachments/{task_id}/`), and inserts DB row (`fn_create_attachment`). |
+| `/tasks/{id}/attachments` | `POST` | Cookie | Creates URL-based task attachment (`fn_create_attachment`). |
+| `/tasks/{id}/attachments` | `GET` | Cookie | Fetches all attachments for a task (`fn_get_task_attachments`). |
+| `/attachments/{attachment_id}` | `DELETE` | Cookie | Deletes attachment DB record (`fn_delete_attachment`) and removes file from Cloudinary or local disk storage (`StorageService.delete_attachment`). |
 
 ---
 

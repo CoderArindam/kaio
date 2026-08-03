@@ -140,6 +140,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.9 Task Detail Modals (`features/boards/modals/task-details/`)
 
 - **Purpose**: Full task detail view. Displays and edits all task fields (title, Markdown description via `MarkdownEditor` in edit-mode and `ReactMarkdown` + `remark-gfm` in read-mode, status, assignee, priority, due date), renders comment thread with replies, and shows file attachments. Performs bidirectional synchronization between modal state (`selectedTaskId`) and URL search parameters (`?taskId=...`) for deep linking.
+- **`AttachmentsTab`** (`features/boards/modals/task-details/tabs/AttachmentsTab.tsx`): Enterprise attachment component featuring drag-and-drop upload zone, traditional file picker button, real-time upload progress indicator animation, image thumbnail previews, generic file icons with formatted size display (KB/MB), direct download action, and attachment deletion.
 
 ---
 
