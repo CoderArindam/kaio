@@ -28,13 +28,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-def is_secure_cookie() -> bool:
+def is_secure_cookie(request: Request = None) -> bool:
     if settings.COOKIE_SECURE:
         return True
-    return "https://" in settings.FRONTEND_ORIGINS.lower()
+    if settings.ENVIRONMENT.lower() in ("production", "prod", "staging"):
+        return True
+    if request:
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        if proto.lower() == "https":
+            return True
+    origins = settings.FRONTEND_ORIGINS.lower()
+    return "https://" in origins or "vercel.app" in origins
 
-def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
-    secure_flag = is_secure_cookie()
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str, request: Request = None):
+    secure_flag = is_secure_cookie(request)
     samesite_val = "none" if secure_flag else "lax"
     response.set_cookie(
         key="access_token",
@@ -42,6 +49,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         httponly=True,
         secure=secure_flag,
         samesite=samesite_val,
+        path="/",
         max_age=15 * 60 # 15 minutes
     )
     response.set_cookie(
@@ -50,7 +58,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
         httponly=True,
         secure=secure_flag,
         samesite=samesite_val,
-        path="/api/v1/auth",
+        path="/",
         max_age=7 * 24 * 60 * 60 # 7 days
     )
 
@@ -77,7 +85,7 @@ async def register_organization(
         "session_id": result["session_id"]
     })
 
-    set_auth_cookies(response, access_token, result["refresh_token"])
+    set_auth_cookies(response, access_token, result["refresh_token"], request)
 
     return {
         "organization": result["organization"],
@@ -104,7 +112,7 @@ async def login(
         "session_id": result["session_id"]
     })
 
-    set_auth_cookies(response, access_token, result["refresh_token"])
+    set_auth_cookies(response, access_token, result["refresh_token"], request)
 
     return {"message": result["message"]}
 
@@ -131,7 +139,7 @@ async def refresh_token(
         "session_id": result["session_id"]
     })
     
-    set_auth_cookies(response, access_token, result["refresh_token"])
+    set_auth_cookies(response, access_token, result["refresh_token"], request)
 
     return {"message": result["message"]}
 
@@ -152,10 +160,10 @@ async def logout(
     token = request.cookies.get("refresh_token")
     await auth_service.logout(token)
 
-    secure_flag = is_secure_cookie()
+    secure_flag = is_secure_cookie(request)
     samesite_val = "none" if secure_flag else "lax"
-    response.delete_cookie(key="access_token", httponly=True, secure=secure_flag, samesite=samesite_val)
-    response.delete_cookie(key="refresh_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/api/v1/auth")
+    response.delete_cookie(key="access_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/")
+    response.delete_cookie(key="refresh_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/")
     
     return {"message": "Logged out successfully"}
 
