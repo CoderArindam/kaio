@@ -8,6 +8,7 @@ from app.schemas.auth import (
     OrganizationRegistrationResponse,
     RegisterInitResponse,
     RegisterVerifyRequest,
+    RegisterSkipOtpRequest,
     UserLogin,
     LoginResponse,
     SuccessResponse,
@@ -133,6 +134,74 @@ async def verify_registration_otp(
 
     return {
         "organization": result["organization"],
+        "message": result["message"]
+    }
+
+
+@router.post("/register/skip-otp", response_model=OrganizationRegistrationResponse, status_code=201)
+async def skip_registration_otp(
+    body: RegisterSkipOtpRequest,
+    request: Request,
+    response: Response,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Skip OTP verification & execute organization + admin creation directly."""
+    ua_string = request.headers.get("user-agent", "Unknown")[:255]
+    ip_address = request.client.host if request.client else "Unknown"
+
+    result = await auth_service.skip_registration_otp(
+        body.registration_token,
+        ua_string,
+        ip_address
+    )
+
+    access_token = create_access_token(data={
+        "user_id": result["user"]["id"],
+        "email": result["user"]["email"],
+        "role": result["user"]["role"],
+        "organization_id": result["user"]["organization_id"],
+        "session_id": result["session_id"]
+    })
+
+    set_auth_cookies(response, access_token, result["refresh_token"], request)
+
+    return {
+        "organization": result["organization"],
+        "user": result["user"],
+        "message": result["message"]
+    }
+
+
+@router.post("/register/direct", response_model=OrganizationRegistrationResponse, status_code=201)
+async def register_organization_direct(
+    org_in: OrganizationCreate,
+    request: Request,
+    response: Response,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Direct registration without requiring email OTP verification."""
+    ua_string = request.headers.get("user-agent", "Unknown")[:255]
+    ip_address = request.client.host if request.client else "Unknown"
+
+    result = await auth_service.register_organization_direct(
+        org_in,
+        ua_string,
+        ip_address
+    )
+
+    access_token = create_access_token(data={
+        "user_id": result["user"]["id"],
+        "email": result["user"]["email"],
+        "role": result["user"]["role"],
+        "organization_id": result["user"]["organization_id"],
+        "session_id": result["session_id"]
+    })
+
+    set_auth_cookies(response, access_token, result["refresh_token"], request)
+
+    return {
+        "organization": result["organization"],
+        "user": result["user"],
         "message": result["message"]
     }
 

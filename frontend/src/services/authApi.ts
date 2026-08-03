@@ -5,10 +5,21 @@ export const registerOrganization = async (org_name: string, email: string, pass
   return response.data;
 };
 
+export const registerOrganizationDirect = async (org_name: string, email: string, password: string, first_name: string, last_name: string) => {
+  const response = await api.post('/auth/register/direct', { org_name, email, password, first_name, last_name });
+  return response.data;
+};
+
 export const verifyRegistrationOtp = async (registration_token: string, otp_code: string) => {
   const response = await api.post('/auth/register/verify-otp', { registration_token, otp_code });
   return response.data;
 };
+
+export const skipRegistrationOtp = async (registration_token: string) => {
+  const response = await api.post('/auth/register/skip-otp', { registration_token });
+  return response.data;
+};
+
 
 export const loginUser = async (email: string, password: string) => {
   const response = await api.post('/auth/login', { email, password });

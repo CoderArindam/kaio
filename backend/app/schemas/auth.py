@@ -22,6 +22,7 @@ class OrganizationResponse(BaseModel):
 
 class OrganizationRegistrationResponse(BaseModel):
     organization: OrganizationResponse
+    user: Optional["UserResponse"] = None
     message: str = "Registration successful"
 
 
@@ -35,6 +36,10 @@ class RegisterInitResponse(BaseModel):
 class RegisterVerifyRequest(BaseModel):
     registration_token: str
     otp_code: str = Field(min_length=6, max_length=6)
+
+
+class RegisterSkipOtpRequest(BaseModel):
+    registration_token: str
 
 
 # --- Auth ---

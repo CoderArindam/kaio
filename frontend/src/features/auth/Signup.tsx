@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerOrganization, verifyRegistrationOtp, resendOtp } from '../../services/authApi';
+import { registerOrganization, registerOrganizationDirect, verifyRegistrationOtp, skipRegistrationOtp, resendOtp } from '../../services/authApi';
 import { LayoutGrid, Eye, EyeOff, Loader2, ArrowLeft, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
@@ -55,6 +55,47 @@ export const Signup: React.FC = () => {
     }
   };
 
+  const handleDirectSubmit = async () => {
+    if (!orgName || !firstName || !lastName || !email || !password) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await registerOrganizationDirect(orgName, email, password, firstName, lastName);
+      useAuthStore.setState({
+        isAuthenticated: true,
+        user: {
+          id: response.user?.id,
+          email: response.user?.email ?? email,
+          first_name: response.user?.first_name ?? firstName,
+          last_name: response.user?.last_name ?? lastName,
+          role: response.user?.role ?? 'SUPER_ADMIN',
+          organization_id: response.user?.organization_id,
+          is_email_verified: false
+        }
+      });
+
+      toast.success("Organization created successfully!");
+      navigate("/dashboard");
+    } catch (error: any) {
+      const detail = error.response?.data?.detail || error.message || "Registration failed. Email might already be in use.";
+      toast.error(detail);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleVerifyOtp = async (code: string) => {
     setIsSubmitting(true);
     setOtpError(null);
@@ -62,10 +103,6 @@ export const Signup: React.FC = () => {
     try {
       const result = await verifyRegistrationOtp(registrationToken, code);
 
-      // Use the user data returned directly from verify-otp.
-      // Calling getMe() immediately after would race against cookie commit and
-      // trigger the /auth/refresh interceptor with no cookie yet — causing
-      // "Refresh token missing".
       useAuthStore.setState({
         isAuthenticated: true,
         user: {
@@ -84,6 +121,35 @@ export const Signup: React.FC = () => {
     } catch (error: any) {
       const detail = error.response?.data?.detail || error.message || "Invalid verification code";
       setOtpError(detail);
+      toast.error(detail);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSkipOtp = async () => {
+    setIsSubmitting(true);
+    setOtpError(null);
+
+    try {
+      const response = await skipRegistrationOtp(registrationToken);
+      useAuthStore.setState({
+        isAuthenticated: true,
+        user: {
+          id: response.user?.id,
+          email: response.user?.email ?? email,
+          first_name: response.user?.first_name ?? firstName,
+          last_name: response.user?.last_name ?? lastName,
+          role: response.user?.role ?? 'SUPER_ADMIN',
+          organization_id: response.user?.organization_id,
+          is_email_verified: false
+        }
+      });
+
+      toast.success("Account created! You can verify your email later.");
+      navigate("/dashboard");
+    } catch (error: any) {
+      const detail = error.response?.data?.detail || error.message || "Failed to skip verification";
       toast.error(detail);
     } finally {
       setIsSubmitting(false);
@@ -236,15 +302,26 @@ export const Signup: React.FC = () => {
                 </div>
               </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-3 w-full bg-brand-primary hover:bg-brand-primary-hover text-white font-medium text-sm rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 transition-colors duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                {isSubmitting ? "Sending OTP..." : "Continue with Email Verification"}
-              </button>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5 mt-3">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-brand-primary hover:bg-brand-primary-hover text-white font-medium text-sm rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 transition-colors duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  {isSubmitting ? "Sending OTP..." : "Continue with Email Verification"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDirectSubmit}
+                  disabled={isSubmitting}
+                  className="w-full border border-brand-outline-variant hover:border-brand-primary/50 bg-brand-surface-low hover:bg-brand-surface-high text-brand-text font-medium text-xs rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue without Email Verification
+                </button>
+              </div>
             </form>
 
             {/* Footer */}
@@ -288,16 +365,27 @@ export const Signup: React.FC = () => {
               />
             </div>
 
-            {/* Back button */}
-            <button
-              type="button"
-              onClick={() => setStep('FORM')}
-              disabled={isSubmitting}
-              className="mt-6 text-xs font-semibold text-brand-text-muted hover:text-brand-text flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <ArrowLeft size={14} />
-              <span>Back to registration form</span>
-            </button>
+            {/* Skip Option and Back button */}
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSkipOtp}
+                disabled={isSubmitting}
+                className="text-xs font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors underline underline-offset-4"
+              >
+                Skip verification & continue for now
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep('FORM')}
+                disabled={isSubmitting}
+                className="text-xs font-semibold text-brand-text-muted hover:text-brand-text flex items-center justify-center gap-1.5 transition-colors mt-1"
+              >
+                <ArrowLeft size={14} />
+                <span>Back to registration form</span>
+              </button>
+            </div>
           </>
         )}
 
@@ -307,3 +395,4 @@ export const Signup: React.FC = () => {
 };
 
 export default Signup;
+

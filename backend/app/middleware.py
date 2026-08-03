@@ -100,11 +100,16 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = {
         "/api/v1/auth/login",
         "/api/v1/auth/register",
+        "/api/v1/auth/register/verify-otp",
+        "/api/v1/auth/register/skip-otp",
+        "/api/v1/auth/register/direct",
         "/api/v1/auth/refresh",
         "/api/v1/invitations/accept",
         "/api/v1/auth/forgot-password",
         "/api/v1/auth/reset-password",
         "/api/v1/auth/verify-email",
+        "/api/v1/auth/login/verify-otp",
+        "/api/v1/auth/otp/resend",
     }
 
     async def dispatch(self, request: Request, call_next):

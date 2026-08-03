@@ -171,9 +171,121 @@ class AuthService:
             logger.error(f"Error in verify_registration_otp: {e}")
             raise HTTPException(status_code=500, detail="An unexpected error occurred during organization creation")
 
+    async def skip_registration_otp(self, registration_token: str, ua_string: str, ip_address: str) -> dict:
+        """Skip OTP verification: create organization & admin user without email verification, start session."""
+        row = await self.conn.fetchrow(
+            "SELECT success, error_code, payload, email FROM fn_skip_registration_otp($1)",
+            registration_token
+        )
+        if not row or not row["success"]:
+            error_code = row["error_code"] if row else "TOKEN_INVALID"
+            error_map = {
+                "TOKEN_INVALID": "Invalid or expired registration session",
+                "OTP_EXPIRED": "Registration session has expired. Please register again."
+            }
+            raise HTTPException(status_code=400, detail=error_map.get(error_code, "Failed to skip verification"))
+
+        payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+        if not payload:
+            raise HTTPException(status_code=400, detail="Invalid registration payload")
+
+        try:
+            org_id = await self.conn.fetchval(
+                "SELECT create_organization_with_admin($1, $2, $3, $4, $5)",
+                payload["org_name"],
+                payload["email"],
+                payload["hashed_password"],
+                payload["first_name"],
+                payload.get("last_name")
+            )
+            if not org_id:
+                raise HTTPException(status_code=500, detail="Failed to create organization")
+
+            user_row = await self.conn.fetchrow(
+                "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+                payload["email"]
+            )
+
+            refresh_token, session_id = await self.create_session(user_row["id"], ua_string, ip_address)
+
+            browser, platform, _ = self.parse_user_agent(ua_string)
+            await self.conn.execute(
+                "SELECT fn_log_security_event($1, $2, $3, $4::entity_type_enum, $5, $6, $7::jsonb)",
+                org_id, user_row["id"], "ORG_REGISTERED", "USER", user_row["id"], ip_address,
+                json.dumps({"browser": browser, "platform": platform, "status": "Success", "email_verified": False})
+            )
+
+            user_data = dict(user_row)
+
+            return {
+                "organization": {"id": org_id, "name": payload["org_name"], "created_at": datetime.now(timezone.utc)},
+                "user": user_data,
+                "refresh_token": refresh_token,
+                "session_id": session_id,
+                "message": "Organization created successfully without email verification"
+            }
+        except asyncpg.exceptions.UniqueViolationError:
+            raise HTTPException(status_code=409, detail="This email or organization name is already registered")
+        except Exception as e:
+            logger.error(f"Error in skip_registration_otp: {e}")
+            raise HTTPException(status_code=500, detail="An unexpected error occurred during organization creation")
+
+    async def register_organization_direct(self, org_in: OrganizationCreate, ua_string: str, ip_address: str) -> dict:
+        """Direct registration without OTP verification."""
+        existing_user = await self.conn.fetchrow(
+            "SELECT id FROM v_users_canonical WHERE LOWER(email) = LOWER($1)",
+            org_in.email
+        )
+        if existing_user:
+            raise HTTPException(status_code=409, detail="This email is already registered")
+
+        hashed_password = get_password_hash(org_in.password)
+
+        try:
+            org_id = await self.conn.fetchval(
+                "SELECT create_organization_with_admin($1, $2, $3, $4, $5)",
+                org_in.org_name,
+                org_in.email,
+                hashed_password,
+                org_in.first_name,
+                org_in.last_name
+            )
+            if not org_id:
+                raise HTTPException(status_code=500, detail="Failed to create organization")
+
+            user_row = await self.conn.fetchrow(
+                "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+                org_in.email
+            )
+
+            refresh_token, session_id = await self.create_session(user_row["id"], ua_string, ip_address)
+
+            browser, platform, _ = self.parse_user_agent(ua_string)
+            await self.conn.execute(
+                "SELECT fn_log_security_event($1, $2, $3, $4::entity_type_enum, $5, $6, $7::jsonb)",
+                org_id, user_row["id"], "ORG_REGISTERED", "USER", user_row["id"], ip_address,
+                json.dumps({"browser": browser, "platform": platform, "status": "Success", "email_verified": False})
+            )
+
+            user_data = dict(user_row)
+
+            return {
+                "organization": {"id": org_id, "name": org_in.org_name, "created_at": datetime.now(timezone.utc)},
+                "user": user_data,
+                "refresh_token": refresh_token,
+                "session_id": session_id,
+                "message": "Organization created successfully"
+            }
+        except asyncpg.exceptions.UniqueViolationError:
+            raise HTTPException(status_code=409, detail="This email or organization name is already registered")
+        except Exception as e:
+            logger.error(f"Error in register_organization_direct: {e}")
+            raise HTTPException(status_code=500, detail="An unexpected error occurred during organization creation")
+
     async def register_organization(self, org_in: OrganizationCreate, ua_string: str, ip_address: str) -> dict:
         """Legacy direct registration wrapper - now redirects through request_registration_otp."""
         return await self.request_registration_otp(org_in)
+
 
     async def login(self, user_in: UserLogin, ua_string: str, ip_address: str) -> dict:
         user_row = await self.conn.fetchrow(
