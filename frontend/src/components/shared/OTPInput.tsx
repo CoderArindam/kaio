@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 interface OTPInputProps {
   length?: number;
@@ -17,7 +17,6 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   onResend,
   isSubmitting = false,
   error = null,
-  email,
   autoFocus = true,
 }) => {
   const [otp, setOtp] = useState<string[]>(Array(length).fill(''));
@@ -33,7 +32,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
 
   // Cooldown countdown timer
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setInterval>;
     if (cooldown > 0) {
       timer = setInterval(() => {
         setCooldown((prev) => prev - 1);
@@ -123,7 +122,9 @@ export const OTPInput: React.FC<OTPInputProps> = ({
         {otp.map((digit, index) => (
           <input
             key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
+            ref={(el) => {
+              inputRefs.current[index] = el;
+            }}
             type="text"
             inputMode="numeric"
             maxLength={1}
