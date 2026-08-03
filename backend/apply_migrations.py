@@ -28,6 +28,10 @@ async def main():
         await conn.execute(f.read())
     print('Applied 047_fix_rejected_timesheet_status.sql')
 
+    with open('../database/migrations/064_comment_editing.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 064_comment_editing.sql')
+
     await conn.close()
 
 if __name__ == '__main__':

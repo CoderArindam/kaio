@@ -2,7 +2,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, Depends, BackgroundTasks
 
-from app.schemas.comments import CommentCreate, CommentResponse
+from app.schemas.comments import CommentCreate, CommentUpdate, CommentResponse
 from app.schemas.envelope import DataEnvelope
 from app.services.notification_service import dispatch_task_email
 from app.auth.dependencies import get_current_user
@@ -53,6 +53,17 @@ async def create_comment(
                 comment=comment_in.content
             )
             
+    return DataEnvelope(data=comment)
+
+@router.patch("/tasks/{task_id}/comments/{comment_id}", response_model=DataEnvelope[CommentResponse])
+async def update_comment(
+    task_id: int,
+    comment_id: int,
+    comment_in: CommentUpdate,
+    current_user: dict = Depends(get_current_user),
+    comment_service: CommentService = Depends(get_comment_service)
+):
+    comment = await comment_service.update_comment(comment_id, comment_in, current_user)
     return DataEnvelope(data=comment)
 
 @router.get("/tasks/{task_id}/comments", response_model=DataEnvelope[List[CommentResponse]])

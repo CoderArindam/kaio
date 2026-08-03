@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional, Dict
 import asyncpg
 from fastapi import HTTPException
 
-from app.schemas.comments import CommentCreate, CommentResponse
+from app.schemas.comments import CommentCreate, CommentUpdate, CommentResponse
 
 logger = logging.getLogger(__name__)
 
@@ -88,4 +88,30 @@ class CommentService:
                 raise HTTPException(status_code=404, detail="Comment not found")
             elif 'Access denied' in err_msg or 'Not authorized' in err_msg:
                 raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
+            raise HTTPException(status_code=400, detail=err_msg if isinstance(e, asyncpg.exceptions.PostgresError) else 'An unexpected error occurred')
+
+    async def update_comment(self, comment_id: int, comment_in: CommentUpdate, current_user: dict) -> CommentResponse:
+        try:
+            async with self.conn.transaction():
+                await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
+                await self.conn.execute(
+                    "SELECT fn_update_comment($1, $2, $3, $4)",
+                    comment_id, comment_in.content, current_user["id"], current_user["organization_id"]
+                )
+                row = await self.conn.fetchrow(
+                    "SELECT * FROM v_comments_canonical WHERE id = $1",
+                    comment_id
+                )
+                if not row:
+                    raise HTTPException(status_code=404, detail="Comment not found")
+                return CommentResponse(**dict(row))
+        except HTTPException:
+            raise
+        except Exception as e:
+            err_msg = str(e)
+            logger.error(f'Error updating comment: {err_msg}')
+            if 'Comment not found' in err_msg:
+                raise HTTPException(status_code=404, detail="Comment not found")
+            elif 'Access denied' in err_msg or 'Not authorized' in err_msg:
+                raise HTTPException(status_code=403, detail="Not authorized to edit this comment")
             raise HTTPException(status_code=400, detail=err_msg if isinstance(e, asyncpg.exceptions.PostgresError) else 'An unexpected error occurred')

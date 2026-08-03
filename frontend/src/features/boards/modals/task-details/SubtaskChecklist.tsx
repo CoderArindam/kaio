@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckSquare, Plus, Trash2, GripVertical, Loader2 } from 'lucide-react';
+import { CheckSquare, ChevronDown, Plus, Trash2, GripVertical, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -121,6 +121,7 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
   const [newTitle, setNewTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const _updateTaskEntity = useTaskStore((state) => state._updateTaskEntity);
 
@@ -245,10 +246,21 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
   return (
     <div className="space-y-4 bg-brand-surface border border-brand-border rounded-2xl p-5 shadow-xs">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-brand-text">
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="flex items-center gap-2 text-brand-text hover:text-brand-primary transition-colors cursor-pointer select-none text-left focus:outline-hidden"
+          aria-expanded={!isCollapsed}
+        >
+          <ChevronDown
+            size={18}
+            className={`text-brand-text-muted transition-transform duration-200 ${
+              isCollapsed ? '-rotate-90' : ''
+            }`}
+          />
           <CheckSquare size={18} className="text-brand-primary" />
           <h3 className="text-base font-semibold">Subtasks</h3>
-        </div>
+        </button>
 
         {totalCount > 0 && (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-surface-low text-brand-text-muted">
@@ -257,59 +269,65 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
         )}
       </div>
 
-      {totalCount > 0 && (
-        <div className="w-full bg-brand-surface-low h-2 rounded-full overflow-hidden">
-          <div
-            className="bg-brand-primary h-full transition-all duration-300 ease-out"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-4 text-brand-text-muted gap-2 text-sm">
-          <Loader2 size={16} className="animate-spin text-brand-primary" />
-          <span>Loading subtasks...</span>
-        </div>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={subtasks.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1">
-              {subtasks.map((subtask) => (
-                <SortableSubtaskItem
-                  key={subtask.id}
-                  subtask={subtask}
-                  canEdit={canEdit}
-                  onToggle={handleToggleSubtask}
-                  onDelete={handleDeleteSubtask}
-                />
-              ))}
+      {!isCollapsed && (
+        <>
+          {totalCount > 0 && (
+            <div className="w-full bg-brand-surface-low h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-brand-primary h-full transition-all duration-300 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
-          </SortableContext>
-        </DndContext>
-      )}
+          )}
 
-      {canEdit && (
-        <form onSubmit={handleAddSubtask} className="flex items-center gap-2 pt-1">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Add a subtask..."
-              disabled={isAdding}
-              className="w-full px-3.5 py-2 text-sm bg-brand-surface-low border border-brand-border rounded-xl text-brand-text placeholder-brand-text-muted focus:outline-hidden focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!newTitle.trim() || isAdding}
-            className="px-3.5 py-2 bg-brand-primary hover:bg-brand-primary-dark text-white text-sm font-medium rounded-xl flex items-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          >
-            {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            <span>Add</span>
-          </button>
-        </form>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4 text-brand-text-muted gap-2 text-sm">
+              <Loader2 size={16} className="animate-spin text-brand-primary text-sm" />
+              <span>Loading subtasks...</span>
+            </div>
+          ) : (
+            <div className="max-h-60 overflow-y-auto pr-1 space-y-1 custom-scrollbar">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={subtasks.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1">
+                    {subtasks.map((subtask) => (
+                      <SortableSubtaskItem
+                        key={subtask.id}
+                        subtask={subtask}
+                        canEdit={canEdit}
+                        onToggle={handleToggleSubtask}
+                        onDelete={handleDeleteSubtask}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          )}
+
+          {canEdit && (
+            <form onSubmit={handleAddSubtask} className="flex items-center gap-2 pt-2 border-t border-brand-border/40">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Add a subtask..."
+                  disabled={isAdding}
+                  className="w-full px-3.5 py-2 text-sm bg-brand-surface-low border border-brand-border rounded-xl text-brand-text placeholder-brand-text-muted focus:outline-hidden focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!newTitle.trim() || isAdding}
+                className="px-3.5 py-2 bg-brand-primary hover:bg-brand-primary-dark text-white text-sm font-medium rounded-xl flex items-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                <span>Add</span>
+              </button>
+            </form>
+          )}
+        </>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ export interface Comment {
   content: string;
   parent_comment_id: number | null;
   created_at: string;
+  edited_at: string | null;
 }
 
 export const getTaskComments = async (taskId: number): Promise<Comment[]> => {
@@ -23,6 +24,15 @@ export const createComment = async (
   data: { content: string; parent_comment_id?: number }
 ): Promise<Comment> => {
   const response = await api.post(`/tasks/${taskId}/comments`, data);
+  return response.data.data;
+};
+
+export const updateComment = async (
+  taskId: number,
+  commentId: number,
+  data: { content: string }
+): Promise<Comment> => {
+  const response = await api.patch(`/tasks/${taskId}/comments/${commentId}`, data);
   return response.data.data;
 };
 

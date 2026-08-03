@@ -9,7 +9,6 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from '@dnd-kit/core';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTaskStore } from '../../../store/taskStore';
@@ -88,7 +87,7 @@ function DraggableTask({
   return (
     <div
       ref={setNodeRef}
-      style={{ opacity: isDragging ? 0.4 : 1 }}
+      style={{ opacity: isDragging ? 0.4 : 1, touchAction: 'none' }}
       {...listeners}
       {...attributes}
     >
@@ -288,29 +287,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     setActiveTask(task ?? null);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over, active } = event;
-    if (!over) return;
-
-    const task = active.data.current?.task as Task;
-    if (!task) return;
-
-    const overId = String(over.id);
-    let targetColumnId: number | null = null;
-
-    if (overId.startsWith("col-")) {
-      targetColumnId = parseInt(overId.replace("col-", ""), 10);
-    } else if (overId.startsWith("task-")) {
-      const overTaskId = parseInt(overId.replace("task-", ""), 10);
-      const overTask = tasks.find((t: any) => t.id === overTaskId);
-      if (overTask) targetColumnId = overTask.column_id;
-    }
-
-    if (targetColumnId !== null && task.column_id !== targetColumnId) {
-      task.column_id = targetColumnId;
-    }
-  };
-
   const handleDragEnd = async (event: DragEndEvent) => {
     const { over, active } = event;
     setActiveTask(null);
@@ -342,7 +318,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="h-full flex flex-col overflow-hidden bg-brand-bg relative">

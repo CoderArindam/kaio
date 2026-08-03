@@ -201,6 +201,8 @@ erDiagram
 | `060_subtasks_schema.sql` | `subtasks` | Subtasks table schema for task checklists (`task_id`, `title`, `is_completed`, `position`, `created_by`, `deleted_at`). |
 | `061_subtasks_functions.sql` | Subtask Procedures | Stored functions: `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks` with board access check. |
 | `062_subtasks_view.sql` | Subtask Canonical Views | `v_subtasks_canonical` view and updated `v_tasks_canonical` exposing aggregated `subtask_count` and `completed_subtask_count`. |
+| `063_column_management_functions.sql` | Column Management Functions | Stored functions for adding, renaming, deleting (with task re-assignment), and reordering board columns. |
+| `064_comment_editing.sql` | Comment Editing & Hard Delete | Adds `edited_at` timestamp to `task_comments`, updates `v_comments_canonical`, adds `fn_update_comment` procedure, and updates `fn_delete_comment` for hard delete & owner-only check. |
 
 ---
 
@@ -244,7 +246,8 @@ erDiagram
 | `fn_check_proposal_review_access(user_id, org_id)` | `024_*.sql` | Boolean: is this user a Manager or Superadmin in this org? |
 | `fn_check_meeting_initiation_access(user_id, org_id)` | `026_*.sql` | Boolean: is this user authorized to start a meeting? |
 | `fn_create_comment(...)` | `029_*.sql` | Creates a comment on a task. |
-| `fn_delete_comment(comment_id, user_id)` | `029_*.sql` | Soft-deletes a comment (owner check). |
+| `fn_update_comment(comment_id, content, user_id, org_id)` | `064_comment_editing.sql` | Updates a comment's text and sets `edited_at = NOW()` (owner-only check). |
+| `fn_delete_comment(comment_id, user_id, user_role, org_id)` | `029_*.sql` / `064_*.sql` | Permanently deletes a comment record from database (owner-only check). |
 | `fn_log_security_event(...)` | `034_*.sql` | Logs a security event (login, logout, session revoke, password change). |
 | `fn_refresh_session(user_id, token, user_agent, ip)` | `035_*.sql` | Upserts an active session record. |
 | `fn_revoke_session(session_id, user_id)` | `035_*.sql` | Marks session as revoked. |

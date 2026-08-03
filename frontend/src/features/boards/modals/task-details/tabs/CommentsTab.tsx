@@ -7,10 +7,13 @@ import {
   AtSign,
   Send,
   Loader2,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import {
   getTaskComments,
   createComment,
+  updateComment,
   deleteComment,
   type Comment,
 } from '../../../../../services/commentsApi';
@@ -44,6 +47,10 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   const [mentionSearch, setMentionSearch] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
 
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const { user: authUser } = useAuthStore();
   const highlightedCommentId = useUiStore((state) => state.highlightedCommentId);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
@@ -51,9 +58,9 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const canDeleteComment = (commentUserId: number | null) => {
-    if (!commentUserId) return false;
-    return currentUserId === commentUserId || authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'MANAGER';
+  const isCommentOwner = (commentUserId: number | null) => {
+    if (!commentUserId || !currentUserId) return false;
+    return currentUserId === commentUserId;
   };
 
   const fetchComments = async () => {
@@ -82,6 +89,62 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
       }, 100);
     }
   }, [isLoading, comments.length, highlightedCommentId]);
+
+  const handleStartReply = (commentId: number) => {
+    setReplyToCommentId(commentId);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+  };
+
+  const handleStartEdit = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditText(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditText("");
+  };
+
+  const handleSaveEdit = async (commentId: number) => {
+    const targetComment = comments.find((c) => c.id === commentId);
+    const trimmed = editText.trim();
+    if (!trimmed || isSavingEdit) return;
+
+    if (targetComment && trimmed === targetComment.content.trim()) {
+      handleCancelEdit();
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    const previousComments = [...comments];
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? { ...c, content: trimmed, edited_at: new Date().toISOString() }
+          : c
+      )
+    );
+
+    try {
+      const updated = await updateComment(task.id, commentId, { content: trimmed });
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? updated : c))
+      );
+      toast.success("Comment updated");
+      setEditingCommentId(null);
+      setEditText("");
+    } catch (error: any) {
+      setComments(previousComments);
+      console.error("Failed to edit comment", error);
+      const detail = error.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : "Failed to edit comment");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleAddComment = async () => {
     if (!newCommentText.trim()) return;
@@ -211,34 +274,90 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
                     <span className="font-semibold text-sm text-brand-text">
                       {formatUserName(itemUser)}
                     </span>
-                    <span className="text-xs text-brand-text-muted">
+                    <span className="text-xs text-brand-text-muted flex items-center gap-1">
                       {new Date(item.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
+                      {item.edited_at && <span className="text-[10px] text-brand-text-muted italic ml-1">(edited)</span>}
                     </span>
                   </div>
 
-                  <div className="mt-1 bg-brand-surface border border-brand-border rounded-lg p-3 text-sm whitespace-pre-wrap text-brand-text">
-                    {item.content}
-                  </div>
+                  {editingCommentId === item.id ? (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        ref={(el) => {
+                          if (el) {
+                            el.focus();
+                            el.setSelectionRange(el.value.length, el.value.length);
+                          }
+                        }}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (editText.trim() !== item.content.trim()) {
+                              handleSaveEdit(item.id);
+                            } else {
+                              handleCancelEdit();
+                            }
+                          } else if (e.key === 'Escape') {
+                            handleCancelEdit();
+                          }
+                        }}
+                        rows={3}
+                        className="w-full bg-brand-surface border border-brand-primary rounded-lg p-2.5 text-sm outline-none text-brand-text focus:ring-1 focus:ring-brand-primary"
+                      />
+                      <div className="flex gap-2 justify-end text-xs">
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-3 py-1 rounded bg-brand-surface-low text-brand-text-muted hover:text-brand-text border border-brand-border flex items-center gap-1"
+                        >
+                          <X size={13} /> Cancel
+                        </button>
+                        <button
+                          onClick={() => handleSaveEdit(item.id)}
+                          disabled={!editText.trim() || editText.trim() === item.content.trim() || isSavingEdit}
+                          className="px-3 py-1 rounded bg-brand-primary text-white hover:bg-brand-primary-hover flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-1 bg-brand-surface border border-brand-border rounded-lg p-3 text-sm whitespace-pre-wrap text-brand-text">
+                        {item.content}
+                      </div>
 
-                  <div className="flex gap-4 mt-2 text-xs text-brand-text-muted">
-                    <button
-                      onClick={() => setReplyToCommentId(item.id)}
-                      className="hover:text-brand-primary flex items-center gap-1"
-                    >
-                      <Reply size={14} /> Reply
-                    </button>
-                    {canDeleteComment(item.user_id) && (
-                      <button
-                        onClick={() => setCommentToDelete(item.id)}
-                        className="hover:text-red-500 flex items-center gap-1"
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    )}
-                  </div>
+                      <div className="flex gap-4 mt-2 text-xs text-brand-text-muted">
+                        <button
+                          onClick={() => handleStartReply(item.id)}
+                          className="hover:text-brand-primary flex items-center gap-1"
+                        >
+                          <Reply size={14} /> Reply
+                        </button>
+                        {isCommentOwner(item.user_id) && (
+                          <>
+                            <button
+                              onClick={() => handleStartEdit(item)}
+                              className="hover:text-brand-primary flex items-center gap-1"
+                            >
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button
+                              onClick={() => setCommentToDelete(item.id)}
+                              className="hover:text-red-500 flex items-center gap-1"
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
 
                   {replies.length > 0 && (
                     <div className="mt-3 space-y-3">
@@ -261,21 +380,84 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
                           >
                             <UserAvatar user={replyUser} size="sm" />
                             <div className="flex-1">
-                              <div className="flex justify-between">
+                              <div className="flex justify-between items-center">
                                 <span className="font-medium text-xs text-brand-text">
                                   {formatUserName(replyUser)}
                                 </span>
+                                <span className="text-[10px] text-brand-text-muted flex items-center gap-1">
+                                  {new Date(reply.created_at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                  {reply.edited_at && <span className="italic ml-0.5">(edited)</span>}
+                                </span>
                               </div>
-                              <div className="mt-1 bg-brand-surface-low border border-brand-border rounded p-2 text-xs whitespace-pre-wrap text-brand-text">
-                                {reply.content}
-                              </div>
-                              {canDeleteComment(reply.user_id) && (
-                                <button
-                                  onClick={() => setCommentToDelete(reply.id)}
-                                  className="text-[10px] text-brand-text-muted hover:text-red-500 mt-1"
-                                >
-                                  Delete
-                                </button>
+
+                              {editingCommentId === reply.id ? (
+                                <div className="mt-1.5 space-y-1.5">
+                                  <textarea
+                                    ref={(el) => {
+                                      if (el) {
+                                        el.focus();
+                                        el.setSelectionRange(el.value.length, el.value.length);
+                                      }
+                                    }}
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        if (editText.trim() !== reply.content.trim()) {
+                                          handleSaveEdit(reply.id);
+                                        } else {
+                                          handleCancelEdit();
+                                        }
+                                      } else if (e.key === 'Escape') {
+                                        handleCancelEdit();
+                                      }
+                                    }}
+                                    rows={2}
+                                    className="w-full bg-brand-surface border border-brand-primary rounded p-2 text-xs outline-none text-brand-text focus:ring-1 focus:ring-brand-primary"
+                                  />
+                                  <div className="flex gap-2 justify-end text-[11px]">
+                                    <button
+                                      onClick={handleCancelEdit}
+                                      className="px-2 py-0.5 rounded bg-brand-surface-low text-brand-text-muted hover:text-brand-text border border-brand-border flex items-center gap-1"
+                                    >
+                                      <X size={11} /> Cancel
+                                    </button>
+                                    <button
+                                      onClick={() => handleSaveEdit(reply.id)}
+                                      disabled={!editText.trim() || editText.trim() === reply.content.trim() || isSavingEdit}
+                                      className="px-2 py-0.5 rounded bg-brand-primary text-white hover:bg-brand-primary-hover flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                    >
+                                      {isSavingEdit ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                                      Save
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="mt-1 bg-brand-surface-low border border-brand-border rounded p-2 text-xs whitespace-pre-wrap text-brand-text">
+                                    {reply.content}
+                                  </div>
+                                  {isCommentOwner(reply.user_id) && (
+                                    <div className="flex gap-3 mt-1 text-[10px] text-brand-text-muted">
+                                      <button
+                                        onClick={() => handleStartEdit(reply)}
+                                        className="hover:text-brand-primary flex items-center gap-0.5"
+                                      >
+                                        <Pencil size={11} /> Edit
+                                      </button>
+                                      <button
+                                        onClick={() => setCommentToDelete(reply.id)}
+                                        className="hover:text-red-500 flex items-center gap-0.5"
+                                      >
+                                        <Trash2 size={11} /> Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>

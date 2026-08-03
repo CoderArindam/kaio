@@ -6,12 +6,16 @@ class CommentCreate(BaseModel):
     content: str
     parent_comment_id: Optional[int] = None
 
+class CommentUpdate(BaseModel):
+    content: str
+
 class CommentResponse(BaseModel):
     id: int
     task_id: int
     content: str
     parent_comment_id: Optional[int] = None
     created_at: datetime
+    edited_at: Optional[datetime] = None
     
     user_id: int
     user_first_name: Optional[str] = None
