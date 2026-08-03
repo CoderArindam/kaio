@@ -5,7 +5,7 @@ import AppLayout from '../components/layout/AppLayout';
 
 import Login from '../features/auth/Login';
 import Signup from '../features/auth/Signup';
-import LandingPage from '../features/auth/LandingPage';
+import LandingPage from '../features/landing/LandingPage';
 import AcceptInvitation from '../features/auth/AcceptInvitation';
 import ForgotPassword from '../features/auth/ForgotPassword';
 import ResetPassword from '../features/auth/ResetPassword';
