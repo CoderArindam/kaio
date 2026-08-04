@@ -50,7 +50,8 @@ DECLARE
 BEGIN
     INSERT INTO organization_invitations (organization_id, email, role, token, expires_at)
     VALUES (p_org_id, p_email, p_role, p_token, p_expires_at)
-    RETURNING id, email, role, expires_at, created_at, accepted_at INTO v_invitation;
+    RETURNING id, email, role, expires_at, created_at, accepted_at,
+              (accepted_at IS NULL AND expires_at > CURRENT_TIMESTAMP) as is_pending INTO v_invitation;
     
     RETURN row_to_json(v_invitation);
 END;

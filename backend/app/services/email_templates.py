@@ -255,6 +255,92 @@ Never share this code with anyone.
     return subject, text, html
 
 
+def generate_workspace_invitation_email(
+    org_name: str,
+    accept_url: str,
+    inviter_name: str = None,
+    role: str = "MEMBER",
+    expire_hours: int = 72,
+) -> tuple[str, str, str]:
+    inviter_display = inviter_name if inviter_name else "A teammate"
+    role_display = role.upper() if role else "MEMBER"
+
+    if inviter_name:
+        subject = f"{inviter_name} invited you to join {org_name} on KAIO"
+    else:
+        subject = f"You're invited to join {org_name} on KAIO"
+
+    text = f"""Hi,
+
+{inviter_display} has invited you to join the {org_name} workspace on KAIO as a {role_display.capitalize()}.
+
+Accept your invitation to get started:
+{accept_url}
+
+This invitation link expires in {expire_hours} hours.
+If you were not expecting this invitation, you can safely ignore this email.
+
+— KAIO Team
+"""
+
+    role_badge = f"""<div style="margin-top:16px;">
+  <span style="display:inline-block;padding:4px 14px;background-color:rgba(99,102,241,0.12);border:1px solid {_PRIMARY};border-radius:20px;font-family:{_FONT};font-size:12px;font-weight:600;color:{_PRIMARY};letter-spacing:0.5px;text-transform:uppercase;">
+    Role: {role_display}
+  </span>
+</div>"""
+
+    inviter_card = f"""
+<table cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:{_BRAND_BG};border-radius:12px;padding:24px 20px;border:1px solid {_BORDER};margin:20px 0 24px;text-align:center;">
+  <tr>
+    <td align="center">
+      <div style="width:48px;height:48px;border-radius:50%;background-color:rgba(99,102,241,0.15);border:1px solid {_PRIMARY};line-height:48px;text-align:center;margin:0 auto 12px;">
+        <span style="font-family:{_FONT};font-size:20px;color:{_PRIMARY};">✉️</span>
+      </div>
+      <p style="font-family:{_FONT};font-size:16px;font-weight:600;color:{_TEXT_LIGHT};margin:0 0 6px;line-height:1.4;">
+        {inviter_display} invited you to collaborate
+      </p>
+      <p style="font-family:{_FONT};font-size:14px;color:{_TEXT_MUTED};margin:0;line-height:1.5;">
+        Join <strong style="color:{_TEXT_LIGHT};">{org_name}</strong> to start working together on tasks, boards, and projects.
+      </p>
+      {role_badge}
+    </td>
+  </tr>
+</table>
+"""
+
+    body_html = f"""
+{_heading(f"You're invited to join {org_name}")}
+<p style="font-family:{_FONT};font-size:15px;color:{_TEXT_MUTED};margin:8px 0 0;line-height:1.6;">
+  Collaborate with your team on KAIO — project management built for high-performing teams.
+</p>
+
+{inviter_card}
+
+{_primary_button("Accept Invitation", accept_url)}
+
+{_divider()}
+
+<table cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:{_BRAND_BG};border-radius:10px;padding:16px 20px;border:1px solid {_BORDER};">
+  <tr>
+    <td>
+      {_small_label("Acceptance link")}
+      <p style="font-family:monospace;font-size:12px;color:{_TEXT_MUTED};margin:4px 0 0;word-break:break-all;">{accept_url}</p>
+    </td>
+  </tr>
+</table>
+
+<p style="font-family:{_FONT};font-size:13px;color:{_TEXT_MUTED};margin:20px 0 0;line-height:1.6;">
+  ⏰ This invitation link expires in <strong style="color:{_WARNING};">{expire_hours} hours</strong>.<br/>
+  🔒 If you didn't expect this invitation, you can safely ignore this email.
+</p>
+"""
+
+    preheader = f"{inviter_display} invited you to join {org_name} on KAIO."
+    html = _base_layout(preheader, body_html)
+    return subject, text, html
+
+
+
 # ── Notification Templates (plain text only, used internally) ─────────────────
 
 

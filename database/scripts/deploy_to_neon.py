@@ -20,8 +20,13 @@ async def deploy_to_neon():
         print("Example: set NEON_DATABASE_URL=postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require")
         sys.exit(1)
 
-    print(f"Connecting to database...")
+    print("Connecting to database...")
     conn = await asyncpg.connect(neon_url)
+
+    if "--reset" in sys.argv:
+        print("Reset flag detected. Dropping and recreating public schema...")
+        await conn.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+        await conn.execute("GRANT ALL ON SCHEMA public TO public;")
 
     migration_files = sorted([f for f in os.listdir(MIGRATIONS_DIR) if f.endswith(".sql")])
     print(f"Found {len(migration_files)} migration files.")
@@ -34,7 +39,6 @@ async def deploy_to_neon():
         try:
             await conn.execute(sql)
         except Exception as e:
-            # Ignore duplicate objects if running on an already seeded database
             print(f"  Note on {filename}: {e}")
 
     print("\n[SUCCESS] All migrations applied successfully to Neon Database!")

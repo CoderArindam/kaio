@@ -15,7 +15,7 @@ class InvitationResponse(BaseModel):
     expires_at: datetime
     created_at: datetime
     accepted_at: Optional[datetime] = None
-    is_pending: Optional[bool] = None
+    is_pending: bool = True
 
 
 class AcceptInvitationRequest(BaseModel):

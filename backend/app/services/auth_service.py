@@ -586,8 +586,9 @@ class AuthService:
         )
 
     async def create_password_reset_token(self, email: str) -> dict | None:
+        clean_email = email.strip().lower()
         row = await self.conn.fetchrow(
-            "SELECT * FROM fn_create_password_reset_token($1)", email
+            "SELECT * FROM fn_create_password_reset_token($1)", clean_email
         )
         if not row:
             return None

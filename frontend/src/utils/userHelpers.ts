@@ -19,6 +19,10 @@ export const formatUserName = (user: BaseUser | null | undefined, fallback: stri
     return user.first_name;
   }
 
+  if (user.email) {
+    return user.email.split('@')[0];
+  }
+
   return fallback;
 };
 

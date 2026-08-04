@@ -28,6 +28,7 @@ def _send_via_gmail_smtp(to_email: str, subject: str, body_text: str, html_conte
             family = socket.AF_INET
         return orig_getaddrinfo(host, port, family, type, proto, flags)
 
+    e587_msg = None
     socket.getaddrinfo = ipv4_getaddrinfo
     try:
         # Attempt 1: Port 587 with STARTTLS
@@ -40,7 +41,8 @@ def _send_via_gmail_smtp(to_email: str, subject: str, body_text: str, html_conte
             logger.info(f"Email successfully sent via Gmail SMTP (Port 587) to {to_email}")
             return True
         except Exception as e587:
-            logger.warning(f"Gmail SMTP Port 587 failed ({e587}), trying Port 465 SSL...")
+            e587_msg = str(e587)
+            logger.warning(f"Gmail SMTP Port 587 failed ({e587_msg}), trying Port 465 SSL...")
 
         # Attempt 2: Port 465 with SSL
         try:
@@ -50,17 +52,49 @@ def _send_via_gmail_smtp(to_email: str, subject: str, body_text: str, html_conte
             logger.info(f"Email successfully sent via Gmail SMTP (Port 465 SSL) to {to_email}")
             return True
         except Exception as e465:
-            logger.error(f"Gmail SMTP failed on ports 587 and 465 for {to_email}: 587 err={e587}, 465 err={e465}")
+            logger.error(f"Gmail SMTP failed on ports 587 and 465 for {to_email}: 587 err={e587_msg}, 465 err={e465}")
             return False
     finally:
         socket.getaddrinfo = orig_getaddrinfo
 
 
 def send_email(to_email: str, subject: str, body_text: str, html_content: Optional[str] = None) -> bool:
+    # 1. Primary: Send via Brevo REST API (v3) over HTTPS Port 443
+    if settings.BREVO_API_KEY:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "api-key": settings.BREVO_API_KEY,
+                "content-type": "application/json",
+                "accept": "application/json",
+            }
+            payload = {
+                "sender": {
+                    "name": "KAIO",
+                    "email": settings.BREVO_SENDER_EMAIL or "coderarindam@gmail.com"
+                },
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "textContent": body_text,
+            }
+            if html_content:
+                payload["htmlContent"] = html_content
+
+            with httpx.Client(timeout=10.0) as client:
+                response = client.post(url, headers=headers, json=payload)
+
+            if response.status_code in (200, 201):
+                logger.info(f"Email successfully sent via Brevo API to {to_email}")
+                return True
+            else:
+                logger.error(f"Brevo email sending failed (status {response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"Brevo API error when sending email to {to_email}: {e}")
+
+    # 2. Secondary: Send via Resend REST API
     api_key = settings.RESEND_API_KEY
     sender_email = settings.RESEND_SENDER_EMAIL or "onboarding@resend.dev"
 
-    # 1. Primary: Send via Resend REST API
     if api_key:
         try:
             url = "https://api.resend.com/emails"
@@ -92,7 +126,7 @@ def send_email(to_email: str, subject: str, body_text: str, html_content: Option
         except Exception as e:
             logger.error(f"Resend API error when sending email to {to_email}: {e}")
 
-    # 2. Secondary Fallback: Gmail SMTP
+    # 3. Tertiary Fallback: Gmail SMTP
     if settings.SMTP_EMAIL and settings.SMTP_PASSWORD:
         return _send_via_gmail_smtp(to_email, subject, body_text, html_content)
     else:

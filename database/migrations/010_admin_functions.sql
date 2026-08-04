@@ -8,7 +8,7 @@ DECLARE
 BEGIN
     SELECT COALESCE(json_agg(row_to_json(u)), '[]'::json) INTO v_result
     FROM (
-        SELECT id, email, role, created_at
+        SELECT id, email, first_name, last_name, avatar_url, role, created_at
         FROM users
         WHERE organization_id = p_org_id AND deleted_at IS NULL
         ORDER BY created_at DESC
@@ -31,7 +31,7 @@ DECLARE
 BEGIN
     INSERT INTO users (organization_id, email, password_hash, role, first_name)
     VALUES (p_org_id, p_email, p_password_hash, p_role, 'AdminUser')
-    RETURNING id, email, role, created_at INTO v_user;
+    RETURNING id, email, first_name, last_name, avatar_url, role, created_at INTO v_user;
     
     RETURN row_to_json(v_user);
 END;
@@ -50,7 +50,7 @@ BEGIN
     UPDATE users 
     SET role = p_role 
     WHERE id = p_user_id AND organization_id = p_org_id AND deleted_at IS NULL
-    RETURNING id, email, role, created_at INTO v_user;
+    RETURNING id, email, first_name, last_name, avatar_url, role, created_at INTO v_user;
     
     IF v_user IS NULL THEN
         RETURN NULL;
@@ -133,6 +133,9 @@ BEGIN
         SELECT 
             u.id, 
             u.email, 
+            u.first_name,
+            u.last_name,
+            u.avatar_url,
             u.role, 
             bm.permission, 
             bm.created_at as joined_at

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     SMTP_EMAIL: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
 
+    # Brevo Integration
+    BREVO_API_KEY: Optional[str] = None
+    BREVO_SENDER_EMAIL: Optional[str] = "coderarindam@gmail.com"
+
     # Resend Integration
     RESEND_API_KEY: Optional[str] = None
     RESEND_SENDER_EMAIL: Optional[str] = "onboarding@resend.dev"

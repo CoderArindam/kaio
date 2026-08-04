@@ -13,6 +13,9 @@ class UserRoleUpdate(BaseModel):
 class AdminUserResponse(BaseModel):
     id: int
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    avatar_url: Optional[str] = None
     role: str
     created_at: datetime
 
@@ -30,6 +33,9 @@ class BoardMemberAssign(BaseModel):
 class AdminBoardMemberResponse(BaseModel):
     id: int
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    avatar_url: Optional[str] = None
     role: str
     permission: str
     joined_at: datetime

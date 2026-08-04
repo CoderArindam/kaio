@@ -34,7 +34,7 @@ interface AdminState {
 
   fetchUsers: () => Promise<void>;
   fetchInvitations: () => Promise<void>;
-  inviteUser: (email: string, role: string) => Promise<void>;
+  inviteUser: (email: string, role: string, isResend?: boolean) => Promise<void>;
   revokeInvitation: (invitationId: number) => Promise<void>;
   updateUserRole: (userId: number, role: string) => Promise<void>;
   deleteUser: (userId: number) => Promise<void>;
@@ -87,30 +87,27 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     }
   },
 
-  inviteUser: async (email, role) => {
+  inviteUser: async (email, role, isResend = false) => {
     set({ isInvitingUser: true });
     try {
       const newInvitation = await adminInviteUser(email, role);
-      set((state) => ({ invitations: [newInvitation, ...state.invitations] }));
-      toast.success('User invited successfully');
+      set((state) => ({ 
+        invitations: [
+          newInvitation, 
+          ...state.invitations.filter((i) => i.email.toLowerCase() !== email.toLowerCase())
+        ] 
+      }));
+      if (isResend) {
+        toast.success(`Invitation re-sent to ${email}`);
+      } else {
+        toast.success('User invited successfully');
+      }
     } catch (error: any) {
       const detail = error.response?.data?.detail;
-      const status = error.response?.status;
-      const errorCode = typeof detail === 'object' ? detail?.error_code : null;
       const message = typeof detail === 'object' ? detail?.message : (typeof detail === 'string' ? detail : error.message);
-
-      if (status === 409 || errorCode === 'USER_ALREADY_EXISTS' || message?.includes('already part of the organization') || message?.includes('already a registered user')) {
-        const errorMsg = 'This person is already part of the organization';
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      } else if (typeof message === 'string' && message) {
-        toast.error(message);
-        throw new Error(message);
-      } else {
-        const fallbackMsg = 'Failed to invite user';
-        toast.error(fallbackMsg);
-        throw new Error(fallbackMsg);
-      }
+      const errorMsg = typeof message === 'string' && message ? message : 'Failed to invite user';
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
     } finally {
       set({ isInvitingUser: false });
     }

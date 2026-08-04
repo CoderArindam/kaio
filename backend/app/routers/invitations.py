@@ -27,10 +27,10 @@ async def invite_user(
     current_user: dict = Depends(require_manager_or_above),
     invitation_service: InvitationService = Depends(get_invitation_service)
 ):
-    invitation, email, org_name, token = await invitation_service.invite_user(invite_in, current_user)
+    invitation, email, org_name, token, inviter_name, role = await invitation_service.invite_user(invite_in, current_user)
     
     background_tasks.add_task(
-        invitation_service._send_invitation_email, email, org_name, token
+        invitation_service._send_invitation_email, email, org_name, token, inviter_name, role
     )
     
     return invitation

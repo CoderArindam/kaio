@@ -32,13 +32,30 @@ CREATE OR REPLACE FUNCTION create_invitation(
 RETURNS JSON AS $$
 DECLARE
     v_invitation RECORD;
+    v_clean_email VARCHAR;
+    v_existing_org_id INTEGER;
 BEGIN
-    IF EXISTS (SELECT 1 FROM users WHERE email = p_email AND deleted_at IS NULL) THEN
-        RAISE EXCEPTION 'This person is already a registered user';
+    v_clean_email := LOWER(TRIM(p_email));
+
+    SELECT organization_id INTO v_existing_org_id 
+    FROM users 
+    WHERE LOWER(email) = v_clean_email AND deleted_at IS NULL 
+    LIMIT 1;
+
+    IF v_existing_org_id IS NOT NULL THEN
+        IF v_existing_org_id = p_org_id THEN
+            RAISE EXCEPTION 'This person is already part of the organization';
+        ELSE
+            RAISE EXCEPTION 'This person is already registered to a different organization';
+        END IF;
     END IF;
 
+    -- Delete any previous unaccepted invitations for this email in the organization
+    DELETE FROM organization_invitations 
+    WHERE organization_id = p_org_id AND LOWER(email) = v_clean_email AND accepted_at IS NULL;
+
     INSERT INTO organization_invitations (organization_id, email, role, token, expires_at)
-    VALUES (p_org_id, p_email, p_role, p_token, p_expires_at)
+    VALUES (p_org_id, v_clean_email, p_role, p_token, p_expires_at)
     RETURNING id, email, role, expires_at, created_at, accepted_at INTO v_invitation;
     
     RETURN row_to_json(v_invitation);

@@ -119,9 +119,14 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
       }, 3000);
     } catch (err: any) {
       console.error('Failed to send invitation:', err);
-      setErrorMessage(
-        err.response?.data?.detail || 'Failed to send invitation email.'
-      );
+      const detail = err.response?.data?.detail;
+      const message =
+        typeof detail === 'object'
+          ? detail?.message || 'This person is already part of the organization'
+          : typeof detail === 'string'
+          ? detail
+          : 'Failed to send invitation email.';
+      setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }

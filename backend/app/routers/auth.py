@@ -468,12 +468,16 @@ async def forgot_password(
     background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    result = await auth_service.create_password_reset_token(body.email)
+    clean_email = body.email.strip().lower()
+    result = await auth_service.create_password_reset_token(clean_email)
 
     if result is not None:
         reset_url = f"{settings.FRONTEND_ORIGINS.split(',')[0].strip()}/reset-password?token={result['raw_token']}"
         subject, text_body, html_body = generate_password_reset_email(result["user_first_name"] or "there", reset_url)
-        background_tasks.add_task(send_email, body.email, subject, text_body, html_body)
+        background_tasks.add_task(send_email, clean_email, subject, text_body, html_body)
+        logger.info(f"Password reset email queued for {clean_email}")
+    else:
+        logger.warning(f"Password reset requested for non-registered or inactive email: {clean_email}")
 
     return {"data": {"message": "If that email is registered, a reset link has been sent."}}
 

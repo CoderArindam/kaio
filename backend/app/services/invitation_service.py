@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from app.schemas.invitations import InviteUserRequest, AcceptInvitationRequest
 from app.auth.password import get_password_hash
 from app.services.email_service import send_email
+from app.services.email_templates import generate_workspace_invitation_email
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -19,39 +20,78 @@ class InvitationService:
     def __init__(self, conn: asyncpg.Connection):
         self.conn = conn
 
-    def _send_invitation_email(self, to_email: str, org_name: str, token: str) -> None:
+    def _send_invitation_email(
+        self,
+        to_email: str,
+        org_name: str,
+        token: str,
+        inviter_name: str = None,
+        role: str = "MEMBER",
+    ) -> None:
         frontend_url = settings.FRONTEND_ORIGINS.split(",")[0].strip()
         accept_url = f"{frontend_url}/accept-invitation?token={token}"
-        body = (
-            f"You have been invited to join {org_name} on KAIO.\n\n"
-            f"Click the link below to accept your invitation and set up your account:\n\n"
-            f"{accept_url}\n\n"
-            f"This invitation expires in {INVITATION_EXPIRE_HOURS} hours.\n\n"
-            f"If you did not expect this invitation, you can safely ignore this email."
-        )
-        send_email(
-            to_email=to_email,
-            subject=f"You're invited to join {org_name} on KAIO",
-            body_text=body,
+
+        subject, body_text, html_content = generate_workspace_invitation_email(
+            org_name=org_name,
+            accept_url=accept_url,
+            inviter_name=inviter_name,
+            role=role,
+            expire_hours=INVITATION_EXPIRE_HOURS,
         )
 
-    async def invite_user(self, invite_in: InviteUserRequest, current_user: dict) -> Tuple[dict, str, str, str]:
+        send_email(
+            to_email=to_email,
+            subject=subject,
+            body_text=body_text,
+            html_content=html_content,
+        )
+
+    async def invite_user(self, invite_in: InviteUserRequest, current_user: dict) -> Tuple[dict, str, str, str, str, str]:
         if invite_in.role not in VALID_INVITE_ROLES:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid role. Invited users must be MEMBER or MANAGER.",
             )
 
+        # Fetch inviter display name
+        inviter_name = None
+        inviter_id = current_user.get("id")
+        if inviter_id:
+            try:
+                inviter_row = await self.conn.fetchrow(
+                    "SELECT first_name, last_name, email FROM v_users_canonical WHERE id = $1", inviter_id
+                )
+                if inviter_row:
+                    fname = (inviter_row.get("first_name") or "").strip()
+                    lname = (inviter_row.get("last_name") or "").strip()
+                    if fname or lname:
+                        inviter_name = f"{fname} {lname}".strip()
+                    else:
+                        inviter_name = inviter_row.get("email")
+            except Exception as e:
+                logger.warning(f"Could not fetch inviter details for user_id {inviter_id}: {e}")
+
+        email_clean = invite_in.email.strip().lower()
+
         # Check if email belongs to an existing registered user
-        existing_user = await self.conn.fetchval(
-            "SELECT 1 FROM v_users_canonical WHERE email = $1", invite_in.email
+        existing_user = await self.conn.fetchrow(
+            "SELECT id, organization_id FROM v_users_canonical WHERE LOWER(email) = $1", email_clean
         )
         if existing_user:
+            user_org = existing_user.get("organization_id")
+            current_org = current_user.get("organization_id")
+            if user_org == current_org:
+                msg = "This person is already part of the organization"
+                err_code = "USER_ALREADY_IN_ORG"
+            else:
+                msg = "This person is already registered to a different organization"
+                err_code = "USER_IN_DIFFERENT_ORG"
+
             raise HTTPException(
                 status_code=409,
                 detail={
-                    "error_code": "USER_ALREADY_EXISTS",
-                    "message": "This person is already part of the organization"
+                    "error_code": err_code,
+                    "message": msg
                 }
             )
 
@@ -69,23 +109,32 @@ class InvitationService:
             result = await self.conn.fetchval(
                 "SELECT create_invitation($1, $2, $3, $4, $5)",
                 organization_id,
-                invite_in.email,
+                email_clean,
                 invite_in.role,
                 token,
                 expires_at,
             )
             invitation = json.loads(result) if isinstance(result, str) else result
-            return invitation, invite_in.email, org_name, token
+            return invitation, email_clean, org_name, token, inviter_name, invite_in.role
         except asyncpg.exceptions.RaiseError as e:
-            if "already a registered user" in str(e).lower():
+            err_msg = str(e)
+            if "different organization" in err_msg.lower():
                 raise HTTPException(
                     status_code=409,
                     detail={
-                        "error_code": "USER_ALREADY_EXISTS",
+                        "error_code": "USER_IN_DIFFERENT_ORG",
+                        "message": "This person is already registered to a different organization"
+                    }
+                )
+            elif "part of the organization" in err_msg.lower() or "already a registered user" in err_msg.lower():
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "error_code": "USER_ALREADY_IN_ORG",
                         "message": "This person is already part of the organization"
                     }
                 )
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=err_msg)
         except HTTPException:
             raise
         except Exception as e:

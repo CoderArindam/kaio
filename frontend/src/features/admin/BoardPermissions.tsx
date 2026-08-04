@@ -35,6 +35,12 @@ const BoardPermissions: React.FC = () => {
   }, [fetchBoards, fetchUsers]);
 
   useEffect(() => {
+    if (boards.length > 0 && (!selectedBoardId || !boards.some((b) => b.id === selectedBoardId))) {
+      setSelectedBoardId(boards[0].id);
+    }
+  }, [boards, selectedBoardId]);
+
+  useEffect(() => {
     if (selectedBoardId) {
       fetchBoardMembers(selectedBoardId);
     }

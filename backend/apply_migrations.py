@@ -44,6 +44,12 @@ async def main():
         await conn.execute(f.read())
     print('Applied 065_comment_mentions.sql')
 
+    with open('../database/migrations/028_users_email_unique.sql', 'r') as f:
+        sql = f.read()
+        udf_sql = sql[sql.find('CREATE OR REPLACE FUNCTION create_invitation'):]
+        await conn.execute(udf_sql)
+    print('Applied create_invitation update from 028_users_email_unique.sql')
+
     await conn.close()
 
 if __name__ == '__main__':
