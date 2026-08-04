@@ -12,12 +12,14 @@ class UserPreferencesBase(BaseModel):
     theme: ThemeEnum
     accent_color: str
     sidebar_theme: str
+    tour_completed: bool = False
 
 class UserPreferencesUpdate(BaseModel):
     theme: Optional[ThemeEnum] = None
     accent_color: Optional[str] = None
     sidebar_theme: Optional[str] = None
     sidebar_collapsed: Optional[bool] = None
+    tour_completed: Optional[bool] = None
 
 class UserPreferencesResponse(UserPreferencesBase):
     id: int

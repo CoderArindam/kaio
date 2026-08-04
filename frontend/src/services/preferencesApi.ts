@@ -9,6 +9,7 @@ export interface UserPreferences {
   accent_color: string;
   sidebar_theme: string;
   sidebar_collapsed: boolean;
+  tour_completed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +19,7 @@ export interface UserPreferencesUpdate {
   accent_color?: string;
   sidebar_theme?: string;
   sidebar_collapsed?: boolean;
+  tour_completed?: boolean;
 }
 
 export const getPreferences = async (): Promise<UserPreferences> => {

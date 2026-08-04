@@ -35,14 +35,16 @@ class PreferencesService:
                 p_theme := $2::theme_enum,
                 p_accent_color := $3,
                 p_sidebar_theme := $4,
-                p_sidebar_collapsed := $5
+                p_sidebar_collapsed := $5,
+                p_tour_completed := $6
             )
             """,
             user_id,
             update_data.get('theme'),
             update_data.get('accent_color'),
             update_data.get('sidebar_theme'),
-            update_data.get('sidebar_collapsed')
+            update_data.get('sidebar_collapsed'),
+            update_data.get('tour_completed')
         )
 
         if not row:

@@ -12,6 +12,7 @@ export const AIButton: React.FC = () => {
 
   return (
     <button
+      id="tour-ai-button"
       onClick={toggleOpen}
       className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg transition-all z-50 flex items-center justify-center 
         ${isOpen ? "bg-brand-primary text-white rotate-12 scale-95" : "bg-brand-surface text-brand-text hover:bg-brand-primary hover:text-white hover:scale-105"}`}

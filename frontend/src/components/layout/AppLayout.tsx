@@ -15,6 +15,7 @@ import { AIButton } from "../../features/ai/components/AIButton";
 import { AIPanel } from "../../features/ai/components/AIPanel";
 import CreateProjectModal from "../../features/projects/components/CreateProjectModal";
 import SearchModal from "../../features/search/SearchModal";
+import AppTour from "../common/AppTour";
 import { Search, ShieldAlert } from "lucide-react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
@@ -77,6 +78,7 @@ export const AppLayout: React.FC = () => {
 
           <div className="flex-1 flex justify-center items-center min-w-0 w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto">
             <button
+              id="tour-global-search"
               onClick={openSearchModal}
               className="w-full flex items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 bg-brand-surface-low/80 hover:bg-brand-surface-low border border-brand-border/80 rounded-xl text-xs text-brand-text-muted transition-all shadow-2xs group text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
@@ -97,8 +99,12 @@ export const AppLayout: React.FC = () => {
 
           {/* Quick Header Actions: Notifications & Profile Dropdown */}
           <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3 shrink-0 relative">
-            <NotificationBell />
-            <UserAvatarDropdown placement="header" />
+            <div id="tour-notifications">
+              <NotificationBell />
+            </div>
+            <div id="tour-profile">
+              <UserAvatarDropdown placement="header" />
+            </div>
           </div>
         </header>
 
@@ -118,6 +124,7 @@ export const AppLayout: React.FC = () => {
       <AIPanel />
       <CreateProjectModal />
       <SearchModal />
+      <AppTour />
     </div>
   );
 };

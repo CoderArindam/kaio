@@ -70,13 +70,14 @@ export const ApplicationSidebar: React.FC = () => {
     board.name.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
-  const NavItem = ({ to, icon: Icon, label, badge, isExact = false }: { to: string, icon: any, label: string, badge?: number, isExact?: boolean }) => {
+  const NavItem = ({ to, icon: Icon, label, badge, isExact = false, id }: { to: string, icon: any, label: string, badge?: number, isExact?: boolean, id?: string }) => {
     const isActive = isExact 
       ? location.pathname === to 
       : location.pathname.startsWith(to);
 
     return (
       <Link
+        id={id}
         to={to}
         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
           isActive 
@@ -120,7 +121,7 @@ export const ApplicationSidebar: React.FC = () => {
           {!isSidebarCollapsed && <h3 className="px-3 text-xs font-bold text-sidebar-text-muted uppercase tracking-wider mb-2">Main</h3>}
           <div className="space-y-1">
             <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" isExact />
-            <NavItem to="/my-work" icon={CheckSquare} label="My Work" />
+            <NavItem to="/my-work" icon={CheckSquare} label="My Work" id="tour-my-work" />
             <NavItem to="/timesheets" icon={Clock} label="Timesheets" />
             {isManagerOrAdmin(user) && (
               <NavItem to="/timesheets/approvals" icon={ClipboardCheck} label="Approval Queue" />
@@ -274,6 +275,7 @@ export const ApplicationSidebar: React.FC = () => {
 
       {/* Sidebar Container */}
       <aside 
+        id="tour-sidebar"
         className={`
           fixed md:relative inset-y-0 left-0 z-50 
           transform transition-all duration-300 ease-in-out

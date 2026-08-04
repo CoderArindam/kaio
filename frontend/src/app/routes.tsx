@@ -42,7 +42,6 @@ import { ProjectLabelsSettings } from '../features/projects/ProjectLabelsSetting
 
 import {
   Key,
-  CreditCard,
   Keyboard,
   Boxes,
   Zap,
