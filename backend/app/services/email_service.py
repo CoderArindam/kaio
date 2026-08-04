@@ -48,6 +48,7 @@ def send_email(to_email: str, subject: str, body_text: str, html_content: Option
     # 2. Secondary Fallback: SMTP
     if settings.SMTP_EMAIL and settings.SMTP_PASSWORD:
         try:
+            logger.info(f"Attempting to send email via Gmail SMTP to {to_email}...")
             msg = EmailMessage()
             msg["From"] = f"KAIO <{settings.SMTP_EMAIL}>"
             msg["To"] = to_email
@@ -57,15 +58,20 @@ def send_email(to_email: str, subject: str, body_text: str, html_content: Option
             if html_content:
                 msg.add_alternative(html_content, subtype="html")
 
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=10.0) as server:
                 server.starttls()
                 server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
                 server.send_message(msg)
 
-            logger.info(f"Email sent via SMTP fallback to {to_email}")
+            logger.info(f"Email successfully sent via SMTP to {to_email}")
             return True
         except Exception as e:
-            logger.error(f"SMTP email fallback failed: {e}")
+            logger.error(f"SMTP email sending failed to {to_email}: {e}")
+    else:
+        logger.warning(
+            f"SMTP credentials missing. SMTP_EMAIL configured: {bool(settings.SMTP_EMAIL)}, "
+            f"SMTP_PASSWORD configured: {bool(settings.SMTP_PASSWORD)}"
+        )
 
-    logger.warning("No email credentials configured or all email methods failed. Skipping email.")
+    logger.warning("No working email credentials configured or all email methods failed. Skipping email.")
     return False
