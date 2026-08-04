@@ -10,52 +10,46 @@ logger = logging.getLogger(__name__)
 
 
 def send_email(to_email: str, subject: str, body_text: str, html_content: Optional[str] = None) -> bool:
-    api_key = settings.MAILJET_API_KEY
-    secret_key = settings.MAILJET_SECRET_KEY
-    sender_email = settings.MAILJET_SENDER_EMAIL or settings.SMTP_EMAIL or "coderarindam@gmail.com"
+    api_key = settings.RESEND_API_KEY
+    sender_email = settings.RESEND_SENDER_EMAIL or "onboarding@resend.dev"
 
-    # 1. Primary: Send via Mailjet REST API (v3.1)
-    if api_key and secret_key:
+    # 1. Primary: Send via Resend REST API
+    if api_key:
         try:
-            url = "https://api.mailjet.com/v3.1/send"
-            message_data = {
-                "From": {
-                    "Email": sender_email,
-                    "Name": "KAIO Workspace"
-                },
-                "To": [
-                    {
-                        "Email": to_email
-                    }
-                ],
-                "Subject": subject,
-                "TextPart": body_text,
+            url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "from": sender_email,
+                "to": [to_email],
+                "subject": subject,
+                "text": body_text,
             }
             if html_content:
-                message_data["HTMLPart"] = html_content
-
-            payload = {"Messages": [message_data]}
+                payload["html"] = html_content
 
             with httpx.Client(timeout=10.0) as client:
                 response = client.post(
                     url,
-                    auth=(api_key, secret_key),
+                    headers=headers,
                     json=payload
                 )
 
             if response.status_code in (200, 201):
-                logger.info(f"Email sent via Mailjet REST API to {to_email}")
+                logger.info(f"Email sent via Resend API to {to_email}")
                 return True
             else:
-                logger.error(f"Mailjet email sending failed (status {response.status_code}): {response.text}")
+                logger.error(f"Resend email sending failed (status {response.status_code}): {response.text}")
         except Exception as e:
-            logger.error(f"Mailjet API error when sending email to {to_email}: {e}")
+            logger.error(f"Resend API error when sending email to {to_email}: {e}")
 
     # 2. Secondary Fallback: SMTP
     if settings.SMTP_EMAIL and settings.SMTP_PASSWORD:
         try:
             msg = EmailMessage()
-            msg["From"] = settings.SMTP_EMAIL
+            msg["From"] = f"KAIO <{settings.SMTP_EMAIL}>"
             msg["To"] = to_email
             msg["Subject"] = subject
             msg.set_content(body_text)
