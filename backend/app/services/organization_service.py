@@ -54,7 +54,7 @@ class OrganizationService:
 
     async def upload_logo(self, file: UploadFile, org_id: int) -> str:
         try:
-            url = await StorageService.save_logo(file)
+            url = await StorageService.save_logo(file, org_id)
             # You might want to update the profile directly, or leave it to the user.
             # But the router was just returning the URL.
             return url

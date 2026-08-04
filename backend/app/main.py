@@ -50,10 +50,18 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Database connection health check returned unhealthy during startup.")
 
+    # Start Organization Purge Worker
+    from app.services.organization_purge_worker import OrganizationPurgeWorker
+    app.state.purge_worker = OrganizationPurgeWorker(db.pool)
+    app.state.purge_worker.start()
+
     yield
 
     # Shutdown — cancel all active meeting sessions cleanly before stopping DB connection
     logger.info("Shutting down KAIO API backend server...")
+    if hasattr(app.state, "purge_worker"):
+        await app.state.purge_worker.stop()
+        
     from app.meeting.api import meeting_service
     await meeting_service.shutdown_all()
     await db.disconnect()

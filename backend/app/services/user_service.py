@@ -95,7 +95,7 @@ class UserService:
 
     async def upload_avatar(self, file: UploadFile, current_user: dict) -> str:
         try:
-            url = await StorageService.save_avatar(file)
+            url = await StorageService.save_avatar(file, current_user["organization_id"])
             await self.conn.execute("UPDATE users SET avatar_url = $1 WHERE id = $2", url, current_user["id"])
             return url
         except Exception as e:

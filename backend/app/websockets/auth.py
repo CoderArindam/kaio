@@ -56,6 +56,20 @@ async def authenticate_websocket(
             await websocket.close(code=4001)
             return None
 
+    try:
+        is_active = await conn.fetchval(
+            "SELECT fn_check_organization_active($1)",
+            org_id
+        )
+        if not is_active:
+            await websocket.close(code=4001)
+            logger.debug(f"WS auth failed: organization {org_id} is not ACTIVE")
+            return None
+    except Exception as e:
+        logger.error(f"WS auth org status check failed: {e}")
+        await websocket.close(code=4001)
+        return None
+
     return {
         "user_id": user_id,
         "org_id": org_id,

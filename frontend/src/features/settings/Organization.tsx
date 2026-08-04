@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Building2,
   Save,
@@ -10,14 +10,18 @@ import {
   ArrowRight,
   ShieldAlert,
   Trash2,
-} from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
-import { useOrganizationStore } from '../../store/organizationStore';
-import { uploadOrganizationLogo } from '../../services/organizationApi';
-import WorkspaceLogo from '../../components/common/WorkspaceLogo';
-import toast from 'react-hot-toast';
-import { useRef } from 'react';
-import { usePageTitle } from '../../hooks/usePageTitle';
+} from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
+import { useOrganizationStore } from "../../store/organizationStore";
+import {
+  uploadOrganizationLogo,
+  deleteOrganization,
+  cancelOrganizationDeletion,
+} from "../../services/organizationApi";
+import WorkspaceLogo from "../../components/common/WorkspaceLogo";
+import toast from "react-hot-toast";
+import { useRef } from "react";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 const INDUSTRIES = [
   "Technology",
@@ -36,7 +40,8 @@ const COMPANY_SIZES = ["1–10", "11–50", "51–200", "201–500", "500+"];
 
 export const Organization: React.FC = () => {
   const { user } = useAuthStore();
-  const { profile, updateProfile } = useOrganizationStore();
+  const { profile, deletionStatus, updateProfile, setDeletionStatus } =
+    useOrganizationStore();
 
   usePageTitle("Workspace Settings");
 
@@ -52,6 +57,13 @@ export const Organization: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Deletion Modal State
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteOrgName, setDeleteOrgName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -162,6 +174,58 @@ export const Organization: React.FC = () => {
     }
   };
 
+  const handleDeleteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deleteOrgName !== profile?.name) {
+      toast.error("Organization name does not match");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const res = await deleteOrganization(
+        deletePassword,
+        deleteOrgName,
+        false,
+      );
+      toast.success(
+        `Deletion scheduled. Grace period: ${res.grace_period_hours} hours.`,
+      );
+      setDeletionStatus({
+        status: res.status,
+        deletion_scheduled_purge_at: null,
+      });
+      setIsDeleteDialogOpen(false);
+      setDeletePassword("");
+      setDeleteOrgName("");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.detail ||
+          error.message ||
+          "Failed to initiate deletion",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    setIsCancelling(true);
+    try {
+      await cancelOrganizationDeletion();
+      toast.success("Organization deletion cancelled successfully");
+      setDeletionStatus(null);
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.detail ||
+          error.message ||
+          "Failed to cancel deletion",
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   // Determine if there are unsaved changes
   const hasChanges = profile
     ? formData.name !== (profile.name || "") ||
@@ -176,7 +240,34 @@ export const Organization: React.FC = () => {
   const displayName = formData.name || "Your Workspace";
 
   return (
-    <div className="max-w-5xl animate-in fade-in duration-300">
+    <div className="max-w-5xl animate-in fade-in duration-300 relative">
+      {deletionStatus?.status === "DELETING" && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800 rounded-xl flex items-center justify-between">
+          <div className="flex items-start gap-3">
+            <ShieldAlert
+              className="text-red-600 dark:text-red-400 mt-0.5"
+              size={20}
+            />
+            <div>
+              <h3 className="text-sm font-bold text-red-800 dark:text-red-300">
+                Workspace Deletion Scheduled
+              </h3>
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                This workspace is scheduled for permanent deletion. All data
+                will be irreversibly purged.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCancelDeletion}
+            disabled={isCancelling}
+            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700 rounded-md text-sm font-medium transition-colors"
+          >
+            {isCancelling ? "Cancelling..." : "Cancel Deletion"}
+          </button>
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-brand-text flex items-center gap-2">
           <Building2 className="text-brand-primary" size={24} />
@@ -411,15 +502,15 @@ export const Organization: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-brand-surface-low text-xs font-semibold uppercase tracking-wider text-brand-text-muted rounded">
-                    Coming Soon
-                  </span>
                   <button
-                    disabled
-                    className="px-4 py-2 border border-red-200 text-red-400 dark:border-red-900/50 dark:text-red-800 rounded-md text-sm font-medium cursor-not-allowed flex items-center gap-2"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    disabled={deletionStatus?.status === "DELETING"}
+                    className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={16} />
-                    Delete
+                    {deletionStatus?.status === "DELETING"
+                      ? "Deletion Scheduled"
+                      : "Delete"}
                   </button>
                 </div>
               </div>
@@ -543,6 +634,93 @@ export const Organization: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Workspace Modal */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-brand-surface rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-red-200 dark:border-red-900/50">
+            <div className="px-6 py-4 border-b border-red-200 dark:border-red-900/50 flex items-center gap-3 bg-red-50/50 dark:bg-red-900/10">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-500">
+                <ShieldAlert size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-red-600 dark:text-red-500">
+                  Delete Workspace
+                </h2>
+              </div>
+            </div>
+
+            <form onSubmit={handleDeleteSubmit}>
+              <div className="p-6 space-y-4">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg text-sm text-red-800 dark:text-red-300">
+                  <p className="font-semibold mb-1">
+                    This action cannot be undone.
+                  </p>
+                  <p>
+                    This will permanently delete the{" "}
+                    <strong>{profile?.name}</strong> workspace, all associated
+                    tasks, projects, timesheets, and remove all user access.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-brand-text mb-1">
+                    Type <strong>{profile?.name}</strong> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={deleteOrgName}
+                    onChange={(e) => setDeleteOrgName(e.target.value)}
+                    className="w-full px-3 py-2 bg-brand-bg border border-brand-border rounded-md text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder={profile?.name}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-brand-text mb-1">
+                    Your Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="w-full px-3 py-2 bg-brand-bg border border-brand-border rounded-md text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Enter your password to verify"
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-brand-surface-low border-t border-brand-border flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDeleteDialogOpen(false);
+                    setDeleteOrgName("");
+                    setDeletePassword("");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-brand-text-muted hover:text-brand-text transition-colors"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    isDeleting ||
+                    deleteOrgName !== profile?.name ||
+                    !deletePassword
+                  }
+                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isDeleting ? "Initiating..." : "Delete Workspace"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

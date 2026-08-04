@@ -303,6 +303,14 @@ class AuthService:
                 )
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
+        # Ensure the organization is active
+        org_active = await self.conn.fetchval(
+            "SELECT fn_check_organization_active($1)",
+            user_row["organization_id"]
+        )
+        if not org_active:
+            raise HTTPException(status_code=403, detail="Organization is no longer active")
+
         # If user has 2FA enabled, issue login OTP
         if user_row.get("is_2fa_enabled"):
             otp_row = await self.conn.fetchrow(
@@ -369,6 +377,14 @@ class AuthService:
         if not user_row:
             raise HTTPException(status_code=404, detail="User not found")
 
+        # Ensure the organization is active
+        org_active = await self.conn.fetchval(
+            "SELECT fn_check_organization_active($1)",
+            user_row["organization_id"]
+        )
+        if not org_active:
+            raise HTTPException(status_code=403, detail="Organization is no longer active")
+
         refresh_token, session_id = await self.create_session(user_row["id"], ua_string, ip_address)
         browser, platform, _ = self.parse_user_agent(ua_string)
 
@@ -395,6 +411,18 @@ class AuthService:
             if error_code == "COOLDOWN_ACTIVE":
                 raise HTTPException(status_code=429, detail="Please wait 60 seconds before requesting another code.")
             raise HTTPException(status_code=400, detail="Unable to resend OTP. Session may have expired.")
+
+        # Check org active
+        if row["email"]:
+            user_org_id = await self.conn.fetchval(
+                "SELECT organization_id FROM v_users_canonical WHERE email = $1", row["email"]
+            )
+            if user_org_id:
+                org_active = await self.conn.fetchval(
+                    "SELECT fn_check_organization_active($1)", user_org_id
+                )
+                if not org_active:
+                    raise HTTPException(status_code=403, detail="Organization is no longer active")
 
         return {
             "success": True,
@@ -587,6 +615,18 @@ class AuthService:
 
     async def create_password_reset_token(self, email: str) -> dict | None:
         clean_email = email.strip().lower()
+
+        # Check org active
+        user_org_id = await self.conn.fetchval(
+            "SELECT organization_id FROM v_users_canonical WHERE email = $1", clean_email
+        )
+        if user_org_id:
+            org_active = await self.conn.fetchval(
+                "SELECT fn_check_organization_active($1)", user_org_id
+            )
+            if not org_active:
+                return None
+
         row = await self.conn.fetchrow(
             "SELECT * FROM fn_create_password_reset_token($1)", clean_email
         )

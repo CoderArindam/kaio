@@ -19,14 +19,9 @@ except Exception:
     HAS_CLOUDINARY = False
 
 # Base Upload Directories
-UPLOAD_DIR = Path("uploads/avatars")
+UPLOAD_DIR = Path("uploads/orgs")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-LOGO_DIR = Path("uploads/logos")
-LOGO_DIR.mkdir(parents=True, exist_ok=True)
-
-ATTACHMENT_BASE_DIR = Path("uploads/attachments")
-ATTACHMENT_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class StorageService:
@@ -64,7 +59,7 @@ class StorageService:
 
 
     @staticmethod
-    async def save_avatar(file: UploadFile) -> str:
+    async def save_avatar(file: UploadFile, org_id: int) -> str:
         """
         Saves an uploaded avatar locally (or to Cloudinary if configured) and returns the public URL path.
         """
@@ -72,7 +67,7 @@ class StorageService:
             try:
                 StorageService._configure_cloudinary()
                 content = await file.read()
-                res = cloudinary.uploader.upload(content, folder="kaio/avatars", resource_type="auto")
+                res = cloudinary.uploader.upload(content, folder=f"kaio/orgs/{org_id}/avatars", resource_type="auto")
                 if res and "secure_url" in res:
                     return res.get("secure_url")
             except Exception as e:
@@ -81,15 +76,18 @@ class StorageService:
 
         file_extension = os.path.splitext(file.filename or "")[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
+        
+        org_dir = UPLOAD_DIR / str(org_id) / "avatars"
+        org_dir.mkdir(parents=True, exist_ok=True)
+        file_path = org_dir / unique_filename
 
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        return f"/uploads/avatars/{unique_filename}"
+        return f"/uploads/orgs/{org_id}/avatars/{unique_filename}"
 
     @staticmethod
-    async def save_logo(file: UploadFile) -> str:
+    async def save_logo(file: UploadFile, org_id: int) -> str:
         """
         Saves an uploaded workspace logo locally (or to Cloudinary if configured) and returns the public URL path.
         """
@@ -97,7 +95,7 @@ class StorageService:
             try:
                 StorageService._configure_cloudinary()
                 content = await file.read()
-                res = cloudinary.uploader.upload(content, folder="kaio/logos", resource_type="auto")
+                res = cloudinary.uploader.upload(content, folder=f"kaio/orgs/{org_id}/logos", resource_type="auto")
                 if res and "secure_url" in res:
                     return res.get("secure_url")
             except Exception as e:
@@ -106,15 +104,18 @@ class StorageService:
 
         file_extension = os.path.splitext(file.filename or "")[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = LOGO_DIR / unique_filename
+        
+        org_dir = UPLOAD_DIR / str(org_id) / "logos"
+        org_dir.mkdir(parents=True, exist_ok=True)
+        file_path = org_dir / unique_filename
 
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        return f"/uploads/logos/{unique_filename}"
+        return f"/uploads/orgs/{org_id}/logos/{unique_filename}"
 
     @staticmethod
-    async def save_attachment(file: UploadFile, task_id: int) -> tuple[str, int, str]:
+    async def save_attachment(file: UploadFile, task_id: int, org_id: int) -> tuple[str, int, str]:
         """
         Saves an uploaded task attachment locally or to Cloudinary if configured.
         Returns tuple of (file_url, file_size, mime_type).
@@ -128,7 +129,7 @@ class StorageService:
                 StorageService._configure_cloudinary()
                 res = cloudinary.uploader.upload(
                     content,
-                    folder=f"kaio/attachments/{task_id}",
+                    folder=f"kaio/orgs/{org_id}/attachments/{task_id}",
                     resource_type="auto",
                     use_filename=True
                 )
@@ -138,7 +139,7 @@ class StorageService:
                 logger.error(f"Cloudinary attachment upload failed, falling back to local storage: {e}")
 
         # Local storage fallback
-        task_dir = ATTACHMENT_BASE_DIR / str(task_id)
+        task_dir = UPLOAD_DIR / str(org_id) / "attachments" / str(task_id)
         task_dir.mkdir(parents=True, exist_ok=True)
 
         original_name = Path(file.filename or "attachment").name
@@ -148,7 +149,7 @@ class StorageService:
         with file_path.open("wb") as buffer:
             buffer.write(content)
 
-        file_url = f"/uploads/attachments/{task_id}/{unique_filename}"
+        file_url = f"/uploads/orgs/{org_id}/attachments/{task_id}/{unique_filename}"
         return file_url, file_size, mime_type
 
     @staticmethod
@@ -178,3 +179,39 @@ class StorageService:
                     local_path.unlink()
             except Exception as e:
                 logger.error(f"Failed to delete local attachment file {file_url}: {e}")
+
+    @staticmethod
+    async def delete_organization_assets(org_id: int):
+        """
+        Deletes all assets (avatars, logos, attachments) scoped to a specific organization.
+        This deletes the local directory entirely and uses Cloudinary API to delete by folder prefix.
+        """
+        # Local Delete
+        org_dir = UPLOAD_DIR / str(org_id)
+        if org_dir.exists() and org_dir.is_dir():
+            try:
+                shutil.rmtree(org_dir)
+                logger.info(f"Deleted local assets for organization {org_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete local assets for org {org_id}: {e}")
+
+        # Cloudinary Delete
+        if StorageService._is_cloudinary_configured():
+            try:
+                StorageService._configure_cloudinary()
+                import cloudinary.api # type: ignore
+                # Cloudinary requires a specific API call to delete resources by prefix
+                prefix = f"kaio/orgs/{org_id}"
+                # Delete resources (files)
+                cloudinary.api.delete_resources_by_prefix(prefix)
+                # Note: This might not delete the empty folders themselves, which is fine, 
+                # but we can optionally try to delete the folder using cloudinary.api.delete_folder
+                try:
+                    cloudinary.api.delete_folder(prefix)
+                except Exception as folder_e:
+                    logger.debug(f"Could not delete empty cloudinary folder {prefix}: {folder_e}")
+                
+                logger.info(f"Deleted Cloudinary assets for organization {org_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete Cloudinary assets for org {org_id}: {e}")
+                raise e # Propagate to the worker to handle failures

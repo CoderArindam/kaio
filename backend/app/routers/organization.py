@@ -56,3 +56,36 @@ async def upload_organization_logo(
         
     url = await org_service.upload_logo(file, org_id)
     return {"logo_url": url}
+
+from fastapi import Request
+from app.services.organization_deletion_service import OrganizationDeletionService, OrganizationDeletionRequest
+
+def get_org_deletion_service(request: Request, conn = Depends(get_db_connection)) -> OrganizationDeletionService:
+    meeting_service = getattr(request.app.state, "meeting_service", None)
+    return OrganizationDeletionService(conn, meeting_service)
+
+@router.post("/delete")
+async def initiate_organization_deletion(
+    req: OrganizationDeletionRequest,
+    current_user: dict = Depends(get_current_user),
+    service: OrganizationDeletionService = Depends(get_org_deletion_service)
+):
+    if current_user.get("role") != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Only Super Admins can delete the organization")
+    return await service.initiate_deletion(current_user["organization_id"], current_user["id"], req)
+
+@router.post("/delete/cancel")
+async def cancel_organization_deletion(
+    current_user: dict = Depends(get_current_user),
+    service: OrganizationDeletionService = Depends(get_org_deletion_service)
+):
+    if current_user.get("role") != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="Only Super Admins can cancel deletion")
+    return await service.cancel_deletion(current_user["organization_id"], current_user["id"])
+
+@router.get("/delete/status")
+async def get_organization_deletion_status(
+    current_user: dict = Depends(get_current_user),
+    service: OrganizationDeletionService = Depends(get_org_deletion_service)
+):
+    return await service.get_status(current_user["organization_id"])

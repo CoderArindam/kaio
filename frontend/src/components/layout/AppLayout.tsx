@@ -15,11 +15,11 @@ import { AIButton } from "../../features/ai/components/AIButton";
 import { AIPanel } from "../../features/ai/components/AIPanel";
 import CreateProjectModal from "../../features/projects/components/CreateProjectModal";
 import SearchModal from "../../features/search/SearchModal";
-import { Search } from "lucide-react";
+import { Search, ShieldAlert } from "lucide-react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
 export const AppLayout: React.FC = () => {
-  const { profile, isLoading: isProfileLoading } = useOrganizationStore();
+  const { profile, deletionStatus, isLoading: isProfileLoading } = useOrganizationStore();
   const { isLoading: isPreferencesLoading } = usePreferencesStore();
   const { pageTitle, openSearchModal, toggleSearchModal } = useUiStore();
 
@@ -93,6 +93,13 @@ export const AppLayout: React.FC = () => {
             <UserAvatarDropdown placement="header" />
           </div>
         </header>
+
+        {deletionStatus?.status === 'DELETING' && (
+          <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 z-20 shadow-md">
+            <ShieldAlert size={16} />
+            <span>This workspace is scheduled for deletion. It will be permanently deleted shortly.</span>
+          </div>
+        )}
 
         <ActiveMeetingBar />
         <main className="flex-1 min-h-0 overflow-hidden flex flex-col">

@@ -280,6 +280,30 @@ class MeetingService:
         self._bot_controller._monitor.stop_all()
         log.info("shutdown.completed")
 
+    async def shutdown_for_organization(self, org_id: int) -> None:
+        """Signal all runtimes for a specific organization to shutdown and await their clean exit."""
+        if not self._runtimes:
+            return
+
+        tasks_to_await = []
+        for session_id, runtime in list(self._runtimes.items()):
+            session = self.get_session(session_id)
+            if session and session.org_id == org_id:
+                if runtime.state == RuntimeState.RUNNING:
+                    runtime.state = RuntimeState.LEAVING
+                    log.info("runtime.leaving", session_id=session_id, runtime_state=runtime.state.value, profile_name=runtime.profile_path.name if runtime.profile_path else "unknown")
+                runtime.request_shutdown("organization_deleted")
+                tasks_to_await.append(runtime.wait_for_cleanup())
+
+        if tasks_to_await:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*tasks_to_await, return_exceptions=True),
+                    timeout=meeting_config.CLEANUP_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                log.error("shutdown_for_organization.timeout", org_id=org_id)
+
     # ------------------------------------------------------------------ #
     # Intelligence data accessors (used by API router)                     #
     # ------------------------------------------------------------------ #

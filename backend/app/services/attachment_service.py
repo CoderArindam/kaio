@@ -28,7 +28,9 @@ class AttachmentService:
             await self._verify_task_access(task_id, current_user)
 
             # Store file using StorageService (Cloudinary or local fallback)
-            file_url, file_size, mime_type = await StorageService.save_attachment(file, task_id)
+            file_url, file_size, mime_type = await StorageService.save_attachment(
+                file, task_id, current_user["organization_id"]
+            )
 
             # Insert attachment record in DB using fn_create_attachment
             result = await self.conn.fetchval(

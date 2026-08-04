@@ -44,3 +44,27 @@ export const updateOrganizationProfile = async (updates: OrganizationProfileUpda
   const response = await api.patch('/organization/profile', updates);
   return response.data;
 };
+
+export interface DeletionStatus {
+  status: string;
+  deletion_scheduled_purge_at: string | null;
+}
+
+export const deleteOrganization = async (password: string, organizationName: string, skipGracePeriod: boolean = false): Promise<any> => {
+  const response = await api.post('/organization/delete', {
+    password,
+    organization_name: organizationName,
+    skip_grace_period: skipGracePeriod,
+  });
+  return response.data;
+};
+
+export const cancelOrganizationDeletion = async (): Promise<any> => {
+  const response = await api.post('/organization/delete/cancel');
+  return response.data;
+};
+
+export const getOrganizationDeletionStatus = async (): Promise<DeletionStatus> => {
+  const response = await api.get('/organization/delete/status');
+  return response.data;
+};

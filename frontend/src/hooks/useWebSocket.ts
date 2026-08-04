@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useUiStore } from '../store/uiStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useTaskStore } from '../store/taskStore';
+import { useOrganizationStore } from '../store/organizationStore';
 
 // Determine WebSocket URL from environment
 function getWsUrl(): string {
@@ -184,6 +185,12 @@ export function useWebSocket(): { isConnected: boolean } {
 
         case 'pong':
           break;
+
+        case 'organization_deletion_scheduled':
+        case 'organization_deletion_cancelled': {
+          useOrganizationStore.getState().fetchDeletionStatus();
+          break;
+        }
 
         default:
           break;

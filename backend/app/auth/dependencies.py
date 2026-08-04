@@ -46,6 +46,15 @@ async def get_current_user(
         if is_revoked:
             raise credentials_exception
 
+    # Immediately reject if organization is not active (e.g. DELETING/PURGING)
+    if organization_id:
+        is_active = await conn.fetchval(
+            "SELECT fn_check_organization_active($1)",
+            organization_id
+        )
+        if not is_active:
+            raise credentials_exception
+
     return {
         "id": user_id,
         "email": email,
