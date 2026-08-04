@@ -1,67 +1,71 @@
-import React, { useEffect, useState } from 'react';
-import { useAdminStore } from '../../store/adminStore';
-import { useAuthStore } from '../../store/authStore';
-import { 
-  Trash2, 
-  Loader2, 
-  Users, 
-  Mail, 
-  UserX, 
-  Search, 
-  Filter, 
-  ShieldCheck, 
-  UserCheck, 
-  Clock, 
-  CheckCircle2, 
+import React, { useEffect, useState } from "react";
+import { useAdminStore } from "../../store/adminStore";
+import { useAuthStore } from "../../store/authStore";
+import {
+  Trash2,
+  Loader2,
+  Users,
+  Mail,
+  UserX,
+  Search,
+  ShieldCheck,
+  UserCheck,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   RefreshCw,
   Send,
   Copy,
   Check,
-  Shield
-} from 'lucide-react';
-import { UserAvatar } from '../../components/common/UserAvatar';
-import { usePageTitle } from '../../hooks/usePageTitle';
-import { useOrganizationStore } from '../../store/organizationStore';
-import { InviteUserModal } from './modals/InviteUserModal';
-import { RevokeInvitationModal } from './modals/RevokeInvitationModal';
-import { DeleteUserModal } from './modals/DeleteUserModal';
-import toast from 'react-hot-toast';
+  Shield,
+} from "lucide-react";
+import { UserAvatar } from "../../components/common/UserAvatar";
+import { usePageTitle } from "../../hooks/usePageTitle";
+import { useOrganizationStore } from "../../store/organizationStore";
+import { InviteUserModal } from "./modals/InviteUserModal";
+import { RevokeInvitationModal } from "./modals/RevokeInvitationModal";
+import { DeleteUserModal } from "./modals/DeleteUserModal";
+import toast from "react-hot-toast";
 
 const UsersManagement: React.FC = () => {
-  const { 
-    users, 
+  const {
+    users,
     invitations,
-    fetchUsers, 
+    fetchUsers,
     fetchInvitations,
-    isFetchingUsers, 
+    isFetchingUsers,
     isFetchingInvitations,
-    inviteUser, 
+    inviteUser,
     revokeInvitation,
-    isInvitingUser, 
+    isInvitingUser,
     isRevokingInvitation,
-    updateUserRole, 
-    deleteUser 
+    updateUserRole,
+    deleteUser,
   } = useAdminStore();
-  
+
   const { user: currentUser } = useAuthStore();
   const { profile } = useOrganizationStore();
 
   usePageTitle("Users & Invitations");
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState('MEMBER');
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState("MEMBER");
   const [inviteError, setInviteError] = useState<string | null>(null);
-  
+
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
-  const [invitationToRevoke, setInvitationToRevoke] = useState<{ id: number; email: string } | null>(null);
+  const [invitationToRevoke, setInvitationToRevoke] = useState<{
+    id: number;
+    email: string;
+  } | null>(null);
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
-  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'invitations'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>("ALL");
+  const [activeTab, setActiveTab] = useState<"all" | "users" | "invitations">(
+    "all",
+  );
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ const UsersManagement: React.FC = () => {
   const handleRefresh = () => {
     fetchUsers();
     fetchInvitations();
-    toast.success('Refreshed user data');
+    toast.success("Refreshed user data");
   };
 
   const closeInviteModal = () => {
@@ -87,10 +91,10 @@ const UsersManagement: React.FC = () => {
     try {
       await inviteUser(newEmail, newRole);
       closeInviteModal();
-      setNewEmail('');
-      setNewRole('MEMBER');
+      setNewEmail("");
+      setNewRole("MEMBER");
     } catch (error: any) {
-      setInviteError(error?.message || 'Failed to invite user');
+      setInviteError(error?.message || "Failed to invite user");
     }
   };
 
@@ -108,7 +112,7 @@ const UsersManagement: React.FC = () => {
   const handleCopyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
     setCopiedEmail(email);
-    toast.success('Email copied to clipboard');
+    toast.success("Email copied to clipboard");
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
@@ -143,34 +147,44 @@ const UsersManagement: React.FC = () => {
       return lastName;
     }
     if (u.email) {
-      const handle = u.email.split('@')[0];
-      const cleanHandle = handle.split('+')[0].replace(/[._-]/g, ' ');
-      return cleanHandle.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const handle = u.email.split("@")[0];
+      const cleanHandle = handle.split("+")[0].replace(/[._-]/g, " ");
+      return cleanHandle
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
     }
-    return 'User';
+    return "User";
   };
 
   // Metrics calculation
   const totalUsersCount = users.length;
-  const superAdminCount = users.filter(u => u.role === 'SUPER_ADMIN').length;
-  const managerCount = users.filter(u => u.role === 'MANAGER').length;
-  const pendingInvitesCount = invitations.filter(inv => inv.is_pending ?? (!inv.accepted_at && new Date(inv.expires_at) > new Date())).length;
+  const superAdminCount = users.filter((u) => u.role === "SUPER_ADMIN").length;
+  const managerCount = users.filter((u) => u.role === "MANAGER").length;
+  const pendingInvitesCount = invitations.filter(
+    (inv) =>
+      inv.is_pending ??
+      (!inv.accepted_at && new Date(inv.expires_at) > new Date()),
+  ).length;
 
   // Filtered lists
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = users.filter((u) => {
     const name = formatDisplayName(u).toLowerCase();
     const email = u.email.toLowerCase();
     const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = query === '' || name.includes(query) || email.includes(query);
-    const matchesRole = selectedRoleFilter === 'ALL' || u.role === selectedRoleFilter;
+    const matchesSearch =
+      query === "" || name.includes(query) || email.includes(query);
+    const matchesRole =
+      selectedRoleFilter === "ALL" || u.role === selectedRoleFilter;
     return matchesSearch && matchesRole;
   });
 
-  const filteredInvitations = invitations.filter(inv => {
+  const filteredInvitations = invitations.filter((inv) => {
     const email = inv.email.toLowerCase();
     const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = query === '' || email.includes(query);
-    const matchesRole = selectedRoleFilter === 'ALL' || inv.role === selectedRoleFilter;
+    const matchesSearch = query === "" || email.includes(query);
+    const matchesRole =
+      selectedRoleFilter === "ALL" || inv.role === selectedRoleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -182,18 +196,24 @@ const UsersManagement: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-brand-text">Users & Invitations</h1>
-            <button 
+            <h1 className="text-2xl font-bold tracking-tight text-brand-text">
+              Users & Invitations
+            </h1>
+            <button
               onClick={handleRefresh}
               disabled={isLoading}
               className="p-1.5 text-brand-text-muted hover:text-brand-text bg-brand-surface border border-brand-border rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               title="Refresh users and invitations"
             >
-              <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw
+                size={15}
+                className={isLoading ? "animate-spin" : ""}
+              />
             </button>
           </div>
           <p className="text-brand-text-muted text-sm mt-1">
-            Manage organization team members, roles, and pending email invitations.
+            Manage organization team members, roles, and pending email
+            invitations.
           </p>
         </div>
         <button
@@ -212,8 +232,12 @@ const UsersManagement: React.FC = () => {
             <Users size={20} />
           </div>
           <div>
-            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Active Users</p>
-            <p className="text-xl font-bold text-brand-text mt-0.5">{totalUsersCount}</p>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">
+              Active Users
+            </p>
+            <p className="text-xl font-bold text-brand-text mt-0.5">
+              {totalUsersCount}
+            </p>
           </div>
         </div>
 
@@ -222,8 +246,12 @@ const UsersManagement: React.FC = () => {
             <ShieldCheck size={20} />
           </div>
           <div>
-            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Super Admins</p>
-            <p className="text-xl font-bold text-brand-text mt-0.5">{superAdminCount}</p>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">
+              Super Admins
+            </p>
+            <p className="text-xl font-bold text-brand-text mt-0.5">
+              {superAdminCount}
+            </p>
           </div>
         </div>
 
@@ -232,8 +260,12 @@ const UsersManagement: React.FC = () => {
             <Shield size={20} />
           </div>
           <div>
-            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Managers</p>
-            <p className="text-xl font-bold text-brand-text mt-0.5">{managerCount}</p>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">
+              Managers
+            </p>
+            <p className="text-xl font-bold text-brand-text mt-0.5">
+              {managerCount}
+            </p>
           </div>
         </div>
 
@@ -242,8 +274,12 @@ const UsersManagement: React.FC = () => {
             <Clock size={20} />
           </div>
           <div>
-            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Pending Invites</p>
-            <p className="text-xl font-bold text-brand-text mt-0.5">{pendingInvitesCount}</p>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">
+              Pending Invites
+            </p>
+            <p className="text-xl font-bold text-brand-text mt-0.5">
+              {pendingInvitesCount}
+            </p>
           </div>
         </div>
       </div>
@@ -253,7 +289,10 @@ const UsersManagement: React.FC = () => {
         <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Search box */}
           <div className="relative flex-1 md:w-72">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted" />
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted"
+            />
             <input
               type="text"
               value={searchQuery}
@@ -262,8 +301,8 @@ const UsersManagement: React.FC = () => {
               className="w-full bg-brand-bg border border-brand-border rounded-xl pl-9 pr-3 py-2 text-sm text-brand-text outline-none focus:border-brand-primary transition-all"
             />
             {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
+              <button
+                onClick={() => setSearchQuery("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text"
               >
                 Clear
@@ -289,31 +328,31 @@ const UsersManagement: React.FC = () => {
         {/* Tab View Filter */}
         <div className="flex items-center bg-brand-bg p-1 rounded-xl border border-brand-border/60 self-stretch md:self-auto justify-stretch">
           <button
-            onClick={() => setActiveTab('all')}
+            onClick={() => setActiveTab("all")}
             className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'all'
-                ? 'bg-brand-surface text-brand-text shadow-sm'
-                : 'text-brand-text-muted hover:text-brand-text'
+              activeTab === "all"
+                ? "bg-brand-surface text-brand-text shadow-sm"
+                : "text-brand-text-muted hover:text-brand-text"
             }`}
           >
             All
           </button>
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => setActiveTab("users")}
             className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-brand-surface text-brand-text shadow-sm'
-                : 'text-brand-text-muted hover:text-brand-text'
+              activeTab === "users"
+                ? "bg-brand-surface text-brand-text shadow-sm"
+                : "text-brand-text-muted hover:text-brand-text"
             }`}
           >
             Users ({filteredUsers.length})
           </button>
           <button
-            onClick={() => setActiveTab('invitations')}
+            onClick={() => setActiveTab("invitations")}
             className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'invitations'
-                ? 'bg-brand-surface text-brand-text shadow-sm'
-                : 'text-brand-text-muted hover:text-brand-text'
+              activeTab === "invitations"
+                ? "bg-brand-surface text-brand-text shadow-sm"
+                : "text-brand-text-muted hover:text-brand-text"
             }`}
           >
             Invitations ({filteredInvitations.length})
@@ -322,12 +361,12 @@ const UsersManagement: React.FC = () => {
       </div>
 
       {/* Active Users Table */}
-      {(activeTab === 'all' || activeTab === 'users') && (
+      {(activeTab === "all" || activeTab === "users") && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-brand-text flex items-center gap-2">
               <UserCheck size={18} className="text-brand-primary" />
-              Active Users 
+              Active Users
               <span className="text-xs font-normal text-brand-text-muted bg-brand-surface px-2 py-0.5 rounded-full border border-brand-border">
                 {filteredUsers.length}
               </span>
@@ -339,46 +378,77 @@ const UsersManagement: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-brand-border bg-brand-surface/70 text-brand-text-muted text-xs uppercase tracking-wider font-semibold">
-                    <th className="px-6 py-4 whitespace-nowrap">User Details</th>
+                    <th className="px-6 py-4 whitespace-nowrap">
+                      User Details
+                    </th>
                     <th className="px-6 py-4 whitespace-nowrap">Role</th>
                     <th className="px-6 py-4 whitespace-nowrap">Joined Date</th>
-                    <th className="px-6 py-4 text-center whitespace-nowrap">Actions</th>
+                    <th className="px-6 py-4 text-center whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border">
                   {isFetchingUsers ? (
                     <tr>
-                      <td colSpan={4} className="p-12 text-center text-brand-text-muted">
-                        <Loader2 className="animate-spin mx-auto mb-2 text-brand-primary" size={24} />
-                        <p className="text-sm font-medium">Loading active users...</p>
+                      <td
+                        colSpan={4}
+                        className="p-12 text-center text-brand-text-muted"
+                      >
+                        <Loader2
+                          className="animate-spin mx-auto mb-2 text-brand-primary"
+                          size={24}
+                        />
+                        <p className="text-sm font-medium">
+                          Loading active users...
+                        </p>
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-12 text-center text-brand-text-muted">
+                      <td
+                        colSpan={4}
+                        className="p-12 text-center text-brand-text-muted"
+                      >
                         <Users className="mx-auto mb-3 opacity-30" size={44} />
-                        <p className="text-sm font-medium text-brand-text">No users found</p>
+                        <p className="text-sm font-medium text-brand-text">
+                          No users found
+                        </p>
                         <p className="text-xs text-brand-text-muted mt-1">
-                          {searchQuery || selectedRoleFilter !== 'ALL' 
-                            ? 'Try matching a different search term or role filter.' 
-                            : 'No active platform users available.'}
+                          {searchQuery || selectedRoleFilter !== "ALL"
+                            ? "Try matching a different search term or role filter."
+                            : "No active platform users available."}
                         </p>
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map(u => {
+                    filteredUsers.map((u) => {
                       const isSelf = u.id === currentUser?.id;
-                      const firstName = u.first_name || (isSelf ? currentUser?.first_name : null);
-                      const lastName = u.last_name || (isSelf ? currentUser?.last_name : null);
-                      const avatarUser = { ...u, first_name: firstName, last_name: lastName };
+                      const firstName =
+                        u.first_name ||
+                        (isSelf ? currentUser?.first_name : null);
+                      const lastName =
+                        u.last_name || (isSelf ? currentUser?.last_name : null);
+                      const avatarUser = {
+                        ...u,
+                        first_name: firstName,
+                        last_name: lastName,
+                      };
                       const displayName = formatDisplayName(u);
 
                       return (
-                        <tr key={u.id} className="hover:bg-brand-surface/50 transition-colors group">
+                        <tr
+                          key={u.id}
+                          className="hover:bg-brand-surface/50 transition-colors group"
+                        >
                           {/* Name with Email Column */}
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3.5">
-                              <UserAvatar user={avatarUser} size="lg" className="ring-1 ring-brand-border" />
+                              <UserAvatar
+                                user={avatarUser}
+                                size="lg"
+                                className="ring-1 ring-brand-border"
+                              />
                               <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold text-brand-text text-sm truncate">
@@ -391,14 +461,24 @@ const UsersManagement: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs text-brand-text-muted mt-0.5">
-                                  <Mail size={12} className="shrink-0 opacity-65" />
+                                  <Mail
+                                    size={12}
+                                    className="shrink-0 opacity-65"
+                                  />
                                   <span className="truncate">{u.email}</span>
                                   <button
                                     onClick={() => handleCopyEmail(u.email)}
                                     className="opacity-0 group-hover:opacity-100 p-0.5 text-brand-text-muted hover:text-brand-text transition-opacity ml-1 cursor-pointer"
                                     title="Copy email address"
                                   >
-                                    {copiedEmail === u.email ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                                    {copiedEmail === u.email ? (
+                                      <Check
+                                        size={12}
+                                        className="text-green-500"
+                                      />
+                                    ) : (
+                                      <Copy size={12} />
+                                    )}
                                   </button>
                                 </div>
                               </div>
@@ -410,19 +490,36 @@ const UsersManagement: React.FC = () => {
                             <div className="relative inline-block">
                               <select
                                 value={u.role}
-                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                onChange={(e) =>
+                                  handleRoleChange(u.id, e.target.value)
+                                }
                                 disabled={isSelf}
                                 className={`text-xs font-bold px-3 py-1.5 rounded-full border outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all appearance-none pr-7 ${
-                                  u.role === 'SUPER_ADMIN' 
-                                    ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 hover:border-purple-500/60' 
-                                    : u.role === 'MANAGER'
-                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:border-blue-500/60'
-                                    : 'bg-slate-500/10 text-slate-300 border-slate-500/30 hover:border-slate-500/60'
+                                  u.role === "SUPER_ADMIN"
+                                    ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:border-purple-500/60"
+                                    : u.role === "MANAGER"
+                                      ? "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:border-blue-500/60"
+                                      : "bg-slate-500/10 text-slate-300 border-slate-500/30 hover:border-slate-500/60"
                                 }`}
                               >
-                                <option value="MEMBER" className="bg-brand-surface text-brand-text font-normal">MEMBER</option>
-                                <option value="MANAGER" className="bg-brand-surface text-brand-text font-normal">MANAGER</option>
-                                <option value="SUPER_ADMIN" className="bg-brand-surface text-brand-text font-normal">SUPER_ADMIN</option>
+                                <option
+                                  value="MEMBER"
+                                  className="bg-brand-surface text-brand-text font-normal"
+                                >
+                                  MEMBER
+                                </option>
+                                <option
+                                  value="MANAGER"
+                                  className="bg-brand-surface text-brand-text font-normal"
+                                >
+                                  MANAGER
+                                </option>
+                                <option
+                                  value="SUPER_ADMIN"
+                                  className="bg-brand-surface text-brand-text font-normal"
+                                >
+                                  SUPER_ADMIN
+                                </option>
                               </select>
                               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] opacity-60">
                                 ▼
@@ -433,8 +530,20 @@ const UsersManagement: React.FC = () => {
                           {/* Joined Column */}
                           <td className="px-6 py-4 text-brand-text-muted text-sm whitespace-nowrap">
                             <div className="flex items-center gap-1.5 whitespace-nowrap">
-                              <Clock size={14} className="opacity-60 shrink-0" />
-                              <span>{new Date(u.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                              <Clock
+                                size={14}
+                                className="opacity-60 shrink-0"
+                              />
+                              <span>
+                                {new Date(u.created_at).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
+                              </span>
                             </div>
                           </td>
 
@@ -445,7 +554,11 @@ const UsersManagement: React.FC = () => {
                                 onClick={() => setUserToDelete(u.id)}
                                 disabled={isSelf}
                                 className="p-2 text-brand-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-brand-text-muted cursor-pointer"
-                                title={isSelf ? "Cannot delete your own account" : "Delete user"}
+                                title={
+                                  isSelf
+                                    ? "Cannot delete your own account"
+                                    : "Delete user"
+                                }
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -463,7 +576,7 @@ const UsersManagement: React.FC = () => {
       )}
 
       {/* Invitations Table */}
-      {(activeTab === 'all' || activeTab === 'invitations') && (
+      {(activeTab === "all" || activeTab === "invitations") && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-brand-text flex items-center gap-2">
@@ -480,40 +593,63 @@ const UsersManagement: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-brand-border bg-brand-surface/70 text-brand-text-muted text-xs uppercase tracking-wider font-semibold">
-                    <th className="px-6 py-4 whitespace-nowrap">Recipient Email</th>
+                    <th className="px-6 py-4 whitespace-nowrap">
+                      Recipient Email
+                    </th>
                     <th className="px-6 py-4 whitespace-nowrap">Role</th>
                     <th className="px-6 py-4 whitespace-nowrap">Status</th>
                     <th className="px-6 py-4 whitespace-nowrap">Sent Date</th>
-                    <th className="px-6 py-4 text-center whitespace-nowrap">Actions</th>
+                    <th className="px-6 py-4 text-center whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border">
                   {isFetchingInvitations ? (
                     <tr>
-                      <td colSpan={5} className="p-12 text-center text-brand-text-muted">
-                        <Loader2 className="animate-spin mx-auto mb-2 text-amber-400" size={24} />
-                        <p className="text-sm font-medium">Loading invitations...</p>
+                      <td
+                        colSpan={5}
+                        className="p-12 text-center text-brand-text-muted"
+                      >
+                        <Loader2
+                          className="animate-spin mx-auto mb-2 text-amber-400"
+                          size={24}
+                        />
+                        <p className="text-sm font-medium">
+                          Loading invitations...
+                        </p>
                       </td>
                     </tr>
                   ) : filteredInvitations.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-12 text-center text-brand-text-muted">
+                      <td
+                        colSpan={5}
+                        className="p-12 text-center text-brand-text-muted"
+                      >
                         <Mail className="mx-auto mb-3 opacity-30" size={44} />
-                        <p className="text-sm font-medium text-brand-text">No invitations found</p>
+                        <p className="text-sm font-medium text-brand-text">
+                          No invitations found
+                        </p>
                         <p className="text-xs text-brand-text-muted mt-1">
-                          {searchQuery || selectedRoleFilter !== 'ALL'
-                            ? 'No invitations match your search filter.'
-                            : 'No pending or historical invitations.'}
+                          {searchQuery || selectedRoleFilter !== "ALL"
+                            ? "No invitations match your search filter."
+                            : "No pending or historical invitations."}
                         </p>
                       </td>
                     </tr>
                   ) : (
-                    filteredInvitations.map(inv => {
-                      const isPending = inv.is_pending ?? (!inv.accepted_at && new Date(inv.expires_at) > new Date());
+                    filteredInvitations.map((inv) => {
+                      const isPending =
+                        inv.is_pending ??
+                        (!inv.accepted_at &&
+                          new Date(inv.expires_at) > new Date());
                       const isResendingThis = resendingEmail === inv.email;
 
                       return (
-                        <tr key={inv.id} className="hover:bg-brand-surface/50 transition-colors group">
+                        <tr
+                          key={inv.id}
+                          className="hover:bg-brand-surface/50 transition-colors group"
+                        >
                           {/* Recipient Email Column */}
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -561,8 +697,20 @@ const UsersManagement: React.FC = () => {
                           {/* Sent Date Column */}
                           <td className="px-6 py-4 text-brand-text-muted text-sm whitespace-nowrap">
                             <div className="flex items-center gap-1.5 whitespace-nowrap">
-                              <Clock size={14} className="opacity-60 shrink-0" />
-                              <span>{new Date(inv.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                              <Clock
+                                size={14}
+                                className="opacity-60 shrink-0"
+                              />
+                              <span>
+                                {new Date(inv.created_at).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
+                              </span>
                             </div>
                           </td>
 
@@ -571,20 +719,30 @@ const UsersManagement: React.FC = () => {
                             {isPending ? (
                               <div className="flex items-center justify-center gap-2">
                                 <button
-                                  onClick={() => handleResendInvite(inv.email, inv.role)}
+                                  onClick={() =>
+                                    handleResendInvite(inv.email, inv.role)
+                                  }
                                   disabled={isResendingThis}
                                   className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-brand-surface hover:bg-brand-border text-brand-text border border-brand-border transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                                   title="Resend invitation email"
                                 >
                                   {isResendingThis ? (
-                                    <Loader2 size={13} className="animate-spin text-brand-primary" />
+                                    <Loader2
+                                      size={13}
+                                      className="animate-spin text-brand-primary"
+                                    />
                                   ) : (
                                     <Send size={13} />
                                   )}
                                   Resend
                                 </button>
                                 <button
-                                  onClick={() => setInvitationToRevoke({ id: inv.id, email: inv.email })}
+                                  onClick={() =>
+                                    setInvitationToRevoke({
+                                      id: inv.id,
+                                      email: inv.email,
+                                    })
+                                  }
                                   className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 transition-colors cursor-pointer flex items-center gap-1.5"
                                   title="Revoke invitation link"
                                 >
@@ -592,7 +750,9 @@ const UsersManagement: React.FC = () => {
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-xs text-brand-text-muted italic">—</span>
+                              <span className="text-xs text-brand-text-muted italic">
+                                —
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -638,5 +798,3 @@ const UsersManagement: React.FC = () => {
 };
 
 export default UsersManagement;
-
-

@@ -23,6 +23,7 @@ from app.schemas.auth import (
     Enable2FARequest,
     Confirm2FARequest,
     Disable2FARequest,
+    DeleteAccountRequest,
 )
 from app.services.email_service import send_email
 from app.services.email_templates import (
@@ -543,3 +544,27 @@ async def verify_email(
         )
 
     return {"data": {"message": "Email verified successfully."}}
+
+
+@router.delete("/account", response_model=SuccessResponse)
+async def delete_account(
+    body: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Permanently hard-delete the authenticated user's account and all associated data."""
+    ua_string = request.headers.get("user-agent", "Unknown")[:255]
+    ip_address = request.client.host if request.client else "Unknown"
+
+    # This raises HTTPException on wrong password, last-admin, or not-found.
+    await auth_service.delete_account(current_user, body.password, ua_string, ip_address)
+
+    # Clear auth cookies so the client is immediately logged out
+    secure_flag = is_secure_cookie(request)
+    samesite_val = "none" if secure_flag else "lax"
+    response.delete_cookie(key="access_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/")
+    response.delete_cookie(key="refresh_token", httponly=True, secure=secure_flag, samesite=samesite_val, path="/")
+
+    return {"message": "Account permanently deleted"}

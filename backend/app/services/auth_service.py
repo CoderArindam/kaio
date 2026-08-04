@@ -629,3 +629,31 @@ class AuthService:
             events.append(event)
             
         return events
+
+    async def delete_account(self, current_user: dict, password: str, ua_string: str, ip_address: str) -> None:
+        """Hard-delete the authenticated user's account and all associated data."""
+        # 1. Verify password in Python (consistent with change_password / disable_2fa patterns)
+        user_row = await self.conn.fetchrow(
+            "SELECT id, password_hash, organization_id FROM v_users_canonical WHERE id = $1",
+            current_user["id"]
+        )
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not verify_password(password, user_row["password_hash"]):
+            raise HTTPException(status_code=401, detail="Incorrect password")
+
+        # 2. Call stored procedure — atomically handles all cascades and guard checks
+        row = await self.conn.fetchrow(
+            "SELECT success, error_code FROM fn_hard_delete_account($1)",
+            current_user["id"]
+        )
+
+        if not row or not row["success"]:
+            error_code = row["error_code"] if row else "UNKNOWN"
+            error_map = {
+                "USER_NOT_FOUND": (404, "Account not found or already deleted"),
+                "LAST_ADMIN": (403, "You are the only administrator of this organization. Transfer ownership or delete the organization before deleting your account."),
+            }
+            status_code, detail = error_map.get(error_code, (500, "Failed to delete account"))
+            raise HTTPException(status_code=status_code, detail=detail)

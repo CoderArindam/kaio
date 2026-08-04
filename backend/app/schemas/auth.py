@@ -131,3 +131,7 @@ class Confirm2FARequest(BaseModel):
 
 class Disable2FARequest(BaseModel):
     password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str

@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
-import { Palette, Monitor, Moon, Sun, CheckCircle, Check } from 'lucide-react';
-import { usePreferencesStore } from '../../store/preferencesStore';
-import type { ThemeType } from '../../services/preferencesApi';
-import toast from 'react-hot-toast';
-import { usePageTitle } from '../../hooks/usePageTitle';
+import React, { useEffect } from "react";
+import { Palette, Monitor, Moon, Sun, Check } from "lucide-react";
+import { usePreferencesStore } from "../../store/preferencesStore";
+import type { ThemeType } from "../../services/preferencesApi";
+import toast from "react-hot-toast";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 const Appearance: React.FC = () => {
-  usePageTitle('Appearance');
-  const { preferences, fetchPreferences, updatePreferences, isLoading } = usePreferencesStore();
+  usePageTitle("Appearance");
+  const { preferences, fetchPreferences, updatePreferences, isLoading } =
+    usePreferencesStore();
 
   useEffect(() => {
     if (!preferences) {
@@ -19,7 +20,7 @@ const Appearance: React.FC = () => {
     try {
       await updatePreferences({ theme });
     } catch (e) {
-      toast.error('Failed to update theme');
+      toast.error("Failed to update theme");
     }
   };
 
@@ -27,7 +28,7 @@ const Appearance: React.FC = () => {
     try {
       await updatePreferences({ accent_color });
     } catch (e) {
-      toast.error('Failed to update accent color');
+      toast.error("Failed to update accent color");
     }
   };
 
@@ -35,26 +36,26 @@ const Appearance: React.FC = () => {
     try {
       await updatePreferences({ sidebar_theme });
     } catch (e) {
-      toast.error('Failed to update sidebar appearance');
+      toast.error("Failed to update sidebar appearance");
     }
   };
 
-  const currentTheme = preferences?.theme || 'system';
-  const currentAccent = preferences?.accent_color || 'blue';
-  const currentSidebar = preferences?.sidebar_theme || 'default';
+  const currentTheme = preferences?.theme || "system";
+  const currentAccent = preferences?.accent_color || "blue";
+  const currentSidebar = preferences?.sidebar_theme || "default";
 
   const accents = [
-    { id: 'blue', color: 'bg-blue-600', name: 'Blue' },
-    { id: 'indigo', color: 'bg-indigo-600', name: 'Indigo' },
-    { id: 'emerald', color: 'bg-emerald-500', name: 'Emerald' },
-    { id: 'rose', color: 'bg-rose-500', name: 'Rose' },
-    { id: 'amber', color: 'bg-amber-500', name: 'Amber' },
+    { id: "blue", color: "bg-blue-600", name: "Blue" },
+    { id: "indigo", color: "bg-indigo-600", name: "Indigo" },
+    { id: "emerald", color: "bg-emerald-500", name: "Emerald" },
+    { id: "rose", color: "bg-rose-500", name: "Rose" },
+    { id: "amber", color: "bg-amber-500", name: "Amber" },
   ];
 
   const sidebars = [
-    { id: 'default', name: 'Default', desc: 'Standard workspace styling' },
-    { id: 'tinted', name: 'Tinted', desc: 'Subtle accent color tint' },
-    { id: 'dark', name: 'Dark', desc: 'High-contrast dark sidebar' },
+    { id: "default", name: "Default", desc: "Standard workspace styling" },
+    { id: "tinted", name: "Tinted", desc: "Subtle accent color tint" },
+    { id: "dark", name: "Dark", desc: "High-contrast dark sidebar" },
   ];
 
   return (
@@ -80,26 +81,26 @@ const Appearance: React.FC = () => {
               Select your preferred color theme for the application.
             </p>
           </div>
-          
+
           <div className="p-6">
             {isLoading && !preferences ? (
-               <div className="animate-pulse flex space-x-4">
-                 <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
-                 <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
-                 <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
-               </div>
+              <div className="animate-pulse flex space-x-4">
+                <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
+                <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
+                <div className="h-24 bg-brand-surface-high rounded-lg w-1/3"></div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Light */}
-                <div 
+                <div
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    currentTheme === 'light' 
-                      ? 'border-brand-primary bg-brand-primary/10' 
-                      : 'border-brand-border hover:border-brand-outline-variant'
+                    currentTheme === "light"
+                      ? "border-brand-primary bg-brand-primary/10"
+                      : "border-brand-border hover:border-brand-outline-variant"
                   }`}
-                  onClick={() => handleThemeChange('light')}
+                  onClick={() => handleThemeChange("light")}
                 >
-                  {currentTheme === 'light' && (
+                  {currentTheme === "light" && (
                     <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
                       <Check size={12} strokeWidth={3} />
                     </div>
@@ -109,17 +110,17 @@ const Appearance: React.FC = () => {
                   </div>
                   <span className="font-medium text-brand-text">Light</span>
                 </div>
-                
+
                 {/* Dark */}
-                <div 
+                <div
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    currentTheme === 'dark' 
-                      ? 'border-brand-primary bg-brand-primary/10' 
-                      : 'border-brand-border hover:border-brand-outline-variant'
+                    currentTheme === "dark"
+                      ? "border-brand-primary bg-brand-primary/10"
+                      : "border-brand-border hover:border-brand-outline-variant"
                   }`}
-                  onClick={() => handleThemeChange('dark')}
+                  onClick={() => handleThemeChange("dark")}
                 >
-                  {currentTheme === 'dark' && (
+                  {currentTheme === "dark" && (
                     <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
                       <Check size={12} strokeWidth={3} />
                     </div>
@@ -129,17 +130,17 @@ const Appearance: React.FC = () => {
                   </div>
                   <span className="font-medium text-brand-text">Dark</span>
                 </div>
-                
+
                 {/* System */}
-                <div 
+                <div
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    currentTheme === 'system' 
-                      ? 'border-brand-primary bg-brand-primary/10' 
-                      : 'border-brand-border hover:border-brand-outline-variant'
+                    currentTheme === "system"
+                      ? "border-brand-primary bg-brand-primary/10"
+                      : "border-brand-border hover:border-brand-outline-variant"
                   }`}
-                  onClick={() => handleThemeChange('system')}
+                  onClick={() => handleThemeChange("system")}
                 >
-                  {currentTheme === 'system' && (
+                  {currentTheme === "system" && (
                     <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
                       <Check size={12} strokeWidth={3} />
                     </div>
@@ -171,7 +172,9 @@ const Appearance: React.FC = () => {
                   key={accent.id}
                   onClick={() => handleAccentChange(accent.id)}
                   className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${accent.color} ${
-                    currentAccent === accent.id ? 'ring-4 ring-offset-2 ring-brand-primary ring-offset-brand-surface' : ''
+                    currentAccent === accent.id
+                      ? "ring-4 ring-offset-2 ring-brand-primary ring-offset-brand-surface"
+                      : ""
                   }`}
                   aria-label={`Select ${accent.name} accent`}
                 >
@@ -202,8 +205,8 @@ const Appearance: React.FC = () => {
                   onClick={() => handleSidebarChange(sidebar.id)}
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     currentSidebar === sidebar.id
-                      ? 'border-brand-primary bg-brand-primary/10'
-                      : 'border-brand-border hover:border-brand-outline-variant'
+                      ? "border-brand-primary bg-brand-primary/10"
+                      : "border-brand-border hover:border-brand-outline-variant"
                   }`}
                 >
                   {currentSidebar === sidebar.id && (
@@ -211,14 +214,17 @@ const Appearance: React.FC = () => {
                       <Check size={12} strokeWidth={3} />
                     </div>
                   )}
-                  <span className="font-medium text-brand-text mb-1">{sidebar.name}</span>
-                  <span className="text-xs text-brand-text-muted text-center">{sidebar.desc}</span>
+                  <span className="font-medium text-brand-text mb-1">
+                    {sidebar.name}
+                  </span>
+                  <span className="text-xs text-brand-text-muted text-center">
+                    {sidebar.desc}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
 CREATE TRIGGER trg_tasks_updated_at
 BEFORE UPDATE ON tasks
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -31,6 +32,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_set_project_sequence_id ON tasks;
 CREATE TRIGGER trg_set_project_sequence_id
 BEFORE INSERT ON tasks
 FOR EACH ROW EXECUTE FUNCTION set_project_sequence_id();
@@ -58,6 +60,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_tasks_completed_at ON tasks;
 CREATE TRIGGER trg_tasks_completed_at
 BEFORE INSERT OR UPDATE OF column_id ON tasks
 FOR EACH ROW EXECUTE FUNCTION sync_completed_at();
@@ -83,6 +86,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_initialize_new_board ON boards;
 CREATE TRIGGER trg_initialize_new_board
 AFTER INSERT ON boards
 FOR EACH ROW EXECUTE FUNCTION initialize_new_board();
@@ -126,6 +130,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_generate_task_activity ON tasks;
 CREATE TRIGGER trg_generate_task_activity
 AFTER INSERT OR UPDATE ON tasks
 FOR EACH ROW EXECUTE FUNCTION generate_task_activity();
@@ -152,6 +157,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_generate_notifications ON activities;
 CREATE TRIGGER trg_generate_notifications
 AFTER INSERT ON activities
 FOR EACH ROW EXECUTE FUNCTION generate_notifications();

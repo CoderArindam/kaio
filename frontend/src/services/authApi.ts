@@ -96,3 +96,8 @@ export const sendVerificationEmail = async () => {
 export const verifyEmail = async (token: string) => {
   await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
 };
+
+export const deleteAccount = async (password: string) => {
+  const response = await api.delete('/auth/account', { data: { password } });
+  return response.data;
+};
