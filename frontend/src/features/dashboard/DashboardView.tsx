@@ -271,6 +271,7 @@ export const DashboardView: React.FC = () => {
             {/* LEFT COLUMN */}
             <div className="lg:col-span-8 space-y-8">
               <StrategicProjectsWidget
+                userRole={user?.role || 'MEMBER'}
                 summaryBoards={summaryBoards}
                 activeBoardsFallback={activeBoards}
                 isFetching={isFetching || isLoadingSummary}

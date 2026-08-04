@@ -105,6 +105,11 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     e.preventDefault();
     if (!inviteEmail.trim() || isSubmitting) return;
 
+    if (inviteEmail.trim().toLowerCase() === user?.email?.toLowerCase()) {
+      setErrorMessage("You cannot invite yourself.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);

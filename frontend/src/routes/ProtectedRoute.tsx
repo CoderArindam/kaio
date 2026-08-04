@@ -1,9 +1,10 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 export const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isInitializing } = useAuthStore();
+  const { isAuthenticated, isInitializing, user } = useAuthStore();
+  const location = useLocation();
 
   if (isInitializing) {
     return (
@@ -16,6 +17,15 @@ export const ProtectedRoute: React.FC = () => {
   // If not authenticated, redirect to login page
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Enforce plan selection for new organizations
+  if (
+    user?.role === 'SUPER_ADMIN' && 
+    user.org_onboarding_completed === false &&
+    location.pathname !== '/plans'
+  ) {
+    return <Navigate to="/plans" replace />;
   }
 
   // If authenticated, render the child routes

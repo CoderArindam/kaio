@@ -87,7 +87,7 @@ export const Signup: React.FC = () => {
       });
 
       toast.success("Organization created successfully!");
-      navigate("/dashboard");
+      navigate("/plans");
     } catch (error: any) {
       const detail = error.response?.data?.detail || error.message || "Registration failed. Email might already be in use.";
       toast.error(detail);
@@ -117,7 +117,7 @@ export const Signup: React.FC = () => {
       });
 
       toast.success("Organization created and verified successfully!");
-      navigate("/dashboard");
+      navigate("/plans");
     } catch (error: any) {
       const detail = error.response?.data?.detail || error.message || "Invalid verification code";
       setOtpError(detail);
@@ -147,7 +147,7 @@ export const Signup: React.FC = () => {
       });
 
       toast.success("Account created! You can verify your email later.");
-      navigate("/dashboard");
+      navigate("/plans");
     } catch (error: any) {
       const detail = error.response?.data?.detail || error.message || "Failed to skip verification";
       toast.error(detail);

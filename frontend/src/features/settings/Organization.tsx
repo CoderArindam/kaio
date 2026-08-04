@@ -268,14 +268,25 @@ export const Organization: React.FC = () => {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-brand-text flex items-center gap-2">
-          <Building2 className="text-brand-primary" size={24} />
-          Workspace Settings
-        </h1>
-        <p className="mt-2 text-sm text-brand-text-muted">
-          Manage your workspace identity, branding, and fundamental settings.
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-text flex items-center gap-2">
+            <Building2 className="text-brand-primary" size={24} />
+            Workspace Settings
+          </h1>
+          <p className="mt-2 text-sm text-brand-text-muted">
+            Manage your workspace identity, branding, and fundamental settings.
+          </p>
+        </div>
+        
+        {profile?.subscription_plan && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-brand-surface-low border border-brand-border rounded-lg shadow-sm">
+            <span className="text-xs font-semibold text-brand-text-muted uppercase tracking-wider">Plan</span>
+            <span className="text-sm font-bold text-brand-primary">
+              {profile.subscription_plan}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">

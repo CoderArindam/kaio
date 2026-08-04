@@ -77,8 +77,13 @@ export const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({
               {user?.email}
             </p>
             {user?.role && (
-              <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20">
+              <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20 mr-2">
                 {user.role}
+              </span>
+            )}
+            {user?.org_subscription_plan && (
+              <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20">
+                {user.org_subscription_plan} PLAN
               </span>
             )}
           </div>

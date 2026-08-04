@@ -88,6 +88,12 @@ const UsersManagement: React.FC = () => {
     e.preventDefault();
     if (!newEmail) return;
     setInviteError(null);
+
+    if (newEmail.trim().toLowerCase() === currentUser?.email?.toLowerCase()) {
+      setInviteError("You cannot invite yourself.");
+      return;
+    }
+
     try {
       await inviteUser(newEmail, newRole);
       closeInviteModal();

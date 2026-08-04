@@ -33,7 +33,9 @@ class OrganizationService:
                 p_website := $4,
                 p_description := $5,
                 p_industry := $6,
-                p_company_size := $7
+                p_company_size := $7,
+                p_subscription_plan := $8,
+                p_onboarding_completed := $9
             )
             """,
             org_id,
@@ -42,7 +44,9 @@ class OrganizationService:
             update_data.get('website'),
             update_data.get('description'),
             update_data.get('industry'),
-            update_data.get('company_size')
+            update_data.get('company_size'),
+            update_data.get('subscription_plan'),
+            update_data.get('onboarding_completed')
         )
         
         if not row:

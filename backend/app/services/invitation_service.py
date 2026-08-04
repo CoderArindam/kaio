@@ -73,6 +73,13 @@ class InvitationService:
 
         email_clean = invite_in.email.strip().lower()
 
+        # Check if the user is trying to invite themselves
+        if email_clean == current_user.get("email", "").strip().lower():
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot invite yourself.",
+            )
+
         # Check if email belongs to an existing registered user
         existing_user = await self.conn.fetchrow(
             "SELECT id, organization_id FROM v_users_canonical WHERE LOWER(email) = $1", email_clean

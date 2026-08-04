@@ -136,7 +136,7 @@ class AuthService:
                 raise HTTPException(status_code=500, detail="Failed to create organization")
 
             user_row = await self.conn.fetchrow(
-                "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+                "SELECT u.id, u.email, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.email = $1",
                 payload["email"]
             )
 
@@ -159,7 +159,7 @@ class AuthService:
             user_data["is_email_verified"] = True
 
             return {
-                "organization": {"id": org_id, "name": payload["org_name"], "created_at": datetime.now(timezone.utc)},
+                "organization": {"id": org_id, "name": payload["org_name"], "created_at": datetime.now(timezone.utc), "subscription_plan": "FREE", "onboarding_completed": False},
                 "user": user_data,
                 "refresh_token": refresh_token,
                 "session_id": session_id,
@@ -202,7 +202,7 @@ class AuthService:
                 raise HTTPException(status_code=500, detail="Failed to create organization")
 
             user_row = await self.conn.fetchrow(
-                "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+                "SELECT u.id, u.email, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.email = $1",
                 payload["email"]
             )
 
@@ -218,7 +218,7 @@ class AuthService:
             user_data = dict(user_row)
 
             return {
-                "organization": {"id": org_id, "name": payload["org_name"], "created_at": datetime.now(timezone.utc)},
+                "organization": {"id": org_id, "name": payload["org_name"], "created_at": datetime.now(timezone.utc), "subscription_plan": "FREE", "onboarding_completed": False},
                 "user": user_data,
                 "refresh_token": refresh_token,
                 "session_id": session_id,
@@ -254,7 +254,7 @@ class AuthService:
                 raise HTTPException(status_code=500, detail="Failed to create organization")
 
             user_row = await self.conn.fetchrow(
-                "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+                "SELECT u.id, u.email, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.email = $1",
                 org_in.email
             )
 
@@ -270,7 +270,7 @@ class AuthService:
             user_data = dict(user_row)
 
             return {
-                "organization": {"id": org_id, "name": org_in.org_name, "created_at": datetime.now(timezone.utc)},
+                "organization": {"id": org_id, "name": org_in.org_name, "created_at": datetime.now(timezone.utc), "subscription_plan": "FREE", "onboarding_completed": False},
                 "user": user_data,
                 "refresh_token": refresh_token,
                 "session_id": session_id,
@@ -289,7 +289,7 @@ class AuthService:
 
     async def login(self, user_in: UserLogin, ua_string: str, ip_address: str) -> dict:
         user_row = await self.conn.fetchrow(
-            "SELECT id, email, first_name, password_hash, role, organization_id, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE email = $1",
+            "SELECT u.id, u.email, u.first_name, u.password_hash, u.role, u.organization_id, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.email = $1",
             user_in.email
         )
 
@@ -371,7 +371,7 @@ class AuthService:
             raise HTTPException(status_code=400, detail=error_map.get(error_code, "2FA verification failed"))
 
         user_row = await self.conn.fetchrow(
-            "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE id = $1",
+            "SELECT u.id, u.email, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.id = $1",
             row["user_id"]
         )
         if not user_row:
@@ -535,7 +535,7 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Session expired or revoked")
 
         user_row = await self.conn.fetchrow(
-            "SELECT id, email, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE id = $1",
+            "SELECT u.id, u.email, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.id = $1",
             row["user_id"]
         )
         if not user_row:
@@ -550,7 +550,7 @@ class AuthService:
 
     async def get_me(self, current_user: dict) -> dict:
         user_row = await self.conn.fetchrow(
-            "SELECT id, email, first_name, last_name, avatar_url, role, organization_id, is_email_verified, is_2fa_enabled, two_factor_type FROM v_users_canonical WHERE id = $1",
+            "SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.role, u.organization_id, u.is_email_verified, u.is_2fa_enabled, u.two_factor_type, o.subscription_plan as org_subscription_plan, o.onboarding_completed as org_onboarding_completed FROM v_users_canonical u JOIN organizations o ON u.organization_id = o.id WHERE u.id = $1",
             current_user["id"]
         )
         if not user_row:

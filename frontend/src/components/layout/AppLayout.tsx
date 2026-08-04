@@ -65,7 +65,15 @@ export const AppLayout: React.FC = () => {
       <ApplicationSidebar />
       <div className="flex-1 flex flex-col relative overflow-hidden min-w-0 md:pt-0 pt-16">
         <header className="h-14 border-b border-brand-border/70 bg-brand-surface/85 backdrop-blur-xl px-3 sm:px-4 md:px-6 flex items-center justify-between shrink-0 z-30 gap-2 sm:gap-4">
-          <div className="flex-1 items-center justify-start min-w-0 hidden sm:flex" />
+          <div className="flex-1 items-center justify-start min-w-0 hidden sm:flex">
+            {profile?.subscription_plan && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 flex-shrink-0 bg-brand-primary/10 border border-brand-primary/20 rounded-md select-none cursor-default shadow-sm transition-transform hover:scale-105">
+                <span className="text-[10px] font-bold text-brand-primary uppercase tracking-wider">
+                  {profile.subscription_plan} PLAN
+                </span>
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 flex justify-center items-center min-w-0 w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto">
             <button

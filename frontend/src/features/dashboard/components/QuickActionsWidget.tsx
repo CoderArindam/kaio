@@ -64,15 +64,17 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
         </button>
 
         {/* Action 3: Create New Project */}
-        <button
-          onClick={onOpenCreateProjectModal}
-          className="w-full py-2.5 px-3.5 text-xs font-semibold bg-brand-surface-low border border-brand-border hover:bg-brand-surface-container text-brand-text rounded-xl flex items-center justify-between transition-colors cursor-pointer"
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="w-4 h-4 text-brand-primary" /> Create New Project
-          </span>
-          <ChevronRight className="w-3.5 h-3.5 text-brand-text-muted" />
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={onOpenCreateProjectModal}
+            className="w-full py-2.5 px-3.5 text-xs font-semibold bg-brand-surface-low border border-brand-border hover:bg-brand-surface-container text-brand-text rounded-xl flex items-center justify-between transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-brand-primary" /> Create New Project
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 text-brand-text-muted" />
+          </button>
+        )}
 
         {/* Action 4: Superadmin Shortcut to User & Role Management */}
         {isSuperAdmin && (

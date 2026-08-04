@@ -15,6 +15,8 @@ class OrganizationProfileResponse(BaseModel):
     owner_email: Optional[str] = None
     members_count: int
     projects_count: int
+    subscription_plan: Optional[str] = "FREE"
+    onboarding_completed: bool = False
 
 class OrganizationProfileUpdate(BaseModel):
     name: Optional[str] = None
@@ -23,3 +25,5 @@ class OrganizationProfileUpdate(BaseModel):
     description: Optional[str] = None
     industry: Optional[str] = None
     company_size: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    onboarding_completed: Optional[bool] = None

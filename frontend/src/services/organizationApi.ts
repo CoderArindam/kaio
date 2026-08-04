@@ -13,6 +13,8 @@ export interface OrganizationProfile {
   owner_email: string | null;
   members_count: number;
   projects_count: number;
+  subscription_plan?: string;
+  onboarding_completed?: boolean;
 }
 
 export interface OrganizationProfileUpdate {
@@ -22,6 +24,8 @@ export interface OrganizationProfileUpdate {
   description?: string | null;
   industry?: string | null;
   company_size?: string | null;
+  subscription_plan?: string;
+  onboarding_completed?: boolean;
 }
 
 export const getOrganizationProfile = async (): Promise<OrganizationProfile> => {

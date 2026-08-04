@@ -18,6 +18,8 @@ class OrganizationResponse(BaseModel):
     id: int
     name: str
     created_at: datetime
+    subscription_plan: Optional[str] = "FREE"
+    onboarding_completed: bool = False
 
 
 class OrganizationRegistrationResponse(BaseModel):
@@ -71,6 +73,8 @@ class UserResponse(BaseModel):
     is_email_verified: bool = True
     is_2fa_enabled: bool = False
     two_factor_type: Optional[str] = "email"
+    org_subscription_plan: Optional[str] = None
+    org_onboarding_completed: Optional[bool] = None
 
 
 class SessionResponse(BaseModel):

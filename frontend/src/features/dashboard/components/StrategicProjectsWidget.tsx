@@ -9,6 +9,7 @@ import EmptyState from '../../../components/common/EmptyState';
 import { useAuthStore } from '../../../store/authStore';
 
 interface StrategicProjectsWidgetProps {
+  userRole?: string;
   summaryBoards: DashboardBoardSummary[];
   activeBoardsFallback: any[];
   isFetching: boolean;
@@ -41,6 +42,7 @@ const getRelativeTime = (dateStr?: string | Date, fallbackIdx: number = 0) => {
 };
 
 export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = ({
+  userRole = 'MEMBER',
   summaryBoards,
   activeBoardsFallback,
   isFetching,
@@ -48,6 +50,7 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
   onRetry,
   onOpenCreateProjectModal,
 }) => {
+  const isSuperAdmin = userRole.toUpperCase() === 'SUPER_ADMIN';
   const { user: currentUser } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 3;
@@ -178,15 +181,17 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
       ) : displayBoards.length === 0 ? (
         <EmptyState
           icon={<FolderPlus size={44} className="text-brand-primary/70" />}
-          title="No strategic projects created yet"
-          description="Get started by initializing your team's first Kanban project board."
+          title={isSuperAdmin ? "No strategic projects created yet" : "No projects assigned yet"}
+          description={isSuperAdmin ? "Get started by initializing your team's first Kanban project board." : "You currently don't have access to any projects. Contact your administrator to be assigned to a project."}
           action={
-            <button
-              onClick={onOpenCreateProjectModal}
-              className="bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Create Project
-            </button>
+            isSuperAdmin ? (
+              <button
+                onClick={onOpenCreateProjectModal}
+                className="bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Create Project
+              </button>
+            ) : undefined
           }
         />
       ) : (

@@ -10,6 +10,7 @@ import AcceptInvitation from '../features/auth/AcceptInvitation';
 import ForgotPassword from '../features/auth/ForgotPassword';
 import ResetPassword from '../features/auth/ResetPassword';
 import VerifyEmail from '../features/auth/VerifyEmail';
+import PlansPage from '../features/billing/PlansPage';
 
 import DashboardView from '../features/dashboard/DashboardView';
 import BoardPage from '../features/boards/BoardPage';
@@ -28,6 +29,7 @@ import Security from '../features/settings/Security';
 import Organization from '../features/settings/Organization';
 import Appearance from '../features/settings/Appearance';
 import NotificationSettings from '../features/settings/NotificationSettings';
+import BillingSettings from '../features/settings/BillingSettings';
 import PlaceholderSetting from '../features/settings/PlaceholderSetting';
 import TimesheetAdminPage from '../features/timesheets/admin/TimesheetAdminPage';
 
@@ -62,6 +64,9 @@ export const AppRoutes: React.FC = () => {
       <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route element={<ProtectedRoute />}>
+        {/* Full-screen protected routes (no AppLayout sidebar) */}
+        <Route path="/plans" element={<PlansPage />} />
+
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardView />} />
           <Route path="/my-work" element={<MyWorkPage />} />
@@ -182,16 +187,7 @@ export const AppRoutes: React.FC = () => {
                 />
               }
             />
-            <Route
-              path="billing"
-              element={
-                <PlaceholderSetting
-                  title="Billing"
-                  description="Manage your subscription and billing details."
-                  Icon={CreditCard}
-                />
-              }
-            />
+            <Route path="billing" element={<BillingSettings />} />
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>

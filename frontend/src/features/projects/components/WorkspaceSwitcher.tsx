@@ -34,11 +34,20 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ isCollapse
         <WorkspaceLogo name={displayName} logoUrl={profile?.logo_url} size={isCollapsed ? "sm" : "md"} variant="rounded" />
         {!isCollapsed && (
           <>
-            <div className="flex flex-col items-start hidden sm:flex">
-              <span className="text-sm font-bold leading-tight text-sidebar-text truncate max-w-[150px]">{displayName}</span>
-              <span className="text-[10px] text-sidebar-text-muted leading-tight uppercase tracking-wide">KAIO Workspace</span>
+            <div className="flex flex-col items-start hidden sm:flex min-w-0">
+              <span className="text-sm font-bold leading-tight text-sidebar-text truncate max-w-[140px]">{displayName}</span>
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0 max-w-[140px]">
+                <span className="text-[10px] text-sidebar-text-muted leading-tight uppercase tracking-wide truncate">
+                  KAIO Workspace
+                </span>
+                {profile?.subscription_plan && (
+                  <span className="text-[8px] bg-brand-primary/20 text-brand-primary font-bold px-1.5 py-[2px] rounded-sm uppercase leading-none border border-brand-primary/30 shrink-0">
+                    {profile.subscription_plan}
+                  </span>
+                )}
+              </div>
             </div>
-            <ChevronDown size={14} className="text-sidebar-text-muted ml-1" />
+            <ChevronDown size={14} className="text-sidebar-text-muted ml-1 shrink-0" />
           </>
         )}
       </button>

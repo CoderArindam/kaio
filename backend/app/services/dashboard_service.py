@@ -40,36 +40,75 @@ class DashboardService:
         try:
             org_id = current_user.get("organization_id")
             user_id = current_user.get("id")
+            role = current_user.get("role")
             if not org_id:
                 raise HTTPException(status_code=400, detail="Organization context missing")
 
             ts_org_uuid = _parse_uuid(org_id)
+            is_super_admin = (role == 'SUPER_ADMIN')
 
-            # 1. Org KPIs
-            kpi_row = await self.conn.fetchrow(
-                "SELECT * FROM v_dashboard_kpis_canonical WHERE organization_id = $1",
-                org_id
-            )
+            if is_super_admin:
+                # 1. Org KPIs
+                kpi_row = await self.conn.fetchrow(
+                    "SELECT * FROM v_dashboard_kpis_canonical WHERE organization_id = $1",
+                    org_id
+                )
 
-            # 2. Per-board summaries (now includes top_members JSON)
-            board_rows = await self.conn.fetch(
-                "SELECT * FROM v_dashboard_board_summaries_canonical WHERE organization_id = $1 ORDER BY name ASC",
-                org_id
-            )
+                # 2. Per-board summaries
+                board_rows = await self.conn.fetch(
+                    "SELECT * FROM v_dashboard_board_summaries_canonical WHERE organization_id = $1 ORDER BY name ASC",
+                    org_id
+                )
 
-            # 3. Recent activity (last 10)
-            activity_rows = await self.conn.fetch(
-                "SELECT * FROM v_activities_canonical WHERE organization_id = $1 ORDER BY created_at DESC, id DESC LIMIT 10",
-                org_id
-            )
+                # 3. Recent activity
+                activity_rows = await self.conn.fetch(
+                    "SELECT * FROM v_activities_canonical WHERE organization_id = $1 ORDER BY created_at DESC, id DESC LIMIT 10",
+                    org_id
+                )
+            else:
+                # 1. Scoped KPIs
+                kpi_row = await self.conn.fetchrow(
+                    """
+                    SELECT 
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS total_tasks,
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id JOIN board_columns c ON t.column_id = c.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND c.column_type = 'TODO' AND LOWER(c.name) NOT LIKE '%review%' AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS todo_tasks,
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id JOIN board_columns c ON t.column_id = c.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND c.column_type = 'IN_PROGRESS' AND LOWER(c.name) NOT LIKE '%review%' AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS in_progress_tasks,
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id JOIN board_columns c ON t.column_id = c.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND (LOWER(c.name) LIKE '%review%' OR c.column_type::text = 'REVIEW') AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS review_tasks,
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id JOIN board_columns c ON t.column_id = c.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND c.column_type = 'DONE' AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS done_tasks,
+                        (SELECT COUNT(t.id) FROM tasks t JOIN boards b ON t.board_id = b.id JOIN board_columns c ON t.column_id = c.id WHERE b.organization_id = $1 AND can_view_board($2, b.id) AND t.due_date < CURRENT_TIMESTAMP AND c.column_type != 'DONE' AND t.deleted_at IS NULL AND b.deleted_at IS NULL) AS overdue_tasks,
+                        (SELECT COUNT(*) FROM boards WHERE organization_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND can_view_board($2, id)) AS total_boards,
+                        (SELECT COUNT(*) FROM (SELECT DISTINCT bm.user_id FROM board_members bm JOIN boards b ON bm.board_id = b.id WHERE b.organization_id = $1 AND b.deleted_at IS NULL AND can_view_board($2, b.id)) AS scoped_users) AS total_team_members,
+                        (SELECT COUNT(*) FROM task_proposals tp JOIN boards b ON tp.board_id = b.id WHERE tp.org_id = $1 AND tp.status::text = 'pending' AND can_view_board($2, b.id)) AS pending_proposals_count,
+                        (SELECT COUNT(*) FROM meeting_sessions ms WHERE ms.org_id = $1 AND ms.initiated_by_user_id = $2 AND LOWER(ms.status) NOT IN ('completed', 'failed', 'finished', 'terminated', 'disconnected', 'meeting_ended', 'meeting_not_found', 'permission_denied', 'network_failure', 'login_required', 'unknown_error')) AS active_meetings_count
+                    """,
+                    org_id, user_id
+                )
 
-            # 4. Recent meetings (last 5) — replaces separate /meeting/sessions frontend call
-            meeting_rows = await self.conn.fetch(
-                "SELECT * FROM v_dashboard_recent_meetings_canonical WHERE org_id = $1 ORDER BY created_at DESC LIMIT 5",
-                org_id
-            )
+                # 2. Scoped Per-board summaries
+                board_rows = await self.conn.fetch(
+                    "SELECT * FROM v_dashboard_board_summaries_canonical WHERE organization_id = $1 AND can_view_board($2, board_id) ORDER BY name ASC",
+                    org_id, user_id
+                )
 
-            # 5. Focus tasks for current user — replaces /my-work/tasks frontend call
+                # 3. Scoped Recent activity
+                activity_rows = await self.conn.fetch(
+                    "SELECT * FROM v_activities_canonical WHERE organization_id = $1 AND target_board_id IS NOT NULL AND can_view_board($2, target_board_id) ORDER BY created_at DESC, id DESC LIMIT 10",
+                    org_id, user_id
+                )
+
+            # 4. Recent meetings (last 5)
+            if is_super_admin:
+                meeting_rows = await self.conn.fetch(
+                    "SELECT * FROM v_dashboard_recent_meetings_canonical WHERE org_id = $1 ORDER BY created_at DESC LIMIT 5",
+                    org_id
+                )
+            else:
+                meeting_rows = await self.conn.fetch(
+                    "SELECT * FROM v_dashboard_recent_meetings_canonical WHERE org_id = $1 AND initiated_by_user_id = $2 ORDER BY created_at DESC LIMIT 5",
+                    org_id, user_id
+                )
+
+            # 5. Focus tasks for current user
             focus_task_rows = await self.conn.fetch(
                 """
                 SELECT t.id, t.title, t.priority, t.due_date, t.board_id, t.column_id,
@@ -90,33 +129,47 @@ class DashboardService:
                 user_id
             )
 
-            # 6. Pending approvals count — replaces /timesheets/approvals/queue/summary frontend call
-            approval_row = await self.conn.fetchrow(
-                "SELECT COUNT(*) AS pending_count FROM v_timesheets_canonical WHERE org_id = $1 AND status = 'submitted'",
-                ts_org_uuid
-            )
+            # 6. Pending approvals count
+            if is_super_admin:
+                approval_row = await self.conn.fetchrow(
+                    "SELECT COUNT(*) AS pending_count FROM v_timesheets_canonical WHERE org_id = $1 AND status = 'submitted'",
+                    ts_org_uuid
+                )
+            else:
+                approval_row = await self.conn.fetchrow(
+                    """
+                    SELECT COUNT(*) AS pending_count FROM v_timesheets_canonical 
+                    WHERE org_id = $1 AND status = 'submitted' 
+                    AND (approver_id::text = $2::text OR LTRIM(RIGHT(approver_id::text, 12), '0') = LTRIM(RIGHT($2::text, 12), '0'))
+                    """,
+                    ts_org_uuid, str(user_id)
+                )
 
-            # 7. Latest timesheet compliance — replaces /timesheets/reports/org-summary frontend call
-            compliance_row = await self.conn.fetchrow(
-                "SELECT compliance_rate, total_hours_logged FROM v_timesheet_org_summary_canonical WHERE org_id = $1 ORDER BY week_start_date DESC LIMIT 1",
-                ts_org_uuid
-            )
+            # 7. Latest timesheet compliance
+            if is_super_admin:
+                compliance_row = await self.conn.fetchrow(
+                    "SELECT compliance_rate, total_hours_logged FROM v_timesheet_org_summary_canonical WHERE org_id = $1 ORDER BY week_start_date DESC LIMIT 1",
+                    ts_org_uuid
+                )
+            else:
+                # Scoped compliance metrics can be complex; we can just set to 0 for managers for now
+                compliance_row = None
 
             # --- Build KPIs ---
             if kpi_row:
                 kpis = DashboardKPIs(
-                    total_tasks=kpi_row["total_tasks"],
+                    total_tasks=kpi_row["total_tasks"] or 0,
                     tasks_by_status=DashboardTasksByStatus(
-                        todo=kpi_row["todo_tasks"],
-                        in_progress=kpi_row["in_progress_tasks"],
-                        review=kpi_row["review_tasks"],
-                        done=kpi_row["done_tasks"]
+                        todo=kpi_row["todo_tasks"] or 0,
+                        in_progress=kpi_row["in_progress_tasks"] or 0,
+                        review=kpi_row["review_tasks"] or 0,
+                        done=kpi_row["done_tasks"] or 0
                     ),
-                    overdue_tasks=kpi_row["overdue_tasks"],
-                    total_boards=kpi_row["total_boards"],
-                    team_size=kpi_row["total_team_members"],
-                    pending_proposals_count=kpi_row["pending_proposals_count"],
-                    active_meetings_count=kpi_row["active_meetings_count"]
+                    overdue_tasks=kpi_row["overdue_tasks"] or 0,
+                    total_boards=kpi_row["total_boards"] or 0,
+                    team_size=kpi_row["total_team_members"] or 0,
+                    pending_proposals_count=kpi_row["pending_proposals_count"] or 0,
+                    active_meetings_count=kpi_row["active_meetings_count"] or 0
                 )
             else:
                 kpis = DashboardKPIs(
@@ -131,7 +184,6 @@ class DashboardService:
             for r in board_rows:
                 raw = dict(r)
                 raw_members = raw.pop("top_members", None) or []
-                # asyncpg with json codec returns list directly; fallback for string
                 if isinstance(raw_members, str):
                     raw_members = json.loads(raw_members)
                 top_members = [DashboardTopMember(**m) for m in (raw_members or [])]

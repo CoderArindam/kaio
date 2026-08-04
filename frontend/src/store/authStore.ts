@@ -13,6 +13,8 @@ export interface User {
   is_email_verified: boolean;
   is_2fa_enabled?: boolean;
   two_factor_type?: string;
+  org_subscription_plan?: string;
+  org_onboarding_completed?: boolean;
 }
 
 interface AuthState {
@@ -50,7 +52,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           organization_id: userData.organization_id,
           is_email_verified: userData.is_email_verified ?? true,
           is_2fa_enabled: userData.is_2fa_enabled ?? false,
-          two_factor_type: userData.two_factor_type || 'email'
+          two_factor_type: userData.two_factor_type || 'email',
+          org_subscription_plan: userData.org_subscription_plan,
+          org_onboarding_completed: userData.org_onboarding_completed
         },
         isInitializing: false 
       });
@@ -84,7 +88,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           organization_id: userData.organization_id,
           is_email_verified: userData.is_email_verified ?? true,
           is_2fa_enabled: userData.is_2fa_enabled ?? false,
-          two_factor_type: userData.two_factor_type || 'email'
+          two_factor_type: userData.two_factor_type || 'email',
+          org_subscription_plan: userData.org_subscription_plan,
+          org_onboarding_completed: userData.org_onboarding_completed
         }
       });
       return { otp_required: false };
@@ -110,7 +116,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           organization_id: userData.organization_id,
           is_email_verified: userData.is_email_verified ?? true,
           is_2fa_enabled: userData.is_2fa_enabled ?? false,
-          two_factor_type: userData.two_factor_type || 'email'
+          two_factor_type: userData.two_factor_type || 'email',
+          org_subscription_plan: userData.org_subscription_plan,
+          org_onboarding_completed: userData.org_onboarding_completed
         }
       });
     } catch (error) {
