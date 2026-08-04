@@ -151,6 +151,7 @@ export const DashboardView: React.FC = () => {
   );
 
   return (
+    <div className="flex-1 overflow-y-auto min-h-0">
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       {/* Header Greeting & Quick Actions — role-aware */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -371,6 +372,7 @@ export const DashboardView: React.FC = () => {
           />
         )}
       </Modal>
+    </div>
     </div>
   );
 };

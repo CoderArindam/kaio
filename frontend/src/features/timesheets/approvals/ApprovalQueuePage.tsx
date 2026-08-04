@@ -154,7 +154,7 @@ export const ApprovalQueuePage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto min-h-0 p-6 max-w-7xl mx-auto w-full min-w-0 space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -191,7 +191,7 @@ export const ApprovalQueuePage: React.FC = () => {
       />
 
       {/* Filter Bar & Content */}
-      <div className="bg-brand-surface border border-brand-border rounded-2xl shadow-lg p-5 space-y-4">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl shadow-lg p-5 space-y-4 w-full overflow-hidden">
         {/* Filter Controls Row */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-brand-border pb-4">
           {/* Status Tabs */}
@@ -270,17 +270,17 @@ export const ApprovalQueuePage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-brand-border text-xs font-semibold text-brand-text-muted uppercase tracking-wider">
-                  <th className="py-3 px-4">Member</th>
-                  <th className="py-3 px-4">Week</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Total Hours</th>
-                  <th className="py-3 px-4">Submitted</th>
-                  <th className="py-3 px-4">Boards Involved</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 min-w-[180px]">Member</th>
+                  <th className="py-3 px-4 min-w-[120px]">Week</th>
+                  <th className="py-3 px-4 min-w-[130px]">Status</th>
+                  <th className="py-3 px-4 min-w-[100px]">Total Hours</th>
+                  <th className="py-3 px-4 min-w-[120px]">Submitted</th>
+                  <th className="py-3 px-4 min-w-[200px] max-w-xs">Boards Involved</th>
+                  <th className="py-3 px-4 text-right min-w-[90px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-border/40 text-xs">
@@ -295,8 +295,8 @@ export const ApprovalQueuePage: React.FC = () => {
                     <tr
                       key={item.id}
                       onClick={() => setSelectedTimesheetId(item.id)}
-                      className={`hover:bg-brand-surface-low/60 transition-colors cursor-pointer group ${
-                        isOverdue ? 'border-l-4 border-l-amber-500 bg-amber-500/5' : ''
+                      className={`hover:bg-brand-surface-low/70 transition-colors cursor-pointer group ${
+                        isOverdue ? 'border-l-4 border-l-amber-500' : ''
                       }`}
                     >
                       {/* Member */}
@@ -341,21 +341,21 @@ export const ApprovalQueuePage: React.FC = () => {
                           ? '1 day ago'
                           : `${item.days_since_submitted} days ago`}
                         {isOverdue && item.status === 'submitted' && (
-                          <span className="ml-2 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          <span className="ml-2 text-[10px] font-bold bg-[#fee2e2] text-[#7f1d1d] border border-[#fca5a5] dark:bg-red-950/50 dark:text-[#fca5a5] dark:border-red-700/40 px-1.5 py-0.5 rounded">
                             OVERDUE
                           </span>
                         )}
                       </td>
 
                       {/* Boards Involved */}
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
+                      <td className="py-3 px-4 max-w-xs">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
                           {item.boards_involved.length === 0 ? (
                             <span className="text-brand-text-muted italic">General / None</span>
                           ) : (
                             item.boards_involved.map((bName, bIdx) => (
-                              <Badge key={bIdx} variant="outline" size="sm" className="gap-1 text-[10px]">
-                                <Building size={10} /> {bName}
+                              <Badge key={bIdx} variant="outline" size="sm" className="gap-1 text-[10px] max-w-[200px] truncate">
+                                <Building size={10} className="shrink-0" /> <span className="truncate">{bName}</span>
                               </Badge>
                             ))
                           )}

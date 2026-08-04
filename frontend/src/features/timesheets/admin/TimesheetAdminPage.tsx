@@ -87,7 +87,7 @@ export const TimesheetAdminPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+    <div className="flex-1 overflow-y-auto min-h-0 space-y-8 max-w-7xl mx-auto pb-16 px-6 pt-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border/60 pb-6">
         <div>

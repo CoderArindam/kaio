@@ -431,3 +431,80 @@ input:disabled {
   --sidebar-text: #f9fafb;
   --sidebar-text-muted: #9ca3af;
 }
+
+/* =============================================
+   Accent Color Customizations
+   ============================================= */
+html[data-accent="blue"] {
+  --primary: #0052cc;
+  --primary-hover: #0747a6;
+}
+
+html[data-accent="indigo"] {
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+}
+
+html[data-accent="emerald"] {
+  --primary: #10b981;
+  --primary-hover: #059669;
+}
+
+html[data-accent="rose"] {
+  --primary: #f43f5e;
+  --primary-hover: #e11d48;
+}
+
+html[data-accent="amber"] {
+  --primary: #f59e0b;
+  --primary-hover: #d97706;
+}
+
+/* =============================================
+   Sidebar Appearance Customizations
+   ============================================= */
+/* Default Sidebar Theme (Light Mode Baseline) */
+html[data-sidebar="default"] {
+  --sidebar-bg: #f4f5f7;
+  --sidebar-border: #dfe1e6;
+  --sidebar-active: #ebecf0;
+  --sidebar-text: #172b4d;
+  --sidebar-text-muted: #5e6c84;
+}
+
+/* Default Sidebar Theme (Dark Mode Baseline) */
+html.dark[data-sidebar="default"] {
+  --sidebar-bg: #1f2937;
+  --sidebar-border: #374151;
+  --sidebar-active: #374151;
+  --sidebar-text: #f9fafb;
+  --sidebar-text-muted: #9ca3af;
+}
+
+/* Tinted Sidebar Theme (Light Mode) */
+html[data-sidebar="tinted"] {
+  --sidebar-bg: color-mix(in srgb, var(--primary) 8%, #f8fafc);
+  --sidebar-border: color-mix(in srgb, var(--primary) 20%, #e2e8f0);
+  --sidebar-active: color-mix(in srgb, var(--primary) 18%, #f8fafc);
+  --sidebar-text: #191c1e;
+  --sidebar-text-muted: #434655;
+}
+
+/* Tinted Sidebar Theme (Dark Mode) */
+html.dark[data-sidebar="tinted"] {
+  --sidebar-bg: color-mix(in srgb, var(--primary) 14%, #111827);
+  --sidebar-border: color-mix(in srgb, var(--primary) 25%, #1f2937);
+  --sidebar-active: color-mix(in srgb, var(--primary) 28%, #111827);
+  --sidebar-text: #f9fafb;
+  --sidebar-text-muted: #9ca3af;
+}
+
+/* Dark Sidebar Theme (Always Dark in both Light & Dark modes) */
+html[data-sidebar="dark"] {
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-active: #1e293b;
+  --sidebar-text: #f8fafc;
+  --sidebar-text-muted: #94a3b8;
+}
+

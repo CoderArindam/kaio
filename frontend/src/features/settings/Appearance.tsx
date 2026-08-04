@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Palette, Monitor, Moon, Sun, CheckCircle } from 'lucide-react';
+import { Palette, Monitor, Moon, Sun, CheckCircle, Check } from 'lucide-react';
 import { usePreferencesStore } from '../../store/preferencesStore';
 import type { ThemeType } from '../../services/preferencesApi';
 import toast from 'react-hot-toast';
@@ -52,9 +52,9 @@ const Appearance: React.FC = () => {
   ];
 
   const sidebars = [
-    { id: 'default', name: 'Default' },
-    { id: 'tinted', name: 'Tinted' },
-    { id: 'dark', name: 'Dark' },
+    { id: 'default', name: 'Default', desc: 'Standard workspace styling' },
+    { id: 'tinted', name: 'Tinted', desc: 'Subtle accent color tint' },
+    { id: 'dark', name: 'Dark', desc: 'High-contrast dark sidebar' },
   ];
 
   return (
@@ -94,14 +94,14 @@ const Appearance: React.FC = () => {
                 <div 
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     currentTheme === 'light' 
-                      ? 'border-brand-primary bg-[var(--primary)]/10' 
+                      ? 'border-brand-primary bg-brand-primary/10' 
                       : 'border-brand-border hover:border-brand-outline-variant'
                   }`}
                   onClick={() => handleThemeChange('light')}
                 >
                   {currentTheme === 'light' && (
-                    <div className="absolute top-3 right-3 text-brand-primary">
-                      <CheckCircle className="w-5 h-5 fill-current" />
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
                   <div className="p-3 bg-brand-surface-high rounded-full mb-3 text-brand-text">
@@ -114,14 +114,14 @@ const Appearance: React.FC = () => {
                 <div 
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     currentTheme === 'dark' 
-                      ? 'border-brand-primary bg-[var(--primary)]/10' 
+                      ? 'border-brand-primary bg-brand-primary/10' 
                       : 'border-brand-border hover:border-brand-outline-variant'
                   }`}
                   onClick={() => handleThemeChange('dark')}
                 >
                   {currentTheme === 'dark' && (
-                    <div className="absolute top-3 right-3 text-brand-primary">
-                      <CheckCircle className="w-5 h-5 fill-current" />
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
                   <div className="p-3 bg-gray-800 rounded-full mb-3 text-gray-300">
@@ -134,14 +134,14 @@ const Appearance: React.FC = () => {
                 <div 
                   className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     currentTheme === 'system' 
-                      ? 'border-brand-primary bg-[var(--primary)]/10' 
+                      ? 'border-brand-primary bg-brand-primary/10' 
                       : 'border-brand-border hover:border-brand-outline-variant'
                   }`}
                   onClick={() => handleThemeChange('system')}
                 >
                   {currentTheme === 'system' && (
-                    <div className="absolute top-3 right-3 text-brand-primary">
-                      <CheckCircle className="w-5 h-5 fill-current" />
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
                   <div className="p-3 bg-gradient-to-r from-gray-200 to-gray-800 dark:from-gray-600 dark:to-gray-800 rounded-full mb-3 text-white">
@@ -176,7 +176,7 @@ const Appearance: React.FC = () => {
                   aria-label={`Select ${accent.name} accent`}
                 >
                   {currentAccent === accent.id && (
-                    <CheckCircle className="w-6 h-6 text-white" />
+                    <Check className="w-6 h-6 text-white" strokeWidth={3} />
                   )}
                 </button>
               ))}
@@ -200,18 +200,19 @@ const Appearance: React.FC = () => {
                 <div
                   key={sidebar.id}
                   onClick={() => handleSidebarChange(sidebar.id)}
-                  className={`relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`relative flex flex-col items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     currentSidebar === sidebar.id
-                      ? 'border-brand-primary bg-[var(--primary)]/10'
+                      ? 'border-brand-primary bg-brand-primary/10'
                       : 'border-brand-border hover:border-brand-outline-variant'
                   }`}
                 >
                   {currentSidebar === sidebar.id && (
-                    <div className="absolute top-3 right-3 text-brand-primary">
-                      <CheckCircle className="w-5 h-5 fill-current" />
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
-                  <span className="font-medium text-brand-text">{sidebar.name}</span>
+                  <span className="font-medium text-brand-text mb-1">{sidebar.name}</span>
+                  <span className="text-xs text-brand-text-muted text-center">{sidebar.desc}</span>
                 </div>
               ))}
             </div>

@@ -96,7 +96,7 @@ export const MyTimesheetsPage: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-brand-surface-low/30 text-brand-text p-4 md:p-8 max-w-7xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto min-h-0 bg-brand-surface-low/30 text-brand-text p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
       {/* Global Rejected Banner */}
       {rejectedTimesheet && (
         <div className="mb-6 p-4 bg-red-500/15 border border-red-500/30 rounded-xl flex flex-wrap items-center justify-between gap-4 animate-in fade-in">

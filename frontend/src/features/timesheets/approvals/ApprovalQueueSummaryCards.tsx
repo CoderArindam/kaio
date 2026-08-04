@@ -51,28 +51,28 @@ export const ApprovalQueueSummaryCards: React.FC<ApprovalQueueSummaryCardsProps>
       title: 'Pending Review',
       value: summary?.pending_count ?? 0,
       icon: Clock,
-      iconColor: 'text-amber-400 bg-amber-500/15',
-      warning: isOldestWarning ? `⚠ Oldest pending: ${oldestPendingDays} days` : null,
+      iconColor: 'bg-[#fef3c7] text-[#78350f] border border-[#fcd34d]/60 dark:bg-amber-950/50 dark:text-[#fde68a] dark:border-amber-700/40',
+      warning: isOldestWarning ? `Oldest pending: ${oldestPendingDays} days` : null,
     },
     {
       title: 'Approved This Week',
       value: summary?.approved_this_week ?? 0,
       icon: CheckCircle2,
-      iconColor: 'text-emerald-400 bg-emerald-500/15',
+      iconColor: 'bg-[#dcfce7] text-[#14532d] border border-[#86efac]/60 dark:bg-emerald-950/50 dark:text-[#6ee7b7] dark:border-emerald-700/40',
       warning: null,
     },
     {
       title: 'Rejected This Week',
       value: summary?.rejected_this_week ?? 0,
       icon: XCircle,
-      iconColor: 'text-red-400 bg-red-500/15',
+      iconColor: 'bg-[#fee2e2] text-[#7f1d1d] border border-[#fca5a5]/60 dark:bg-red-950/50 dark:text-[#fca5a5] dark:border-red-700/40',
       warning: null,
     },
     {
       title: 'Avg Hours Approved',
       value: (summary?.avg_hours_approved ?? 0).toFixed(1),
       icon: BarChart3,
-      iconColor: 'text-sky-400 bg-sky-500/15',
+      iconColor: 'bg-[#e0f2fe] text-[#0c4a6e] border border-[#7dd3fc]/60 dark:bg-sky-950/50 dark:text-[#7dd3fc] dark:border-sky-700/40',
       warning: null,
     },
   ];
@@ -102,8 +102,8 @@ export const ApprovalQueueSummaryCards: React.FC<ApprovalQueueSummaryCardsProps>
             </div>
 
             {card.warning && (
-              <div className="mt-2 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md flex items-center gap-1.5 animate-pulse">
-                <AlertTriangle size={12} className="shrink-0" />
+              <div className="mt-2 text-xs font-semibold bg-[#fef3c7] text-[#78350f] border border-[#fcd34d] dark:bg-amber-950/50 dark:text-[#fde68a] dark:border-amber-700/40 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                <AlertTriangle size={13} className="shrink-0 text-[#92400e] dark:text-[#fde68a]" />
                 <span>{card.warning}</span>
               </div>
             )}

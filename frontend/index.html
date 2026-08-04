@@ -13,6 +13,14 @@
           if (isDark) {
             document.documentElement.classList.add('dark');
           }
+          var accent = localStorage.getItem('kanban-accent-cache');
+          if (accent) {
+            document.documentElement.setAttribute('data-accent', accent);
+          }
+          var sidebar = localStorage.getItem('kanban-sidebar-cache');
+          if (sidebar) {
+            document.documentElement.setAttribute('data-sidebar', sidebar);
+          }
         } catch (e) {}
       })();
     </script>

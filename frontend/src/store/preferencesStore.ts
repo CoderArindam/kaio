@@ -29,10 +29,12 @@ export const applyThemeToDocument = (theme: ThemeType) => {
 
 export const applyAccentColorToDocument = (color: string) => {
   document.documentElement.setAttribute('data-accent', color);
+  localStorage.setItem('kanban-accent-cache', color);
 };
 
 export const applySidebarThemeToDocument = (theme: string) => {
   document.documentElement.setAttribute('data-sidebar', theme);
+  localStorage.setItem('kanban-sidebar-cache', theme);
 };
 
 export const applyAllPreferences = (prefs: UserPreferences) => {
@@ -43,6 +45,19 @@ export const applyAllPreferences = (prefs: UserPreferences) => {
     useUiStore.getState().setSidebarCollapsed(prefs.sidebar_collapsed);
   }
 };
+
+// Hydrate cached preferences on store import
+if (typeof window !== 'undefined') {
+  const cachedTheme = localStorage.getItem('kanban-theme-cache');
+  if (cachedTheme) applyThemeToDocument(cachedTheme as ThemeType);
+
+  const cachedAccent = localStorage.getItem('kanban-accent-cache');
+  if (cachedAccent) applyAccentColorToDocument(cachedAccent);
+
+  const cachedSidebar = localStorage.getItem('kanban-sidebar-cache');
+  if (cachedSidebar) applySidebarThemeToDocument(cachedSidebar);
+}
+
 
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   preferences: null,

@@ -20,7 +20,7 @@ const AdminLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col">
+    <div className="flex-1 overflow-y-auto min-h-0 bg-brand-bg text-brand-text flex flex-col">
       {/* Admin Top Header */}
       <header className="h-16 bg-brand-surface border-b border-brand-border flex items-center justify-between px-8 sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-6">

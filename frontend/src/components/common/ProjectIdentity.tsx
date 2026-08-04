@@ -24,7 +24,7 @@ export const ProjectIdentity: React.FC<ProjectIdentityProps> = ({ board, showKey
           className={`rounded flex-shrink-0 ${colorClass} ${size === 'sm' ? 'w-3 h-3' : size === 'lg' ? 'w-6 h-6' : 'w-4 h-4'}`} 
         />
       )}
-      <span className={`text-brand-text ${nameSize} truncate`}>
+      <span className={`text-current ${nameSize} truncate`}>
         {board.name || 'Unnamed Project'}
       </span>
       {showKey && board.project_key && (

@@ -27,6 +27,11 @@ def dispatch_task_email(
     Dispatches appropriate emails based on the activity.
     Should be called via FastAPI BackgroundTasks so it doesn't block the API.
     """
+    # TEMPORARILY DISABLED: Task emails (creation, assignee updates, status changes, comments) are bypassed
+    # to avoid hitting email provider rate limits during testing. Account emails (signup, 2FA, password reset, invitations) remain active.
+    logger.info(f"[TEMPORARILY DISABLED] Task email dispatch skipped for activity_type='{activity_type}', task='{task_title}'")
+    return
+
     try:
         if activity_type == "ASSIGNEE_CHANGED":
             if assignee_email:

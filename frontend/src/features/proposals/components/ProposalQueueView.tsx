@@ -52,7 +52,7 @@ export const ProposalQueueView: React.FC = () => {
   const reviewedProposals = proposals.filter((p) => p.status !== 'pending');
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text p-6 max-w-6xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto min-h-0 bg-brand-bg text-brand-text p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-brand-border">
         <div className="flex items-center gap-3">

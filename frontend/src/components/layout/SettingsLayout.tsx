@@ -28,9 +28,9 @@ export const SettingsLayout: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-brand-bg text-brand-text">
+    <div className="flex-1 flex overflow-hidden bg-brand-bg text-brand-text h-full">
       {/* Sidebar Navigation */}
-      <div className="w-64 border-r overflow-y-auto" style={{ backgroundColor: 'var(--color-sidebar-bg)', borderColor: 'var(--color-sidebar-border)' }}>
+      <div className="w-64 border-r shrink-0 overflow-y-auto" style={{ backgroundColor: 'var(--color-sidebar-bg)', borderColor: 'var(--color-sidebar-border)' }}>
         <div className="p-6">
           <h2 className="text-xl font-bold tracking-tight mb-6" style={{ color: 'var(--color-sidebar-text)' }}>Settings</h2>
           

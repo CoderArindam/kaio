@@ -145,7 +145,7 @@ export const ApplicationSidebar: React.FC = () => {
                   value={projectSearch}
                   onChange={(e) => setProjectSearch(e.target.value)}
                   placeholder="Filter projects..."
-                  className="w-full bg-sidebar-bg border border-sidebar-border rounded-md pl-8 pr-3 py-1.5 text-xs text-sidebar-text outline-none focus:border-sidebar-text transition-colors"
+                  className="w-full bg-sidebar-bg border border-sidebar-border rounded-md pl-8 pr-3 py-1.5 text-xs text-sidebar-text placeholder:text-sidebar-text-muted outline-none focus:border-sidebar-text transition-colors"
                 />
               </div>
             </div>

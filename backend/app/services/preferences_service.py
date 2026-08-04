@@ -12,6 +12,11 @@ class PreferencesService:
             user_id
         )
         if not row:
+            row = await self.conn.fetchrow(
+                "SELECT * FROM fn_update_user_preferences(p_user_id := $1)",
+                user_id
+            )
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User preferences not found"
@@ -26,7 +31,7 @@ class PreferencesService:
         row = await self.conn.fetchrow(
             """
             SELECT * FROM fn_update_user_preferences(
-                $1,
+                p_user_id := $1,
                 p_theme := $2::theme_enum,
                 p_accent_color := $3,
                 p_sidebar_theme := $4,
