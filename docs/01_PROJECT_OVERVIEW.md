@@ -29,8 +29,11 @@ Unlike traditional meeting recording tools that generate static videos or raw tr
 10. **Global Search, Bulk Operations & Transcript Intelligence**: Cmd+K workspace-wide search across tasks, boards, and meetings, multi-select task card bulk operations, and post-meeting interactive transcript editing.
 11. **Real-Time WebSocket Updates & Task Deep Linking**: Low-latency WebSocket event channel broadcasting live task movements and unread notification alerts with sidebar status monitoring, combined with bidirectional task modal URL deep linking.
 12. **Board & Task Labels / Color-Coded Tagging System**: Board-scoped customizable label taxonomy (`057`-`059`), multi-label task tagging, real-time label event broadcasting, and instant board filter pills.
-13. **Account Security, Password Reset & Email Verification**: Secure password reset flow via cryptographic single-use tokens, email verification workflow (`055`), background email task sender, and security audit log integration.
+13. **Account Security, Password Reset & Email Verification**: Secure password reset flow via cryptographic single-use tokens, email verification workflow (`055`), background email task sender (Brevo / SMTP), and security audit log integration. Including a secure **Danger Zone** for account hard deletion.
 14. **Public Marketing Landing Page**: Bespoke React 19 + Tailwind v4 marketing landing page showcasing live transcript-to-task pipeline visuals and interactive platform highlights.
+15. **Rich Text & Multi-View Boards**: TipTap Markdown editor integration for rich text descriptions and comments. Dynamic visualization via Kanban, List, and Calendar view modes.
+16. **Cloudinary Asset Management**: Native Cloudinary integration for scalable task attachment storage with metadata tracking.
+17. **Project & Workflow Settings**: Dedicated administrative layouts for precise board label, member, and workflow lifecycle management.
 
 ---
 
@@ -133,6 +136,8 @@ graph TD
 - Drag-and-drop powered by **@dnd-kit** (core + sortable) with optimistic rollbacks.
 - Route guards: `ProtectedRoute` (auth check) and `RequireRole` (RBAC role check).
 - Interactive notifications with destination deep-linking, bidirectional task modal URL state sync (`?taskId=...`), color-coded task label picker & filter pills, multi-device session management UI, task proposal review queues, weekly timesheet effort logging grid with row locking controls, global search Cmd+K modal dialog, multi-select task move toolbar, transcript manual editor, public landing page, and admin system status/audit export tools.
+- **TipTap Markdown Editor & Multi-Views**: Rich text support via TipTap, providing seamless markdown editing. Task boards support seamless switching between Kanban, List, and Calendar views.
+- **Comprehensive Settings Architecture**: Split settings layout for Account Profile (including Danger Zone) and Project Settings (Labels, Members, and Workflow).
 
 ### 4.5 Chrome Extension (`extension/`)
 - Manifest V3 extension monitoring Google Meet DOM changes.
@@ -160,6 +165,7 @@ gantt
     Phase 4.95 (Real-Time WebSockets & Task Sync):done, p895, 2026-07-30, 2026-07-30
     Phase 4.96 (Task Labels, Password Reset & Landing Page):done, p896, 2026-08-01, 2026-08-01
     Phase 4.97 (Subtasks, Column Mgmt, Comment Editing & @Mentions):done, p897, 2026-08-02, 2026-08-03
+    Phase 4.98 (Project Settings, Multi-View, Cloudinary, Account Deletion):done, p898, 2026-08-03, 2026-08-04
     section Upcoming
     Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-08-04, 2026-11-01
 ```
@@ -179,4 +185,5 @@ gantt
 | **4.95** | Real-Time WebSockets & Task Sync | WebSockets live event stream, sidebar connection status indicator, and task modal URL deep linking | **Completed** |
 | **4.96** | Task Labels, Security & Landing Page | Board-scoped customizable task labels/tags, password reset & email verification, and landing page redesign | **Completed** |
 | **4.97** | Subtasks, Column Mgmt & Comment Features | Task subtask checklists (drag-to-reorder, progress bar), dynamic Kanban column management (add/rename/delete/reorder), inline comment editing with `(edited)` label, and @mention autocomplete with `MENTIONED_IN_COMMENT` notifications | **Completed** |
+| **4.98** | Project Settings & Core Enhancements | TipTap markdown editor, Cloudinary file attachments, Board Multi-views (Calendar & List), Account Hard Deletion (Danger Zone), Project Settings modules, and Brevo email integration. | **Completed** |
 | **5.0** | Knowledge Graph & Insights | Cross-board relationships, smart meeting analytics & insights | **In Progress** |

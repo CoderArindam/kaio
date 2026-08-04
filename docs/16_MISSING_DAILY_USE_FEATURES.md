@@ -15,14 +15,14 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 | **Task Duplication** | Not implemented | One-click "Duplicate Task" action | **High** |
 | **Comment Editing** | **IMPLEMENTED (Migration 064)** | Inline comment editing (`064`), owner-only check, `PATCH /tasks/{id}/comments/{id}`, auto-focus textarea, `(edited)` timestamp | **Resolved (Completed)** |
 | **@Mentions in Comments** | **IMPLEMENTED (Migration 065)** | `@user` autocomplete dropdown (`065`), `comment_mentions` junction table, styled chips, real-time WS & in-app notification dispatch | **Resolved (Completed)** |
-| **Rich Text Descriptions** | Plain `<textarea>` | Markdown or WYSIWYG editor for task descriptions | **High** |
+| **Rich Text Descriptions** | **IMPLEMENTED** | Markdown/WYSIWYG editor for task descriptions (TipTap / React-Markdown) | **Resolved (Completed)** |
 | **Board Views (List/Calendar)** | Kanban board only | List view, calendar view, table view toggle | **High** |
 | **Column Management** | **IMPLEMENTED (Migration 063)** | Dynamic column CRUD (`063`), inline rename, column type selector, reordering handles, ghost card "+ Add Column", atomic card migration on delete | **Resolved (Completed)** |
 | **Board Favorites / Pinning** | Not implemented | Star/pin boards to sidebar top | **Medium** |
 | **Task Sorting** | No sort controls | Sort by priority, due date, created date, assignee | **High** |
 | **Password Reset / Forgot** | **IMPLEMENTED (Migration 055)** | Single-use cryptographic reset tokens via async SMTP email (`/auth/forgot-password`, `/auth/reset-password`) | **Resolved (Completed)** |
 | **Email Verification** | **IMPLEMENTED (Migration 055)** | Email verification tokens and async email link dispatch (`/auth/send-verification-email`, `/auth/verify-email`) | **Resolved (Completed)** |
-| **File Upload for Attachments** | URL-based `AttachmentCreate` only | Drag-and-drop file upload to task | **High** |
+| **File Upload for Attachments** | **IMPLEMENTED (Migration 066)** | Drag-and-drop file upload to Cloudinary/local fallback, DB metadata tracking (`066`) | **Resolved (Completed)** |
 | **WIP Limits** | Not implemented | Configurable work-in-progress limits per column | **Medium** |
 | **Task Estimation** | Not implemented | Story points / time estimates on tasks | **Medium** |
 | **Swimlanes** | Not implemented | Group tasks by assignee, priority, or label within board | **Medium** |
@@ -101,15 +101,12 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.7 Rich Text Task Descriptions (High)
+### 3.7 Rich Text Task Descriptions (IMPLEMENTED)
 
-**Current State**: [TaskDescription.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/task-details/TaskDescription.tsx) and [CreateTaskModal.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/CreateTaskModal.tsx) use a plain `<textarea>` for descriptions.
-
-**Required Implementation**:
-- Integrate a lightweight Markdown editor (e.g., `@uiw/react-md-editor` or `tiptap`) 
-- Support basic formatting: bold, italic, bullet lists, code blocks, links
-- Render markdown in description display mode
-- Store raw markdown in database (no schema change needed — `description TEXT` already exists)
+**Current Implementation**: Integrates an enterprise-grade WYSIWYG & Markdown editor powered by TipTap (`@tiptap/react`).
+- Supports bold, italic, lists, code blocks, checklists, headings.
+- Stores raw markdown in the database (`description TEXT`).
+- Renders via `ReactMarkdown` + `remark-gfm` in read-mode.
 
 ---
 
@@ -148,15 +145,14 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.11 File Upload Attachments (High)
+### 3.11 File Upload Attachments (IMPLEMENTED)
 
-**Current State**: [attachments.py](file:///d:/kanban-project/backend/app/routers/attachments.py) accepts `AttachmentCreate` (likely URL-based). No `UploadFile` multipart form handling for actual file uploads in the attachments router, although the user service does handle avatar file uploads via `UploadFile`.
+**Current Implementation**: Implemented across database migration `066_attachment_file_metadata.sql`, backend `attachments.py` router (`POST /tasks/{task_id}/attachments/upload`), `StorageService` (Cloudinary primary, local fallback), and frontend `AttachmentsTab.tsx`.
 
-**Required Implementation**:
-- `POST /tasks/{task_id}/attachments/upload` — accept `multipart/form-data` with `UploadFile`
-- Store in `uploads/attachments/{task_id}/` directory (reuse existing `StorageService` pattern)
-- `DELETE /attachments/{attachment_id}` — delete file + DB record
-- Frontend: drag-and-drop zone in AttachmentsTab, file preview thumbnails, download links
+#### Implemented Features:
+- **Database**: Added `file_size` and `mime_type` to `task_attachments` table. Stored functions `fn_create_attachment`, `fn_get_task_attachments`, `fn_delete_attachment`.
+- **Backend**: Accepts `multipart/form-data` with `UploadFile`. Streams upload to Cloudinary or saves to local disk.
+- **Frontend**: Enterprise drag-and-drop upload zone, real-time upload progress, image thumbnails, file icons, and size formatting.
 
 ---
 

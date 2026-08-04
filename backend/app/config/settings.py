@@ -22,9 +22,6 @@ class Settings(BaseSettings):
     BREVO_API_KEY: Optional[str] = None
     BREVO_SENDER_EMAIL: Optional[str] = "coderarindam@gmail.com"
 
-    # Resend Integration
-    RESEND_API_KEY: Optional[str] = None
-    RESEND_SENDER_EMAIL: Optional[str] = "onboarding@resend.dev"
 
     FRONTEND_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
     COOKIE_SECURE: bool = False

@@ -29,7 +29,7 @@ The KAIO frontend is a high-performance single-page application (SPA) built usin
 - **Drag & Drop**: @dnd-kit/core + @dnd-kit/sortable
 - **Icons**: Lucide React
 - **Toast Notifications**: react-hot-toast
-- **Markdown Rendering**: react-markdown + remark-gfm
+- **Markdown Rendering**: TipTap Rich Text Editor (with GitHub Flavored Markdown styling)
 - **Date Utilities**: date-fns
 
 ---
@@ -100,7 +100,11 @@ frontend/src/
 │   │   └── TranscriptEditor.tsx # Interactive transcript text & speaker attribution editor
 │   ├── my-work/                # Personal task aggregation view
 │   ├── notifications/          # Notification bell, panel, and item components
-│   ├── projects/               # Project settings layout & pages
+│   ├── projects/               # Project settings layout & pages (Labels, Members, Workflow)
+│   │   ├── ProjectSettingsLayout.tsx
+│   │   ├── ProjectLabelsSettings.tsx
+│   │   ├── ProjectMembersSettings.tsx
+│   │   └── ProjectWorkflowSettings.tsx
 │   ├── proposals/              # Task proposal review components
 │   ├── search/                 # Global workspace search (Cmd+K modal)
 │   ├── settings/               # User & org settings pages
@@ -272,13 +276,19 @@ Only accessible to **Superadmin** role.
 - **`NotificationItem`**: Single notification entry with destination deep-linking — resolves to specific task modal, board, or proposal queue.
 
 ### 6.5 Settings Feature (`src/features/settings/`)
-- **`MyAccount`**: Edit first name, last name, avatar. Calls `PATCH /users/me`.
+- **`MyAccount`**: Edit first name, last name, avatar. Includes **Danger Zone** for secure account hard deletion. Calls `PATCH /users/me` and `DELETE /auth/account`.
 - **`Security`**: Active multi-device sessions list with one-click session revocation; security event audit log (logins, password changes, revocations). Calls `GET /auth/sessions`, `DELETE /auth/sessions/other`, `GET /auth/security-events`.
-- **`Appearance`**: Theme (dark/light) and UI layout preference toggles.
+- **`Appearance`**: Theme (dark/light), UI layout preference toggles, and customizable Accent Color selection.
 - **`NotificationSettings`**: Configure per-channel notification preferences (in-app, email).
 - **`Organization`**: Org profile editing (name, logo, branding); invitation management — send new invitations and revoke pending ones.
 
-### 6.6 My Work Feature (`src/features/my-work/`)
+### 6.6 Project Settings Feature (`src/features/projects/`)
+Dedicated settings layout for board-specific configuration.
+- **`ProjectLabelsSettings`**: Manage board label taxonomy, colors, and metadata.
+- **`ProjectMembersSettings`**: Add/remove board members, assign board-specific roles, and manage access.
+- **`ProjectWorkflowSettings`**: Configure Kanban columns and workflow behavior.
+
+### 6.7 My Work Feature (`src/features/my-work/`)
 - **`MyWorkPage`**: Aggregates tasks assigned to the current user across all organization boards. Supports filtering by due date and sorting.
 
 ---

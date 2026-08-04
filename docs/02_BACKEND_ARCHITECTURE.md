@@ -28,8 +28,8 @@ The KAIO backend is built using modern asynchronous Python architecture centered
 - **Browser Automation**: Playwright Python (v1.40+)
 - **Audio Processing**: FFmpeg binary integration
 - **Speech Engine**: Deepgram SDK (v3.0+)
-- **HTTP Client**: httpx (v0.27+) — used by LLM providers
-- **Email**: SMTP via Python `smtplib` (configured via `SMTP_EMAIL` / `SMTP_PASSWORD` env vars)
+- **HTTP Client**: httpx (v0.27+) — used by LLM providers and Brevo API
+- **Email**: Brevo REST API (v3) primary delivery, with fallback to standard SMTP (`BREVO_API_KEY`, `SMTP_EMAIL`, `SMTP_PASSWORD` env vars)
 
 ---
 
@@ -59,7 +59,7 @@ backend/
 │   │   ├── password.py             # bcrypt hash & verify helpers
 │   │   └── permissions.py          # require_super_admin, require_manager_or_above
 │   ├── config/
-│   │   └── settings.py             # pydantic-settings: DATABASE_URL, JWT_SECRET, JWT_ALGORITHM, SMTP_*, FRONTEND_ORIGINS
+│   │   └── settings.py             # pydantic-settings: DATABASE_URL, JWT_SECRET, JWT_ALGORITHM, BREVO_*, SMTP_*, CLOUDINARY_*, FRONTEND_ORIGINS
 │   ├── constants/                  # System constants & enums
 │   ├── database/
 │   │   └── connection.py           # asyncpg pool manager, get_db_connection dependency
@@ -72,9 +72,9 @@ backend/
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
-│   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads & downloads
-│   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, password reset, email verification, sessions, security events
-│   │   ├── board_members.py        # /boards/{id}/members — membership queries
+│   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads (Cloudinary/Local) & downloads
+│   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, password reset, email verification, sessions, security events, account hard deletion (danger zone)
+│   │   ├── board_members.py        # /boards/{id}/members — membership queries & project settings
 │   │   ├── boards.py               # /boards — CRUD, archiving
 │   │   ├── columns.py              # /boards/{id}/columns, /columns/{id} — dynamic column management (add, rename, delete with card migration, reorder)
 │   │   ├── comments.py             # /tasks/{id}/comments — create, update (inline edit), list, delete
@@ -105,7 +105,7 @@ backend/
 │       ├── column_service.py       # Column management: add, rename, delete (with task migration), reorder
 │       ├── comment_service.py      # Comment create, update (inline edit via fn_update_comment), delete, @mention dispatch
 │       ├── dashboard_service.py    # Reads v_dashboard_kpis_canonical, v_dashboard_board_summaries_canonical
-│       ├── email_service.py        # Async background SMTP email dispatch wrapper
+│       ├── email_service.py        # Async background email dispatch wrapper (Brevo API + SMTP fallback)
 │       ├── email_templates.py      # HTML email templates for invitations, password reset & email verification
 │       ├── invitation_service.py   # Full invitation lifecycle (invite → email → verify token → accept → revoke)
 │       ├── my_work_service.py
@@ -113,7 +113,7 @@ backend/
 │       ├── organization_service.py
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
-│       ├── storage_service.py      # Local disk file storage
+│       ├── storage_service.py      # Dual-mode file storage: Cloudinary integration (primary) & Local disk (fallback)
 │       ├── task_service.py         # Handles CRUD, reordering, bulk task move, and bulk task deletion via fn_bulk_move_tasks & fn_bulk_delete_tasks
 │       └── user_service.py
 
@@ -207,7 +207,7 @@ sequenceDiagram
 |---|---|---|---|
 | `FastAPI` | `app/main.py` | Framework | Top-level ASGI web application controller |
 | `Database` | `app/database/connection.py` | Infrastructure | `asyncpg` pool lifecycle manager |
-| `Settings` | `app/config/settings.py` | Config | pydantic-settings env config (`DATABASE_URL`, `JWT_SECRET`, `JWT_ALGORITHM`, `SMTP_*`, `FRONTEND_ORIGINS`) |
+| `Settings` | `app/config/settings.py` | Config | pydantic-settings env config (`DATABASE_URL`, `JWT_SECRET`, `BREVO_*`, `CLOUDINARY_*`, `FRONTEND_ORIGINS`) |
 | `ConnectionManager` | `app/websockets/manager.py` | WebSocket Engine | Maintains user connections, board topic subscriptions, and real-time event broadcasting |
 | `MeetingService` | `app/meeting/services/meeting_service.py` | Service | Global registry and manager of active meeting runtimes |
 | `MeetingRuntime` | `app/meeting/services/meeting_service.py` | Domain | Container for session state, Playwright browser, event bus |

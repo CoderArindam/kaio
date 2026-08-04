@@ -16,8 +16,11 @@ The `Settings` class uses `pydantic-settings` with `SettingsConfigDict(env_file=
 | `JWT_SECRET` | `str` | **Required** | Secret key used for signing JWT access tokens. Must be a long random string in production. |
 | `JWT_ALGORITHM` | `str` | `"HS256"` | JWT signing algorithm. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `int` | `30` | Access token TTL in minutes. The auth router overrides cookie max_age to 15 min. |
-| `SMTP_EMAIL` | `str \| None` | `None` | SMTP sender email address for invitation and notification emails. If `None`, email dispatch is skipped. |
+| `BREVO_API_KEY` | `str \| None` | `None` | Brevo API key for transactional email sending. Primary email method if set. |
+| `BREVO_SENDER_EMAIL` | `str \| None` | `"coderarindam@gmail.com"` | Sender email address for Brevo API. |
+| `SMTP_EMAIL` | `str \| None` | `None` | SMTP sender email address for fallback email dispatch. |
 | `SMTP_PASSWORD` | `str \| None` | `None` | SMTP sender account password. |
+| `CLOUDINARY_URL` | `str \| None` | `None` | Connection string for Cloudinary attachments storage. |
 | `FRONTEND_ORIGINS` | `str` | `"http://localhost:5173,http://localhost:3000"` | Comma-separated list of allowed CORS origins. |
 | `COOKIE_SECURE` | `bool` | `False` | Controls `secure` flag on httpOnly auth cookies. Set `True` in HTTPS production. |
 
@@ -27,8 +30,9 @@ DATABASE_URL=postgresql://postgres:Password%40123@localhost:5432/kaio_db
 JWT_SECRET=your-very-long-random-secret-key-here
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
-SMTP_EMAIL=noreply@yourapp.com
-SMTP_PASSWORD=your-smtp-password
+BREVO_API_KEY=xkeysib-your-brevo-api-key
+BREVO_SENDER_EMAIL=noreply@yourapp.com
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 FRONTEND_ORIGINS=http://localhost:5173,http://localhost:3000
 COOKIE_SECURE=false
 ```
@@ -138,7 +142,7 @@ npm run dev
 
 ### Database (initial setup)
 ```powershell
-# Apply all 51 SQL migration files (no data loss)
+# Apply all 72 SQL migration files (no data loss)
 python database/scripts/rebuild.py
 
 # Full reset + seed (destroys data)

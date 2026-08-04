@@ -91,42 +91,7 @@ def send_email(to_email: str, subject: str, body_text: str, html_content: Option
         except Exception as e:
             logger.error(f"Brevo API error when sending email to {to_email}: {e}")
 
-    # 2. Secondary: Send via Resend REST API
-    api_key = settings.RESEND_API_KEY
-    sender_email = settings.RESEND_SENDER_EMAIL or "onboarding@resend.dev"
-
-    if api_key:
-        try:
-            url = "https://api.resend.com/emails"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "from": sender_email,
-                "to": [to_email],
-                "subject": subject,
-                "text": body_text,
-            }
-            if html_content:
-                payload["html"] = html_content
-
-            with httpx.Client(timeout=10.0) as client:
-                response = client.post(
-                    url,
-                    headers=headers,
-                    json=payload
-                )
-
-            if response.status_code in (200, 201):
-                logger.info(f"Email sent via Resend API to {to_email}")
-                return True
-            else:
-                logger.error(f"Resend email sending failed (status {response.status_code}): {response.text}")
-        except Exception as e:
-            logger.error(f"Resend API error when sending email to {to_email}: {e}")
-
-    # 3. Tertiary Fallback: Gmail SMTP
+    # 2. Secondary Fallback: Gmail SMTP
     if settings.SMTP_EMAIL and settings.SMTP_PASSWORD:
         return _send_via_gmail_smtp(to_email, subject, body_text, html_content)
     else:

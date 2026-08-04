@@ -29,7 +29,8 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/auth/register` | `POST` | Public | Registers a new **organization** with an owner (Superadmin) account. Sets `access_token` + `refresh_token` cookies. Body: `{org_name, admin_email, password, first_name, last_name}`. |
+| `/auth/register` | `POST` | Public | Initiates registration for a new **organization** with an owner (Superadmin) account. Sends OTP to email (`fn_create_otp_token`). Body: `{org_name, admin_email, password, first_name, last_name}`. |
+| `/auth/register/verify` | `POST` | Public | Verifies OTP and completes registration (`fn_verify_otp`). Sets cookies. Body: `{email, otp_code}`. |
 | `/auth/login` | `POST` | Public | Authenticates user credentials. Sets `access_token` + `refresh_token` cookies. Logs `user_login` security event. Body: `{email, password}`. |
 | `/auth/me` | `GET` | Cookie | Returns full user profile — id, email, first_name, last_name, role, organization_id, avatar_url, is_email_verified. |
 | `/auth/refresh` | `POST` | Cookie (`refresh_token`) | Reads `refresh_token` cookie, issues new `access_token` + `refresh_token` cookies. |
@@ -42,6 +43,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/auth/sessions/other` | `DELETE` | Cookie | Revokes all sessions except the currently active one. Logs security event. |
 | `/auth/security-events` | `GET` | Cookie | Retrieves user security event audit history (`v_user_security_events_canonical`). |
 | `/auth/password-policy` | `GET` | Public | Returns org password complexity requirements (min_length, require_uppercase, etc.). |
+| `/auth/account` | `DELETE` | Cookie | Permanently hard-deletes the authenticated user's account and all associated orphaned data (Danger Zone). Requires password confirmation. Body: `{password}`. |
 
 ---
 
@@ -64,6 +66,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 |---|---|---|---|
 | `/boards/{board_id}/labels` | `GET` | Cookie | Lists all customizable color-coded labels created for a specific board (`v_labels_canonical`). |
 | `/boards/{board_id}/labels` | `POST` | Cookie | Creates a new board label (`fn_create_label`). Broadcasts `label_created` WS event to board members. Body: `{name, color}`. |
+| `/labels/{label_id}` | `PATCH` | Cookie | Updates a board label's properties (`fn_update_label`). Broadcasts `label_updated` WS event. Body: `{name, color}`. |
 | `/labels/{label_id}` | `DELETE` | Cookie | Deletes a board label (`fn_delete_label`). Requires board membership access. |
 | `/tasks/{task_id}/labels/{label_id}` | `POST` | Cookie | Attaches a label tag to a task (`fn_attach_label`). Broadcasts `task_updated` WS event. |
 | `/tasks/{task_id}/labels/{label_id}` | `DELETE` | Cookie | Detaches a label tag from a task (`fn_detach_label`). Broadcasts `task_updated` WS event. |

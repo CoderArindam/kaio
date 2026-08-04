@@ -242,6 +242,12 @@ erDiagram
 | `064_comment_editing.sql` | Comment Editing & Hard Delete | Adds `edited_at` timestamp to `task_comments`, updates `v_comments_canonical`, adds `fn_update_comment` procedure, and updates `fn_delete_comment` for hard delete & owner-only check. |
 | `065_comment_mentions.sql` | `comment_mentions` | Table schema for user @mentions in task comments (`comment_id`, `mentioned_user_id`, `created_at`), `v_comment_mentions_canonical` view, `fn_create_comment_mentions` procedure, `fn_get_comment_mentions` function, and activity/notification triggers. |
 | `066_attachment_file_metadata.sql` | `task_attachments` | Migration adding `file_size` (BIGINT) and `mime_type` (VARCHAR(100)) columns to `task_attachments` table, along with `fn_create_attachment`, `fn_get_task_attachments`, and `fn_delete_attachment` stored functions. |
+| `067_update_label_function.sql` | Label Procedures | Adds `fn_update_label` to allow modifying existing label metadata. |
+| `068_otp_verification.sql` | OTP Auth | Schema and functions for time-based OTP verification. |
+| `069_fix_otp_type_mismatch.sql` | OTP Fix | Fixes data type mismatches in OTP verification functions. |
+| `070_skip_registration_otp.sql` | OTP Bypass | Functionality to conditionally skip OTP on registration. |
+| `071_account_hard_delete.sql` | Account Deletion | Adds `fn_delete_account_hard` to securely and permanently delete a user and their orphaned data (Danger Zone). |
+| `072_fix_admin_users_query.sql` | Admin Queries | Fixes issues with admin user dashboard view queries. |
 
 ---
 
@@ -320,6 +326,8 @@ erDiagram
 | `fn_check_timesheet_approver_access(user_id, timesheet_id)` | `041_*.sql` | Boolean: does this user have approver rights for this timesheet? |
 | `fn_fail_meeting_session(session_id)` | `049_*.sql` | Updates meeting session status to `FAILED` and sets `failed_at = NOW()`. |
 | `fn_reset_meeting_session_status(session_id)` | `050_*.sql` | Resets meeting session status to `PROCESSING` and clears `failed_at` for pipeline rerun. |
+| `fn_update_label(label_id, name, color, user_id)` | `067_update_label_function.sql` | Updates board label properties. |
+| `fn_delete_account_hard(user_id)` | `071_account_hard_delete.sql` | Permanently deletes a user account, active sessions, and orphans their comments/tasks (Danger Zone). |
 
 ---
 
@@ -391,6 +399,13 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 063_column_management_functions.sql
 064_comment_editing.sql
 065_comment_mentions.sql
+066_attachment_file_metadata.sql
+067_update_label_function.sql
+068_otp_verification.sql
+069_fix_otp_type_mismatch.sql
+070_skip_registration_otp.sql
+071_account_hard_delete.sql
+072_fix_admin_users_query.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)

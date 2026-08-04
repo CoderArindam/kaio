@@ -252,7 +252,7 @@ This document provides a reference catalog of the primary React UI components wi
 ### 10.1 `MyAccount`
 
 - **Path**: `features/settings/MyAccount.tsx`
-- **Purpose**: Edit profile (first name, last name, avatar). Calls `PATCH /api/v1/users/me`.
+- **Purpose**: Edit profile (first name, last name, avatar). Includes a secure **Danger Zone** for account hard deletion with password confirmation. Calls `PATCH /api/v1/users/me` and `DELETE /api/v1/auth/account`.
 
 ### 10.2 `Security`
 
@@ -315,15 +315,25 @@ Meeting UI components expose joining controls, active session status indicators,
 
 ## 15. Project Settings Feature (`src/features/projects/`)
 
-### 15.1 `ProjectSettingsPage`
-
-- **Path**: `features/projects/ProjectSettingsPage.tsx`
-- **Purpose**: Board-level settings page — edit board name, description, project key, icon, color, cover gradient. Archived status toggle. Gated to Manager/Admin roles.
-
-### 15.2 `ProjectSettingsLayout`
+### 15.1 `ProjectSettingsLayout`
 
 - **Path**: `features/projects/ProjectSettingsLayout.tsx`
-- **Purpose**: Layout wrapper with tabs for General, Members, and Danger Zone board settings sections.
+- **Purpose**: Layout wrapper with side navigation tabs for General, Labels, Members, Workflow, and Danger Zone settings sections.
+
+### 15.2 `ProjectLabelsSettings`
+
+- **Path**: `features/projects/ProjectLabelsSettings.tsx`
+- **Purpose**: Manage board label taxonomy, colors, and metadata via a dedicated admin table.
+
+### 15.3 `ProjectMembersSettings`
+
+- **Path**: `features/projects/ProjectMembersSettings.tsx`
+- **Purpose**: Add or remove board members, assign board-specific roles, and manage access control lists.
+
+### 15.4 `ProjectWorkflowSettings`
+
+- **Path**: `features/projects/ProjectWorkflowSettings.tsx`
+- **Purpose**: Advanced Kanban column lifecycle management and workflow progression rules.
 
 ---
 
