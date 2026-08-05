@@ -21,6 +21,7 @@ This document provides a reference catalog of the primary React UI components wi
 
 | Component         | Path                                    | Description                                                                                                                                 |
 | ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AppTour`         | `components/common/AppTour.tsx`         | Guided interactive application tour using react-joyride, automatically triggered for new users based on preferences. |
 | `Modal`           | `components/common/Modal.tsx`           | Accessible backdrop modal with slide-in animation, escape key dismissal, and close button. Props: `isOpen`, `onClose`, `title`, `children`. |
 | `ConfirmDialog`   | `components/common/ConfirmDialog.tsx`   | Reusable confirmation prompt dialog for destructive actions (archive, delete, revoke).                                                      |
 | `EmptyState`      | `components/common/EmptyState.tsx`      | Placeholder for empty lists with an icon, heading, and optional CTA button.                                                                 |
@@ -274,6 +275,11 @@ This document provides a reference catalog of the primary React UI components wi
 - **Path**: `features/settings/Organization.tsx`
 - **Purpose**: Organization profile editing (name, branding). Full invitation management section — send new invitations and **revoke pending** ones (`DELETE /invitations/{id}`).
 
+### 10.6 `BillingSettings`
+
+- **Path**: `features/settings/BillingSettings.tsx`
+- **Purpose**: Manage organization subscription plan, view limits, and trigger upgrade modal.
+
 ---
 
 ## 11. Auth Feature (`src/features/auth/`)
@@ -379,3 +385,12 @@ Meeting UI components expose joining controls, active session status indicators,
 - **`LabelPicker`** (`src/components/shared/LabelPicker.tsx`): Reusable interactive label dropdown component for `TaskSidebar`. Displays attached color pill badges, allows multi-select attach/detach, and includes inline color swatch picker for Manager/Admin label creation and deletion.
 - **`LabelFilter`** (`src/features/boards/components/LabelFilter.tsx`): Kanban board toolbar filter dropdown displaying board labels with color indicators for instant task filtering.
 
+---
+
+## 18. Billing Feature (`src/features/billing/`)
+
+| Component | Path | Description |
+| --- | --- | --- |
+| `PlansPage` | `features/billing/PlansPage.tsx` | Onboarding plan selection route, shown when a new organization is created. |
+| `PlanCard` | `features/billing/components/PlanCard.tsx` | Card displaying subscription plan details (Free vs Pro). |
+| `UpgradeModal` | `features/billing/components/UpgradeModal.tsx` | Modal prompt to upgrade subscription plan when hitting limits. |

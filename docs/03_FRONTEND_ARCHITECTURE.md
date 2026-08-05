@@ -42,6 +42,7 @@ frontend/src/
 ├── assets/                     # Static graphics, SVG icons, logos
 ├── components/                 # Shared UI primitives across all features
 │   ├── common/                 # Reusable modal, dialogs, avatars, project cards
+│   │   ├── AppTour.tsx         # Guided product tour component
 │   │   ├── ConfirmDialog.tsx   # Generic confirmation dialog
 │   │   ├── EmptyState.tsx      # Empty state placeholder
 │   │   ├── Modal.tsx           # Accessible backdrop modal
@@ -76,6 +77,7 @@ frontend/src/
 │   │   └── UsersManagement.tsx
 │   ├── ai/                     # KAI AI agent UI (chat, tools, store)
 │   ├── auth/                   # Login, Signup, ForgotPassword, ResetPassword, VerifyEmail, AcceptInvitation
+│   ├── billing/                # Subscription plans and onboarding selection
 │   ├── boards/                 # Kanban board feature (Board, List, Calendar views)
 │   │   ├── BoardPage.tsx       # Board page wrapper with view-mode toggle (Board | List | Calendar)
 │   │   ├── components/

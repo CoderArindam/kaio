@@ -247,7 +247,12 @@ erDiagram
 | `069_fix_otp_type_mismatch.sql` | OTP Fix | Fixes data type mismatches in OTP verification functions. |
 | `070_skip_registration_otp.sql` | OTP Bypass | Functionality to conditionally skip OTP on registration. |
 | `071_account_hard_delete.sql` | Account Deletion | Adds `fn_delete_account_hard` to securely and permanently delete a user and their orphaned data (Danger Zone). |
-| `072_fix_admin_users_query.sql` | Admin Queries | Fixes issues with admin user dashboard view queries. |
+| `072_organization_deletion.sql` | `organizations` | Adds soft delete status and deletion jobs schema for organizations. |
+| `073_manager_rbac_refinements.sql` | Authz Functions | Refines board access RBAC for Manager role. |
+| `074_organization_plans.sql` | `organizations` | Adds `subscription_plan` and `onboarding_completed` fields. |
+| `075_user_preferences_tour.sql` | `user_preferences` | Adds `tour_completed` onboarding tracking field. |
+| `076_update_org_profile_function.sql` | `fn_get_organization_profile` | Updates organization profile retrieval with new fields. |
+| `077_fix_deleting_org_users.sql` | Fix | Soft-deletes users associated with organizations pending deletion. |
 
 ---
 
@@ -328,6 +333,11 @@ erDiagram
 | `fn_reset_meeting_session_status(session_id)` | `050_*.sql` | Resets meeting session status to `PROCESSING` and clears `failed_at` for pipeline rerun. |
 | `fn_update_label(label_id, name, color, user_id)` | `067_update_label_function.sql` | Updates board label properties. |
 | `fn_delete_account_hard(user_id)` | `071_account_hard_delete.sql` | Permanently deletes a user account, active sessions, and orphans their comments/tasks (Danger Zone). |
+| `fn_initiate_organization_deletion(...)` | `072_*.sql` | Initiates asynchronous organization deletion process. |
+| `fn_cancel_organization_deletion(...)` | `072_*.sql` | Cancels pending organization deletion process. |
+| `fn_claim_organization_purge_job(...)` | `072_*.sql` | Claims deletion job for background worker processing. |
+| `fn_purge_organization_batch(...)` | `072_*.sql` | Purges records iteratively to prevent transaction timeout. |
+| `fn_finalize_organization_purge(...)` | `072_*.sql` | Finalizes the organization deletion and purges remaining data. |
 
 ---
 
@@ -405,7 +415,12 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 069_fix_otp_type_mismatch.sql
 070_skip_registration_otp.sql
 071_account_hard_delete.sql
-072_fix_admin_users_query.sql
+072_organization_deletion.sql
+073_manager_rbac_refinements.sql
+074_organization_plans.sql
+075_user_preferences_tour.sql
+076_update_org_profile_function.sql
+077_fix_deleting_org_users.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)

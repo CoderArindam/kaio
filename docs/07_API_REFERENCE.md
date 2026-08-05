@@ -160,8 +160,12 @@ All invitation endpoints require **Manager or Superadmin** role (`require_manage
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/organization` | `GET` | Cookie | Retrieves active organization profile and member list. |
-| `/organization/settings` | `PUT` | Cookie (RBAC) | Updates organization settings & security rules. Requires Manager/Admin. |
+| `/organization/profile` | `GET` | Cookie | Retrieves active organization profile details. |
+| `/organization/profile` | `PATCH` | Cookie (Superadmin) | Updates organization profile (name, description, industry, etc.). |
+| `/organization/logo` | `POST` | Cookie (Superadmin) | Uploads and updates the organization logo. |
+| `/organization/delete` | `POST` | Cookie (Superadmin) | Initiates organization deletion process. |
+| `/organization/delete/cancel` | `POST` | Cookie (Superadmin) | Cancels an ongoing organization deletion process. |
+| `/organization/delete/status` | `GET` | Cookie (Superadmin) | Retrieves the current status of organization deletion. |
 
 ---
 
@@ -197,8 +201,8 @@ All admin endpoints require **Superadmin** role unless noted.
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/preferences` | `GET` | Cookie | Fetches user UI theme and notification preferences (`user_preferences`). |
-| `/preferences` | `PUT` | Cookie | Updates user preference settings (theme, notification channels). |
+| `/preferences` | `GET` | Cookie | Fetches user UI theme, notification preferences, and `tour_completed` status (`user_preferences`). |
+| `/preferences` | `PUT` | Cookie | Updates user preference settings (theme, notification channels, `tour_completed`). |
 
 ---
 

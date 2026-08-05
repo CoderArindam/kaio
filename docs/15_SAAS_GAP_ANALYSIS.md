@@ -14,14 +14,14 @@ This document provides a comprehensive **Gap Analysis** detailing the features, 
 
 | Capability Area              | Current State                   | Target SaaS State                                                        | Maturity Gap                |
 | ---------------------------- | ------------------------------- | ------------------------------------------------------------------------ | --------------------------- |
-| **Monetization & Billing**   | None                            | Tiered Subscriptions, Usage-Based Metering, Paywalls, Stripe Integration | **Critical (100% Missing)** |
+| **Monetization & Billing**   | Database schemas & UI built     | Tiered Subscriptions, Usage-Based Metering, Paywalls, Stripe Integration | **High (Needs Gateway)**    |
 | **Tenant Isolation**         | Basic `organization_id` FK      | Strict Subdomain Routing, RLS Tenant Policies, White-Labeling            | **High**                    |
 | **Authentication & IAM**     | Password + Cookie JWT           | SAML 2.0 / Okta SSO, OAuth Social Logins, MFA / Passkeys, SCIM 2.0       | **High**                    |
 | **Integrations & Ecosystem** | Google Meet via Extension       | Zoom, Teams, Webex, Google/Outlook Calendar, Slack, Jira                 | **High**                    |
 | **Developer Platform**       | Internal REST APIs              | Scoped API Keys, Rate Limiting, Outbound Webhooks Queue                  | **Critical (100% Missing)** |
 | **Compliance & Privacy**     | Basic security log table        | GDPR/CCPA Tools (Export/Anonymization), Enterprise SIEM Audit Trail      | **High**                    |
 | **Background Processing**    | Simple Asyncio background tasks | Dedicated Distributed Worker Queue (Redis + Celery/ARQ)                  | **High**                    |
-| **Growth & Onboarding**      | Manual invitation & seeding     | Self-service signup, guided wizard, telemetry, in-app support            | **Critical**                |
+| **Growth & Onboarding**      | **IMPLEMENTED (AppTour + DB)**  | Self-service signup, guided wizard, telemetry, in-app support            | **Resolved (Completed)**    |
 
 ---
 
