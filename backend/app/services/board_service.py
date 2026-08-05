@@ -49,16 +49,37 @@ class BoardService:
 
     async def get_user_boards(self, include_archived: bool, current_user: dict) -> List[CanonicalBoardResponse]:
         try:
-            if include_archived:
-                query = "SELECT * FROM v_boards_canonical WHERE organization_id = $1 AND can_view_board($2, id)"
-            else:
-                query = "SELECT * FROM v_boards_canonical WHERE organization_id = $1 AND can_view_board($2, id) AND archived_at IS NULL"
-                
-            rows = await self.conn.fetch(query, current_user["organization_id"], current_user["id"])
-            return [CanonicalBoardResponse(**dict(row)) for row in rows]
+            async with self.conn.transaction():
+                await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
+                if include_archived:
+                    query = "SELECT * FROM v_boards_canonical WHERE organization_id = $1 AND can_view_board($2, id)"
+                else:
+                    query = "SELECT * FROM v_boards_canonical WHERE organization_id = $1 AND can_view_board($2, id) AND archived_at IS NULL"
+                    
+                rows = await self.conn.fetch(query, current_user["organization_id"], current_user["id"])
+                return [CanonicalBoardResponse(**dict(row)) for row in rows]
         except Exception as e:
             logger.error(f"Error getting user boards: {e}")
             raise HTTPException(status_code=400, detail="An unexpected error occurred")
+
+    async def toggle_board_favorite(self, board_id: int, current_user: dict) -> dict:
+        try:
+            async with self.conn.transaction():
+                await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
+                is_favorited = await self.conn.fetchval(
+                    "SELECT fn_toggle_board_favorite($1, $2)",
+                    current_user["id"],
+                    board_id
+                )
+                return {"board_id": board_id, "is_favorited": is_favorited}
+        except asyncpg.exceptions.RaiseError as e:
+            logger.error(f"RaiseError toggling board favorite: {e}")
+            raise HTTPException(status_code=403 if "Access denied" in str(e) else 400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Error toggling board favorite: {e}", exc_info=True)
+            raise HTTPException(status_code=400, detail="Failed to update board favorite status")
+
+
 
     async def get_project_settings(self, board_id: int, current_user: dict) -> ProjectSettingsResponse:
         has_access = await self.conn.fetchval("SELECT can_view_board($1, $2)", current_user["id"], board_id)

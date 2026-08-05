@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Star } from 'lucide-react';
 import type { Board } from '../../services/boardsApi';
 import { getProjectColorClass, getProjectGradientClass } from '../../utils/projectIdentity';
+import { useBoardStore } from '../../store/boardStore';
 
 interface ProjectCardProps {
   board: Partial<Board>;
@@ -14,15 +16,38 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({ board, onClick, className = '', isLink = true, action }) => {
   const colorClass = getProjectColorClass(board.color);
   const gradientClass = getProjectGradientClass(board.cover_gradient);
-  
+  const toggleFavorite = useBoardStore(state => state.toggleFavorite);
+
+  const handleStarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (board.id) {
+      toggleFavorite(board.id);
+    }
+  };
+
   const content = (
     <div className="relative">
       <div className={`h-24 ${gradientClass} flex-shrink-0`}></div>
+      {board.id && (
+        <button
+          type="button"
+          onClick={handleStarClick}
+          className="absolute top-3 left-3 z-10 p-1.5 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors"
+          title={board.is_favorited ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star 
+            size={16} 
+            className={board.is_favorited ? "fill-amber-400 text-amber-400" : "text-white/80 hover:text-white"} 
+          />
+        </button>
+      )}
       {action && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-3 right-3 z-10">
           {action}
         </div>
       )}
+
       <div className="p-4 flex flex-col min-w-0">
         <div className="flex items-center gap-3 mb-1">
           {board.icon ? (

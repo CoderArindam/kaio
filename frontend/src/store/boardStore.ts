@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { getBoards, createBoard, deleteBoard, type Board } from '../services/boardsApi';
+import { getBoards, createBoard, deleteBoard, toggleBoardFavorite, type Board } from '../services/boardsApi';
 import toast from 'react-hot-toast';
 
 interface BoardState {
@@ -10,6 +10,7 @@ interface BoardState {
   fetchBoards: () => Promise<void>;
   createNewBoard: (boardData: Partial<Board>) => Promise<Board | undefined>;
   removeBoard: (boardId: number) => Promise<void>;
+  toggleFavorite: (boardId: number) => Promise<void>;
 }
 
 let _boardFetchingPromise: Promise<void> | null = null;
@@ -64,6 +65,34 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       console.error('Failed to delete board:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete project');
     }
+  },
+
+  toggleFavorite: async (boardId: number) => {
+    const previousBoards = get().boards;
+    const targetBoard = previousBoards.find(b => b.id === boardId);
+    if (!targetBoard) return;
+
+    const nextIsFavorited = !targetBoard.is_favorited;
+
+    set({
+      boards: previousBoards.map(b =>
+        b.id === boardId ? { ...b, is_favorited: nextIsFavorited } : b
+      )
+    });
+
+    try {
+      const result = await toggleBoardFavorite(boardId);
+      set({
+        boards: get().boards.map(b =>
+          b.id === boardId ? { ...b, is_favorited: result.is_favorited } : b
+        )
+      });
+      toast.success(result.is_favorited ? 'Project added to favorites' : 'Project removed from favorites');
+    } catch (error) {
+      console.error('Failed to toggle board favorite:', error);
+      set({ boards: previousBoards });
+      toast.error('Failed to update favorite status');
+    }
   }
 }));
 
@@ -72,7 +101,13 @@ export const useActiveBoards = () => {
   return useMemo(() => boards.filter(b => !b.archived_at), [boards]);
 };
 
+export const useFavoritedBoards = () => {
+  const boards = useBoardStore(state => state.boards);
+  return useMemo(() => boards.filter(b => !b.archived_at && b.is_favorited), [boards]);
+};
+
 export const useArchivedBoards = () => {
   const boards = useBoardStore(state => state.boards);
   return useMemo(() => boards.filter(b => b.archived_at), [boards]);
 };
+

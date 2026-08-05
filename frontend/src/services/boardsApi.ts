@@ -16,6 +16,7 @@ export interface Board {
   created_at: string;
   member_count: number;
   task_count: number;
+  is_favorited?: boolean;
 }
 
 export const getBoards = async (): Promise<Board[]> => {
@@ -31,3 +32,9 @@ export const createBoard = async (boardData: Partial<Board>): Promise<Board> => 
 export const deleteBoard = async (boardId: number): Promise<void> => {
   await api.delete(`/boards/${boardId}`);
 };
+
+export const toggleBoardFavorite = async (boardId: number): Promise<{ board_id: number; is_favorited: boolean }> => {
+  const response = await api.post(`/boards/${boardId}/favorite`);
+  return response.data.data;
+};
+

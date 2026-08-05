@@ -56,7 +56,10 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/boards/{id}` | `GET` | Cookie | Fetches board details including columns and task cards (`v_boards_canonical`). |
 | `/boards/{id}` | `PUT` | Cookie (RBAC) | Updates board metadata (name, description). Requires Manager/Admin role. |
 | `/boards/{id}` | `DELETE` | Cookie (RBAC) | Soft-deletes a board and all contained tasks. Requires Manager/Admin role. |
+| `/boards/{board_id}/favorite` | `POST` | Cookie | Toggles favorited state for board (`fn_toggle_board_favorite`). Returns `{board_id, is_favorited}`. |
+| `/boards/{board_id}/favorite` | `DELETE` | Cookie | Unfavorites board for current user (`fn_toggle_board_favorite`). Returns `{board_id, is_favorited}`. |
 | `/boards/{board_id}/proposals` | `GET` | Cookie (RBAC) | Lists all pending task proposals for a board's meetings. Requires Manager/Admin. |
+
 
 ---
 

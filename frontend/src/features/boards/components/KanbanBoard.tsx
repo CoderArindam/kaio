@@ -43,7 +43,7 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 overflow-y-auto space-y-3 min-h-[160px] p-1.5 rounded-xl transition-all duration-150 custom-scrollbar ${
+      className={`space-y-3 min-h-[160px] p-2 sm:p-2.5 transition-all duration-150 ${
         isOver ? "bg-brand-primary/10 ring-2 ring-brand-primary/40" : ""
       }`}
     >
@@ -313,7 +313,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-full flex flex-col overflow-hidden bg-brand-bg relative">
+      <div className="h-full flex flex-col min-h-0 bg-brand-bg relative overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-3.5 sm:py-4 shrink-0">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-text">
             Kanban
@@ -348,7 +348,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </header>
 
         {/* Filters */}
-        <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-2 shrink-0">
+        <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-3 shrink-0 bg-brand-bg z-20 relative">
           <AssigneeFilter
             users={boardMembers}
             selectedAssigneeId={selectedAssigneeId}
@@ -366,14 +366,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         </div>
 
         {/* Board columns */}
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-8 pb-4 pt-2 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto px-4 sm:px-8 pb-6 pt-0 custom-scrollbar">
           {isFetching ? (
             <div className="h-full flex flex-col items-center justify-center text-brand-text-muted">
               <Loader2 className="w-10 h-10 animate-spin text-brand-primary opacity-50 mb-4" />
               <p>Loading board...</p>
             </div>
           ) : (
-            <div className="flex gap-3 sm:gap-4.5 h-full items-stretch pb-1">
+            <div className="flex gap-3 sm:gap-4.5 items-start pb-1">
               {columns.map((column: any, colIdx: number) => {
                 let columnTasks = tasks.filter((task: any) => {
                   if (task.column_id !== column.id) return false;
@@ -438,9 +438,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                 return (
                   <div
                     key={column.id}
-                    className="flex-1 min-w-[260px] sm:min-w-[280px] md:min-w-[300px] max-w-[440px] shrink-0 flex flex-col bg-brand-surface border border-brand-border/80 rounded-2xl p-2 sm:p-2.5 h-full shadow-2xs transition-all overflow-hidden"
+                    className="flex-1 min-w-[260px] sm:min-w-[280px] md:min-w-[300px] max-w-[440px] shrink-0 flex flex-col bg-brand-surface border border-brand-border/80 rounded-2xl shadow-2xs transition-all"
                   >
-                    <div className="flex justify-between items-center px-2 py-2 mb-2 relative border-b border-brand-border/40 pb-2.5">
+                    <div className="sticky top-0 z-10 bg-brand-surface border-b border-brand-border/40 px-3 sm:px-3.5 py-2.5 rounded-t-2xl flex justify-between items-center shadow-xs">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div
                           className={`w-2.5 h-2.5 rounded-full shrink-0 ${

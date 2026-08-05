@@ -3,7 +3,7 @@ import asyncpg
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.board import BoardCreate, CanonicalBoardResponse, ProjectSettingsResponse, ProjectSettingsUpdate
+from app.schemas.board import BoardCreate, CanonicalBoardResponse, ProjectSettingsResponse, ProjectSettingsUpdate, BoardFavoriteToggleResponse
 from app.schemas.envelope import DataEnvelope
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import require_manager_or_above
@@ -63,6 +63,26 @@ async def archive_project(
     settings = await board_service.archive_project(board_id, current_user)
     return DataEnvelope(data=settings)
 
+@router.post("/{board_id}/favorite", response_model=DataEnvelope[BoardFavoriteToggleResponse])
+async def toggle_board_favorite(
+    board_id: int,
+    current_user: dict = Depends(get_current_user),
+    board_service: BoardService = Depends(get_board_service)
+):
+    res = await board_service.toggle_board_favorite(board_id, current_user)
+    return DataEnvelope(data=res)
+
+@router.delete("/{board_id}/favorite", response_model=DataEnvelope[BoardFavoriteToggleResponse])
+async def remove_board_favorite(
+    board_id: int,
+    current_user: dict = Depends(get_current_user),
+    board_service: BoardService = Depends(get_board_service)
+):
+    res = await board_service.toggle_board_favorite(board_id, current_user)
+    if res["is_favorited"]:
+        res = await board_service.toggle_board_favorite(board_id, current_user)
+    return DataEnvelope(data=res)
+
 @router.delete("/{board_id}", status_code=204)
 async def delete_board(
     board_id: int,
@@ -71,3 +91,4 @@ async def delete_board(
 ):
     await board_service.delete_board(board_id, current_user)
     return None
+

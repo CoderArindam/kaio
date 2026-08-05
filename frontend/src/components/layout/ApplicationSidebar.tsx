@@ -13,6 +13,7 @@ import {
   X,
   Clock,
   ClipboardCheck,
+  Star,
 } from 'lucide-react';
 import { isManagerOrAdmin, isSuperAdmin } from '../../lib/rbac';
 import { useAuthStore } from '../../store/authStore';
@@ -24,14 +25,16 @@ import { ProjectIdentity } from '../common/ProjectIdentity';
 import UserAvatarDropdown from './UserAvatarDropdown';
 import NotificationPanel from '../../features/notifications/NotificationPanel';
 import { formatUserName } from '../../utils/userHelpers';
+import type { Board } from '../../services/boardsApi';
 
 export const ApplicationSidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuthStore();
   const activeBoards = useActiveBoards();
-  const { fetchBoards } = useBoardStore();
+  const { fetchBoards, toggleFavorite } = useBoardStore();
   const { unreadCount, fetchNotifications } = useNotificationStore();
   const { isSidebarCollapsed, toggleSidebar, wsConnected } = useUiStore();
+
   
   const [projectSearch, setProjectSearch] = useState('');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -66,9 +69,62 @@ export const ApplicationSidebar: React.FC = () => {
     setIsMobileOpen(false);
   }, [location.pathname]);
 
-  const filteredBoards = activeBoards.filter(board => 
+  const favoritedBoards = activeBoards.filter(b => b.is_favorited);
+  const otherBoards = activeBoards.filter(b => !b.is_favorited);
+
+  const filteredFavoriteBoards = favoritedBoards.filter(board => 
     board.name.toLowerCase().includes(projectSearch.toLowerCase())
   );
+  const filteredOtherBoards = otherBoards.filter(board => 
+    board.name.toLowerCase().includes(projectSearch.toLowerCase())
+  );
+
+  const renderBoardItem = (board: Board) => {
+    const isActive = location.pathname.startsWith(`/board/${board.id}`);
+    return (
+      <div
+        key={board.id}
+        className={`group flex items-center justify-between px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          isActive 
+            ? 'bg-sidebar-active text-sidebar-text font-semibold' 
+            : 'text-sidebar-text hover:bg-sidebar-active/50'
+        }`}
+      >
+        <Link
+          to={`/board/${board.id}`}
+          className="flex items-center gap-3 flex-1 min-w-0"
+          title={isSidebarCollapsed ? board.name : undefined}
+        >
+          <ProjectIdentity 
+            board={board} 
+            size="sm" 
+            className={`transition-transform group-hover:scale-105 ${isSidebarCollapsed ? 'mx-auto' : ''}`} 
+          />
+        </Link>
+        {!isSidebarCollapsed && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite(board.id);
+            }}
+            className="p-1 rounded hover:bg-sidebar-active/80 transition-colors shrink-0"
+            title={board.is_favorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Star 
+              size={14} 
+              className={
+                board.is_favorited 
+                  ? "fill-amber-400 text-amber-400" 
+                  : "text-sidebar-text-muted hover:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              } 
+            />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const NavItem = ({ to, icon: Icon, label, badge, isExact = false, id }: { to: string, icon: any, label: string, badge?: number, isExact?: boolean, id?: string }) => {
     const isActive = isExact 
@@ -129,6 +185,21 @@ export const ApplicationSidebar: React.FC = () => {
           </div>
         </div>
 
+        {/* Favorites Section */}
+        {filteredFavoriteBoards.length > 0 && (
+          <div className="px-3 mb-6">
+            {!isSidebarCollapsed && (
+              <div className="px-3 mb-2 flex items-center gap-1.5">
+                <Star size={12} className="fill-amber-400 text-amber-400" />
+                <h3 className="text-xs font-bold text-sidebar-text-muted uppercase tracking-wider">Favorites</h3>
+              </div>
+            )}
+            <div className="space-y-1">
+              {filteredFavoriteBoards.map(renderBoardItem)}
+            </div>
+          </div>
+        )}
+
         {/* Projects Section */}
         <div className="px-3 mb-6">
           {!isSidebarCollapsed && (
@@ -153,33 +224,14 @@ export const ApplicationSidebar: React.FC = () => {
           )}
 
           <div className="space-y-1">
-            {filteredBoards.map(board => {
-              const isActive = location.pathname.startsWith(`/board/${board.id}`);
-              return (
-                <Link
-                  key={board.id}
-                  to={`/board/${board.id}`}
-                  className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors group ${
-                    isActive 
-                      ? 'bg-sidebar-active text-sidebar-text font-semibold' 
-                      : 'text-sidebar-text hover:bg-sidebar-active/50'
-                  }`}
-                  title={isSidebarCollapsed ? board.name : undefined}
-                >
-                  <ProjectIdentity 
-                    board={board} 
-                    size="sm" 
-                    className={`transition-transform group-hover:scale-105 ${isSidebarCollapsed ? 'mx-auto' : ''}`} 
-                  />
-                </Link>
-              );
-            })}
+            {filteredOtherBoards.map(renderBoardItem)}
             
-            {filteredBoards.length === 0 && !isSidebarCollapsed && (
+            {filteredOtherBoards.length === 0 && filteredFavoriteBoards.length === 0 && !isSidebarCollapsed && (
               <div className="px-3 py-2 text-xs text-sidebar-text-muted">No projects found.</div>
             )}
           </div>
         </div>
+
 
         {/* Administration Section */}
         {isSuperAdmin(user) && (

@@ -253,6 +253,8 @@ erDiagram
 | `075_user_preferences_tour.sql` | `user_preferences` | Adds `tour_completed` onboarding tracking field. |
 | `076_update_org_profile_function.sql` | `fn_get_organization_profile` | Updates organization profile retrieval with new fields. |
 | `077_fix_deleting_org_users.sql` | Fix | Soft-deletes users associated with organizations pending deletion. |
+| `078_board_favorites.sql` | `user_board_favorites` | Creates board favorites junction table, `fn_toggle_board_favorite` procedure, and updates `v_boards_canonical` with `is_favorited`. |
+
 
 ---
 
@@ -263,7 +265,8 @@ erDiagram
 | View Name | Source Migration | Description |
 |---|---|---|
 | `v_users_canonical` | `008_views.sql` | User profile combined with organization role. |
-| `v_boards_canonical` | `008_views.sql` | Board details with member counts and task counts. |
+| `v_boards_canonical` | `008_views.sql` / `078_*.sql` | Board details with member counts, task counts, columns array, and per-user `is_favorited` flag. |
+
 | `v_tasks_canonical` | `008_views.sql` | Task attributes combined with assignee details, comment/attachment counts, label objects array, subtask counts. |
 | `v_comments_canonical` | `008_views.sql` / `064_*.sql` / `065_*.sql` | Task comments with author metadata, parent comment reference, `edited_at` timestamp, and `mentioned_users` JSON array. |
 | `v_comment_mentions_canonical` | `065_comment_mentions.sql` | User @mentions in comments joined with mentioned user details and comment metadata. |
@@ -291,6 +294,8 @@ erDiagram
 | Function | Source Migration | Description |
 |---|---|---|
 | `fn_check_board_access(user_id, board_id)` | `005_*.sql` | Boolean: does this user have access to this board? |
+| `fn_toggle_board_favorite(user_id, board_id)` | `078_board_favorites.sql` | Toggles board favorited state for user; returns boolean `is_favorited`. |
+
 | `fn_create_task(...)` | `006_*.sql` | Atomically creates a task card and records audit log. |
 | `fn_move_task(task_id, new_column_id, new_position)` | `006_*.sql` | Atomically moves task to column and position. |
 | `fn_delete_task(task_id, user_id)` | `054_task_deletion_notifications_cleanup.sql` | Atomically soft-deletes a task and its comments, and purges all associated notifications across all users. |

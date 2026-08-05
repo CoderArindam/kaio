@@ -7,6 +7,8 @@ import AssigneeSelector from '../../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../../components/shared/PrioritySelector';
 import DueDatePicker from '../../../../components/shared/DueDatePicker';
 import LabelPicker from '../../../../components/shared/LabelPicker';
+import { UserAvatar } from '../../../../components/common/UserAvatar';
+import { formatUserName } from '../../../../utils/userHelpers';
 
 interface TaskSidebarProps {
   task: Task;
@@ -18,6 +20,14 @@ interface TaskSidebarProps {
 
 const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, canEdit, createdDate }) => {
   const { updateTaskData, moveTask, assignTask } = useTaskStore();
+
+  const creatorUser = boardMembers.find((m) => m.id === task.created_by) || {
+    id: task.created_by,
+    first_name: task.creator_first_name,
+    last_name: task.creator_last_name,
+    email: task.creator_email,
+    avatar_url: task.creator_avatar_url,
+  };
 
   return (
     <aside className="w-80 p-8 bg-brand-surface border-l border-brand-border space-y-6 shrink-0 overflow-y-auto">
@@ -62,19 +72,9 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
       <div className="pt-4 border-t border-brand-border">
         <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
         <div className="flex items-center gap-2">
-          {task.creator_avatar_url ? (
-            <img
-              src={task.creator_avatar_url}
-              alt="Reporter"
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px] font-bold">
-              {((task.creator_first_name?.[0] || task.creator_email?.[0] || 'U')).toUpperCase()}
-            </div>
-          )}
-          <span className="text-sm text-brand-text">
-            {[task.creator_first_name, task.creator_last_name].filter(Boolean).join(' ') || task.creator_email || `User #${task.created_by || '—'}`}
+          <UserAvatar user={creatorUser} size="sm" />
+          <span className="text-sm font-medium text-brand-text">
+            {formatUserName(creatorUser, task.created_by ? `User #${task.created_by}` : 'Unknown')}
           </span>
         </div>
       </div>

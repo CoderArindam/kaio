@@ -25,8 +25,9 @@ This document provides a reference catalog of the primary React UI components wi
 | `Modal`           | `components/common/Modal.tsx`           | Accessible backdrop modal with slide-in animation, escape key dismissal, and close button. Props: `isOpen`, `onClose`, `title`, `children`. |
 | `ConfirmDialog`   | `components/common/ConfirmDialog.tsx`   | Reusable confirmation prompt dialog for destructive actions (archive, delete, revoke).                                                      |
 | `EmptyState`      | `components/common/EmptyState.tsx`      | Placeholder for empty lists with an icon, heading, and optional CTA button.                                                                 |
-| `ProjectCard`     | `components/common/ProjectCard.tsx`     | Board/project preview card with icon, color, name, and task count.                                                                          |
+| `ProjectCard`     | `components/common/ProjectCard.tsx`     | Board/project preview card with icon, color, name, task count, and interactive Star favorite toggle button.                                |
 | `ProjectIdentity` | `components/common/ProjectIdentity.tsx` | Renders board icon + color identity badge (used in headers and sidebars).                                                                   |
+
 | `UserAvatar`      | `components/common/UserAvatar.tsx`      | User avatar with image src or initials fallback, configurable size.                                                                         |
 | `WorkspaceLoader` | `components/common/WorkspaceLoader.tsx` | Full-page loading spinner shown during workspace initialization.                                                                            |
 | `WorkspaceLogo`   | `components/common/WorkspaceLogo.tsx`   | Organization logo/branding display with name fallback.                                                                                      |
@@ -43,7 +44,8 @@ This document provides a reference catalog of the primary React UI components wi
 ### 4.2 `ApplicationSidebar`
 
 - **Path**: `components/layout/ApplicationSidebar.tsx`
-- **Purpose**: Left navigation sidebar. Renders workspace logo, nav links (Dashboard, Boards, My Work, Meetings, Settings, Admin), notification bell, active meeting status indicator, and real-time WebSocket connection status pulse indicator (`wsConnected`). Collapses to icon-only mode.
+- **Purpose**: Left navigation sidebar. Renders workspace logo, nav links (Dashboard, Boards, My Work, Timesheets, Admin), pinned "Favorites" section above main board list, project filter search, Star toggle buttons per board, notification bell, active meeting status indicator, and real-time WebSocket connection status pulse indicator (`wsConnected`). Collapses to icon-only mode.
+
 
 ### 4.3 `SettingsLayout`
 

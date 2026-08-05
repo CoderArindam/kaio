@@ -28,6 +28,12 @@ class CanonicalBoardResponse(BaseModel):
     archived_at: Optional[datetime] = None
     member_count: int
     task_count: int
+    is_favorited: bool = False
+
+class BoardFavoriteToggleResponse(BaseModel):
+    board_id: int
+    is_favorited: bool
+
 
 class ProjectSettingsUpdate(BaseModel):
     name: Optional[str] = None

@@ -226,7 +226,7 @@ export const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({ boardId }) =
   const weekDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-brand-bg relative">
+    <div className="h-full flex flex-col min-h-0 bg-brand-bg relative overflow-hidden">
       {/* Top Header Bar */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-3 shrink-0 border-b border-brand-border/60 bg-brand-surface/50">
         <div className="flex items-center gap-3 sm:gap-4">

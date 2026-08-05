@@ -145,7 +145,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ boardId }) => {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-brand-bg relative">
+    <div className="h-full flex flex-col min-h-0 bg-brand-bg relative overflow-hidden">
       {/* Header Bar */}
       <header className="flex flex-wrap items-center justify-between px-4 sm:px-8 py-3.5 shrink-0 gap-2">
         <h1 className="text-lg sm:text-2xl font-bold text-brand-text flex items-center gap-2">
@@ -189,7 +189,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ boardId }) => {
         ) : (
           <div className="flex flex-col gap-3 max-w-6xl mx-auto">
             {/* Table Header Bar */}
-            <div className="hidden md:flex items-center justify-between px-4 py-2 text-xs font-semibold text-brand-text-muted uppercase tracking-wider bg-brand-surface-low/50 rounded-lg border border-brand-border/50">
+            <div className="hidden md:flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-brand-text-muted uppercase tracking-wider bg-brand-surface sticky top-0 z-10 rounded-xl border border-brand-border shadow-2xs">
               <button
                 onClick={() => handleSort('title')}
                 className="group flex items-center gap-1.5 flex-1 text-left cursor-pointer hover:text-brand-text transition-colors"
