@@ -109,8 +109,11 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 |---|---|---|---|
 | `/tasks/{task_id}/comments` | `POST` | Cookie | Creates a comment on a task (`fn_create_comment`). Accepts optional `mentioned_user_ids: number[]`. Inserts mention history into `comment_mentions` (`fn_create_comment_mentions`), dispatches `MENTIONED_IN_COMMENT` notifications, real-time WebSocket events, and email notifications to assignees/parents. |
 | `/tasks/{task_id}/comments/{comment_id}` | `PATCH` | Cookie | Updates an existing comment (`fn_update_comment`). Owner-only access, sets `edited_at = NOW()`. Body: `{content: string}`. |
-| `/tasks/{task_id}/comments` | `GET` | Cookie | Lists all comments for a task (surfaces `edited_at` timestamp and `mentioned_users` JSON array). |
+| `/tasks/{task_id}/comments` | `GET` | Cookie | Lists all comments for a task (surfaces `edited_at` timestamp, `mentioned_users` JSON array, and aggregated `reactions` array). |
 | `/comments/{comment_id}` | `DELETE` | Cookie | Permanently deletes a comment from database (`fn_delete_comment`, owner-only access). |
+| `/comments/{comment_id}/reactions/{emoji}` | `POST` | Cookie | Toggles an emoji reaction (👍, ✅, ❤️) on a comment (`fn_toggle_comment_reaction`). Broadcasts `comment_updated` WS event. |
+| `/comments/{comment_id}/reactions/{emoji}` | `DELETE` | Cookie | Removes an emoji reaction (👍, ✅, ❤️) from a comment (`fn_toggle_comment_reaction`). Broadcasts `comment_updated` WS event. |
+
 
 ---
 

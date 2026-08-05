@@ -9,13 +9,16 @@ import {
   Loader2,
   Pencil,
   Check,
+  Smile,
 } from 'lucide-react';
 import {
   getTaskComments,
   createComment,
   updateComment,
   deleteComment,
+  toggleCommentReaction,
   type Comment,
+  type CommentReaction,
 } from '../../../../../services/commentsApi';
 import { type Task } from '../../../../../services/tasksApi';
 import { type User, getBoardMembers, getUsers } from '../../../../../services/usersApi';
@@ -25,6 +28,8 @@ import ConfirmDialog from '../../../../../components/common/ConfirmDialog';
 import { UserAvatar } from '../../../../../components/common/UserAvatar';
 import { formatUserName } from '../../../../../utils/userHelpers';
 import { useUiStore } from '../../../../../store/uiStore';
+
+const EMOJI_OPTIONS = ['👍', '✅', '❤️'];
 
 interface CommentsTabProps {
   task: Task;
@@ -55,7 +60,19 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [activePickerCommentId, setActivePickerCommentId] = useState<number | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActivePickerCommentId(null);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,27 +103,27 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
     return currentUserId === commentUserId;
   };
 
-  const fetchComments = async () => {
-    setIsLoading(true);
+  const fetchComments = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const data = await getTaskComments(task.id);
       setComments(data);
     } catch (error) {
       console.error("Failed to fetch comments", error);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchComments();
+    fetchComments(true);
   }, [task.id]);
 
   useEffect(() => {
     const handleCommentUpdated = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail && customEvent.detail.task_id === task.id) {
-        fetchComments();
+        fetchComments(false);
       }
     };
     window.addEventListener('kaio:comment_updated', handleCommentUpdated);
@@ -114,6 +131,7 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
       window.removeEventListener('kaio:comment_updated', handleCommentUpdated);
     };
   }, [task.id]);
+
 
   useEffect(() => {
     if (!isLoading && comments.length > 0 && highlightedCommentId) {
@@ -125,6 +143,49 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
       }, 100);
     }
   }, [isLoading, comments.length, highlightedCommentId]);
+
+  const handleToggleReaction = async (commentId: number, emoji: string) => {
+    let currentlyReacted = false;
+
+    setComments((prevComments) =>
+      prevComments.map((c) => {
+        if (c.id !== commentId) return c;
+
+        const currentReactions = c.reactions || [];
+        const existing = currentReactions.find((r) => r.emoji === emoji);
+        currentlyReacted = existing?.reacted || false;
+
+        let nextReactions: CommentReaction[] = [];
+        if (existing) {
+          if (existing.reacted) {
+            if (existing.count <= 1) {
+              nextReactions = currentReactions.filter((r) => r.emoji !== emoji);
+            } else {
+              nextReactions = currentReactions.map((r) =>
+                r.emoji === emoji ? { ...r, count: r.count - 1, reacted: false } : r
+              );
+            }
+          } else {
+            nextReactions = currentReactions.map((r) =>
+              r.emoji === emoji ? { ...r, count: r.count + 1, reacted: true } : r
+            );
+          }
+        } else {
+          nextReactions = [...currentReactions, { emoji, count: 1, reacted: true }];
+        }
+
+        return { ...c, reactions: nextReactions };
+      })
+    );
+
+    try {
+      await toggleCommentReaction(commentId, emoji, currentlyReacted);
+    } catch (error: any) {
+      console.error("Failed to toggle comment reaction", error);
+      toast.error("Failed to update reaction");
+      fetchComments(false);
+    }
+  };
 
   const handleStartReply = (targetComment: Comment) => {
     setReplyToCommentId(targetComment.id);
@@ -225,7 +286,7 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
       });
       setNewCommentText("");
       setReplyToCommentId(null);
-      await fetchComments();
+      await fetchComments(false);
       useActivityStore.getState().appendActivity(task.id, {
         entity_type: 'TASK', entity_id: task.id, activity_type: 'COMMENT_ADDED',
         old_value: null, new_value: null, metadata: {}
@@ -245,7 +306,7 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
     setIsDeleting(true);
     try {
       await deleteComment(commentToDelete);
-      await fetchComments();
+      await fetchComments(false);
       useActivityStore.getState().appendActivity(task.id, {
         entity_type: 'TASK', entity_id: task.id, activity_type: 'COMMENT_DELETED',
         old_value: null, new_value: null, metadata: {}
@@ -316,10 +377,8 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   const renderCommentContent = (content: string) => {
     if (!content) return null;
 
-    // Normalize any legacy structured tokens @[Name](user:123) to @Name
     let cleanContent = content.replace(/@\[([^\]]+)\]\(user:\d+\)/g, '@$1');
 
-    // Build matching regex for current board members
     const sortedMembers = [...boardMembers].sort(
       (a, b) => formatUserName(b).length - formatUserName(a).length
     );
@@ -490,13 +549,67 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
                         {renderCommentContent(item.content)}
                       </div>
 
-                      <div className="flex gap-4 mt-2 text-xs text-brand-text-muted">
+                      {/* Reaction Pills Row */}
+                      {item.reactions && item.reactions.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {item.reactions.map((r) => (
+                            <button
+                              key={r.emoji}
+                              onClick={() => handleToggleReaction(item.id, r.emoji)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs transition-all ${
+                                r.reacted
+                                  ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/40 font-semibold shadow-xs'
+                                  : 'bg-brand-surface-low text-brand-text-muted border border-brand-border hover:bg-brand-surface-highlight hover:text-brand-text'
+                              }`}
+                              title={`${r.count} ${r.count === 1 ? 'person' : 'people'} reacted with ${r.emoji}`}
+                            >
+                              <span>{r.emoji}</span>
+                              <span className="text-[11px] font-medium">{r.count}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4 mt-2 text-xs text-brand-text-muted">
                         <button
                           onClick={() => handleStartReply(item)}
                           className="hover:text-brand-primary flex items-center gap-1 font-medium"
                         >
                           <Reply size={14} /> Reply
                         </button>
+
+                        <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setActivePickerCommentId(activePickerCommentId === item.id ? null : item.id)}
+                            className="hover:text-brand-primary flex items-center gap-1 font-medium transition-colors"
+                            title="Add reaction"
+                          >
+                            <Smile size={14} /> React
+                          </button>
+
+                          {activePickerCommentId === item.id && (
+                            <div className="absolute left-0 bottom-full mb-1.5 flex items-center gap-1 p-1 bg-brand-surface border border-brand-border rounded-lg shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100">
+                              {EMOJI_OPTIONS.map((emoji) => {
+                                const hasReacted = item.reactions?.some((r) => r.emoji === emoji && r.reacted);
+                                return (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => {
+                                      handleToggleReaction(item.id, emoji);
+                                      setActivePickerCommentId(null);
+                                    }}
+                                    className={`p-1.5 text-base hover:bg-brand-surface-highlight rounded transition-transform hover:scale-125 ${
+                                      hasReacted ? 'bg-brand-primary/20 rounded-md' : ''
+                                    }`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
                         {isCommentOwner(item.user_id) && (
                           <>
                             <button
@@ -599,13 +712,68 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
                                   <div className="mt-1 bg-brand-surface-low border border-brand-border rounded p-2 text-xs whitespace-pre-wrap text-brand-text leading-relaxed">
                                     {renderCommentContent(reply.content)}
                                   </div>
-                                  <div className="flex gap-3 mt-1 text-[10px] text-brand-text-muted">
+
+                                  {/* Reaction Pills Row */}
+                                  {reply.reactions && reply.reactions.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                      {reply.reactions.map((r) => (
+                                        <button
+                                          key={r.emoji}
+                                          onClick={() => handleToggleReaction(reply.id, r.emoji)}
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] transition-all ${
+                                            r.reacted
+                                              ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/40 font-semibold shadow-xs'
+                                              : 'bg-brand-surface-low text-brand-text-muted border border-brand-border hover:bg-brand-surface-highlight hover:text-brand-text'
+                                          }`}
+                                          title={`${r.count} ${r.count === 1 ? 'person' : 'people'} reacted with ${r.emoji}`}
+                                        >
+                                          <span>{r.emoji}</span>
+                                          <span className="text-[10px] font-medium">{r.count}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center gap-3 mt-1 text-[10px] text-brand-text-muted">
                                     <button
                                       onClick={() => handleStartReply(reply)}
                                       className="hover:text-brand-primary flex items-center gap-0.5 font-medium"
                                     >
                                       <Reply size={11} /> Reply
                                     </button>
+
+                                    <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        onClick={() => setActivePickerCommentId(activePickerCommentId === reply.id ? null : reply.id)}
+                                        className="hover:text-brand-primary flex items-center gap-0.5 font-medium transition-colors"
+                                        title="Add reaction"
+                                      >
+                                        <Smile size={11} /> React
+                                      </button>
+
+                                      {activePickerCommentId === reply.id && (
+                                        <div className="absolute left-0 bottom-full mb-1 flex items-center gap-1 p-1 bg-brand-surface border border-brand-border rounded-lg shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100">
+                                          {EMOJI_OPTIONS.map((emoji) => {
+                                            const hasReacted = reply.reactions?.some((r) => r.emoji === emoji && r.reacted);
+                                            return (
+                                              <button
+                                                key={emoji}
+                                                onClick={() => {
+                                                  handleToggleReaction(reply.id, emoji);
+                                                  setActivePickerCommentId(null);
+                                                }}
+                                                className={`p-1.5 text-sm hover:bg-brand-surface-highlight rounded transition-transform hover:scale-125 ${
+                                                  hasReacted ? 'bg-brand-primary/20 rounded-md' : ''
+                                                }`}
+                                              >
+                                                {emoji}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+
                                     {isCommentOwner(reply.user_id) && (
                                       <>
                                         <button

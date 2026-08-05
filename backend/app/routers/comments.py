@@ -118,3 +118,46 @@ async def delete_comment(
             }
         )
     return None
+
+@router.post("/comments/{comment_id}/reactions/{emoji}", response_model=DataEnvelope[dict])
+async def add_or_toggle_reaction(
+    comment_id: int,
+    emoji: str,
+    current_user: dict = Depends(get_current_user),
+    comment_service: CommentService = Depends(get_comment_service)
+):
+    added, task_id, board_id = await comment_service.toggle_reaction(comment_id, emoji, current_user)
+    if board_id and task_id:
+        await connection_manager.send_to_board(
+            board_id=board_id,
+            message={
+                "type": "comment_updated",
+                "board_id": board_id,
+                "task_id": task_id,
+                "comment_id": comment_id,
+                "action": "reaction_updated"
+            }
+        )
+    return DataEnvelope(data={"comment_id": comment_id, "emoji": emoji, "added": added})
+
+@router.delete("/comments/{comment_id}/reactions/{emoji}", response_model=DataEnvelope[dict])
+async def remove_reaction(
+    comment_id: int,
+    emoji: str,
+    current_user: dict = Depends(get_current_user),
+    comment_service: CommentService = Depends(get_comment_service)
+):
+    added, task_id, board_id = await comment_service.toggle_reaction(comment_id, emoji, current_user)
+    if board_id and task_id:
+        await connection_manager.send_to_board(
+            board_id=board_id,
+            message={
+                "type": "comment_updated",
+                "board_id": board_id,
+                "task_id": task_id,
+                "comment_id": comment_id,
+                "action": "reaction_updated"
+            }
+        )
+    return DataEnvelope(data={"comment_id": comment_id, "emoji": emoji, "added": added})
+

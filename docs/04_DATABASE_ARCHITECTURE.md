@@ -254,6 +254,7 @@ erDiagram
 | `076_update_org_profile_function.sql` | `fn_get_organization_profile` | Updates organization profile retrieval with new fields. |
 | `077_fix_deleting_org_users.sql` | Fix | Soft-deletes users associated with organizations pending deletion. |
 | `078_board_favorites.sql` | `user_board_favorites` | Creates board favorites junction table, `fn_toggle_board_favorite` procedure, and updates `v_boards_canonical` with `is_favorited`. |
+| `079_comment_reactions.sql` | `comment_reactions` | Creates comment reactions table, `fn_toggle_comment_reaction` procedure, and updates `v_comments_canonical` with aggregated `reactions` array. |
 
 
 ---
@@ -268,7 +269,8 @@ erDiagram
 | `v_boards_canonical` | `008_views.sql` / `078_*.sql` | Board details with member counts, task counts, columns array, and per-user `is_favorited` flag. |
 
 | `v_tasks_canonical` | `008_views.sql` | Task attributes combined with assignee details, comment/attachment counts, label objects array, subtask counts. |
-| `v_comments_canonical` | `008_views.sql` / `064_*.sql` / `065_*.sql` | Task comments with author metadata, parent comment reference, `edited_at` timestamp, and `mentioned_users` JSON array. |
+| `v_comments_canonical` | `008_views.sql` / `064_*.sql` / `065_*.sql` / `079_*.sql` | Task comments with author metadata, parent comment reference, `edited_at` timestamp, `mentioned_users` JSON array, and aggregated emoji reactions array (`{emoji, count, reacted}`). |
+
 | `v_comment_mentions_canonical` | `065_comment_mentions.sql` | User @mentions in comments joined with mentioned user details and comment metadata. |
 | `v_task_proposals_canonical` | `022_task_proposals_view.sql` | Proposal details with confidence scores and source transcript snippets. |
 | `v_notifications_canonical` | `031_*.sql` / `054_*.sql` / `065_*.sql` | Notifications with target entity type, deep-link payload, and target title reference (includes `COMMENT_MENTIONED` events; strictly excludes deleted tasks/comments). |

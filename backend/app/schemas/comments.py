@@ -10,6 +10,11 @@ class CommentCreate(BaseModel):
 class CommentUpdate(BaseModel):
     content: str
 
+class CommentReactionSummary(BaseModel):
+    emoji: str
+    count: int
+    reacted: bool = False
+
 class CommentResponse(BaseModel):
     id: int
     task_id: int
@@ -23,4 +28,6 @@ class CommentResponse(BaseModel):
     user_last_name: Optional[str] = None
     user_avatar_url: Optional[str] = None
     user_email: Optional[str] = None
+    reactions: List[CommentReactionSummary] = []
+
 
