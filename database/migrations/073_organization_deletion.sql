@@ -96,6 +96,11 @@ BEGIN
     SET revoked_at = NOW()
     WHERE user_id IN (SELECT id FROM users WHERE organization_id = p_org_id);
 
+    -- Soft-delete users to immediately release their emails for reuse
+    UPDATE users
+    SET deleted_at = NOW()
+    WHERE organization_id = p_org_id AND deleted_at IS NULL;
+
     -- Log to platform audit log
     INSERT INTO platform_audit_log (
         event_type, organization_id_snapshot, organization_name_snapshot,
@@ -145,6 +150,11 @@ BEGIN
     UPDATE organization_deletion_jobs
     SET status = 'FAILED', last_error = 'CANCELLED'
     WHERE organization_id = p_org_id AND status = 'PENDING';
+
+    -- Restore soft-deleted users
+    UPDATE users
+    SET deleted_at = NULL
+    WHERE organization_id = p_org_id AND deleted_at IS NOT NULL;
 
     -- Log to platform audit log
     INSERT INTO platform_audit_log (
