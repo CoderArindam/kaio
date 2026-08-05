@@ -1,4 +1,4 @@
--- 073_organization_deletion.sql
+-- 072_organization_deletion.sql
 
 -- 1. Organizations Status Modifications
 ALTER TABLE organizations

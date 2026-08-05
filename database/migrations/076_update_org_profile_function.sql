@@ -1,4 +1,4 @@
--- 075_update_org_profile_function.sql
+-- 076_update_org_profile_function.sql
 -- Update organization profile functions to include new fields
 
 DROP FUNCTION IF EXISTS fn_get_organization_profile(INTEGER);

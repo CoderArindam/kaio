@@ -1,4 +1,4 @@
--- 074_user_preferences_tour.sql
+-- 075_user_preferences_tour.sql
 -- Add tour_completed to user_preferences to track onboarding
 
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS tour_completed BOOLEAN DEFAULT false NOT NULL;

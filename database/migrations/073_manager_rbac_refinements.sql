@@ -1,4 +1,4 @@
--- 074_manager_rbac_refinements.sql
+-- 073_manager_rbac_refinements.sql
 -- Modify RBAC to ensure MANAGER role only accesses assigned projects/boards
 -- instead of organization-wide default access.
 
