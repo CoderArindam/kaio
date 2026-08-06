@@ -145,33 +145,36 @@ const CommentsTab: React.FC<CommentsTabProps> = ({
   }, [isLoading, comments.length, highlightedCommentId]);
 
   const handleToggleReaction = async (commentId: number, emoji: string) => {
-    let currentlyReacted = false;
+    const targetComment = comments.find(c => c.id === commentId);
+    if (!targetComment) return;
+    const currentReactions = targetComment.reactions || [];
+    const existingReaction = currentReactions.find((r) => r.emoji === emoji);
+    const currentlyReacted = existingReaction?.reacted || false;
 
     setComments((prevComments) =>
       prevComments.map((c) => {
         if (c.id !== commentId) return c;
 
-        const currentReactions = c.reactions || [];
-        const existing = currentReactions.find((r) => r.emoji === emoji);
-        currentlyReacted = existing?.reacted || false;
+        const prevReactions = c.reactions || [];
+        const existing = prevReactions.find((r) => r.emoji === emoji);
 
         let nextReactions: CommentReaction[] = [];
         if (existing) {
           if (existing.reacted) {
             if (existing.count <= 1) {
-              nextReactions = currentReactions.filter((r) => r.emoji !== emoji);
+              nextReactions = prevReactions.filter((r) => r.emoji !== emoji);
             } else {
-              nextReactions = currentReactions.map((r) =>
+              nextReactions = prevReactions.map((r) =>
                 r.emoji === emoji ? { ...r, count: r.count - 1, reacted: false } : r
               );
             }
           } else {
-            nextReactions = currentReactions.map((r) =>
+            nextReactions = prevReactions.map((r) =>
               r.emoji === emoji ? { ...r, count: r.count + 1, reacted: true } : r
             );
           }
         } else {
-          nextReactions = [...currentReactions, { emoji, count: 1, reacted: true }];
+          nextReactions = [...prevReactions, { emoji, count: 1, reacted: true }];
         }
 
         return { ...c, reactions: nextReactions };

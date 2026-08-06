@@ -98,34 +98,45 @@ This document provides a reference catalog of the primary React UI components wi
 ### 6.5 `TaskCard`
 
 - **Path**: `features/boards/components/TaskCard.tsx`
-- **Purpose**: Draggable task card preview with support for `variant="board"` and `variant="list"`. Displays title, assignee avatar, due date, priority badge, comment count, subtask ratio badge (`3/5`), and color-coded label tag pills. Clicking opens the task detail modal.
+- **Purpose**: Draggable task card preview with support for `variant="board"` and `variant="list"`. Displays title, assignee avatar, due date, priority badge, comment count, subtask ratio badge (`3/5`), estimate & logged hours badge (`⏱️ 2.5/4h`), and color-coded label tag pills. Clicking opens the task detail modal.
 
-### 6.4 `SubtaskChecklist`
+### 6.4 `TaskSidebar`
+
+- **Path**: `features/boards/modals/task-details/TaskSidebar.tsx`
+- **Purpose**: Task detail sidebar metadata panel. Manages column status, assignee, priority, due date, reporter info, labels, estimate hours (with inline edit input), and Time Tracking widget (displaying estimated hours, logged hours, remaining hours, visual progress bar, and "+ Log Time" button launching `LogTimeModal`).
+
+### 6.5 `LogTimeModal`
+
+- **Path**: `features/boards/modals/task-details/LogTimeModal.tsx`
+- **Purpose**: Jira-style modal for logging work hours directly to a task (`POST /tasks/{id}/log-time`). Auto-creates draft timesheet for the week if none exists, validates input, and updates task logged hours.
+
+### 6.6 `SubtaskChecklist`
 
 - **Path**: `features/boards/modals/task-details/SubtaskChecklist.tsx`
 - **Purpose**: Interactive subtask checklist embedded inside task detail modal. Features a **collapsible toggle arrow** to expand/collapse the subtask section. Displays progress bar and ratio ("3/5 completed"), drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter key, instant checkbox completion toggles, and delete-on-hover actions.
 
-### 6.5 `LabelFilter`
+### 6.7 `LabelFilter`
 
 - **Path**: `features/boards/components/LabelFilter.tsx`
 - **Purpose**: Filter bar pill selector for filtering board task cards by color-coded board labels.
 
-### 6.5 `AssigneeFilter`
+### 6.8 `AssigneeFilter`
 
 - **Path**: `features/boards/components/AssigneeFilter.tsx`
 - **Purpose**: Filter bar dropdown for filtering task cards by board member.
 
-### 6.6 `DueDateFilter`
+### 6.9 `DueDateFilter`
 
 - **Path**: `features/boards/components/DueDateFilter.tsx`
 - **Purpose**: Filter bar dropdown for filtering task cards by due date range (today, this week, overdue).
 
-### 6.6 `CreateTaskModal`
+### 6.10 `CreateTaskModal`
 
 - **Path**: `features/boards/modals/CreateTaskModal.tsx`
-- **Purpose**: Quick task creation form with title, Markdown description editor (`MarkdownEditor` with Write/Preview tabs and formatting toolbar), assignee selector, priority selector, and due date picker.
+- **Purpose**: Quick task creation form with title, Markdown description editor (`MarkdownEditor` with Write/Preview tabs and formatting toolbar), assignee selector, priority selector, due date picker, and estimate hours field.
 
-### 6.7 `AddMemberModal`
+### 6.11 `AddMemberModal`
+
 
 - **Path**: `features/boards/modals/AddMemberModal.tsx`
 - **Purpose**: Modal for inviting users to a board by email address.

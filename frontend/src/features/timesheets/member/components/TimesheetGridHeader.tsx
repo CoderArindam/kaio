@@ -27,12 +27,12 @@ export const TimesheetGridHeader: React.FC<TimesheetGridHeaderProps> = ({
       </div>
       {!readOnly && (
         <Button
-          variant="primary"
+          variant="secondary"
           size="sm"
           onClick={onLogEffort}
-          className="flex items-center gap-1.5 shadow-md shadow-brand-primary/20 bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold cursor-pointer"
+          className="flex items-center gap-1.5 shadow-sm text-brand-text font-semibold cursor-pointer ml-4 hover:bg-brand-surface-low"
         >
-          <Plus size={16} /> Log Effort
+          <Plus size={16} className="text-brand-primary" /> Log Effort
         </Button>
       )}
     </div>

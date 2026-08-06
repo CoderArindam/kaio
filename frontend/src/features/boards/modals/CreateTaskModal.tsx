@@ -22,6 +22,7 @@ const CreateTaskModal: React.FC = () => {
   const [priority, setPriority] = useState('Medium');
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
+  const [estimateHours, setEstimateHours] = useState<string>('');
   const [columnId, setColumnId] = useState<number | undefined>(undefined);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
 
@@ -36,10 +37,13 @@ const CreateTaskModal: React.FC = () => {
     e.preventDefault();
     if (!title.trim() || columnId === undefined) return;
     
+    const estNum = estimateHours.trim() ? parseFloat(estimateHours) : undefined;
+
     await createNewTask({
       title,
       description,
       priority,
+      estimate_hours: estNum && !isNaN(estNum) ? estNum : undefined,
       assigned_to: assigneeId || undefined,
       due_date: dueDate,
       column_id: columnId,
@@ -49,6 +53,7 @@ const CreateTaskModal: React.FC = () => {
     setTitle('');
     setDescription('');
     setPriority('Medium');
+    setEstimateHours('');
     setAssigneeId(null);
     setDueDate(null);
     setSelectedLabelIds([]);
@@ -123,6 +128,19 @@ const CreateTaskModal: React.FC = () => {
               />
             </div>
 
+            <div>
+              <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Estimate (Hours)</p>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                placeholder="e.g. 8.0"
+                value={estimateHours}
+                onChange={(e) => setEstimateHours(e.target.value)}
+                className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-brand-primary"
+              />
+            </div>
+
             <div className="col-span-2 pt-2 border-t border-brand-border/50">
               <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Labels (Optional)</p>
               <LabelPicker 
@@ -133,6 +151,7 @@ const CreateTaskModal: React.FC = () => {
             </div>
           </div>
         </div>
+
         
         <div className="p-6 border-t border-brand-border bg-brand-surface-low flex justify-end gap-3 mt-auto rounded-b-lg">
           <button

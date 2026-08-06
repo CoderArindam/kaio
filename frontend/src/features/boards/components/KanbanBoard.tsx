@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Plus, UserPlus, CheckSquare, Trash2, MoreVertical, MoveLeft, MoveRight, Edit2, Check, X } from 'lucide-react';
+import { Loader2, Plus, UserPlus, CheckSquare, Trash2, MoreVertical, MoveLeft, MoveRight, Edit2, Check, X, Clock } from 'lucide-react';
+
 import {
   DndContext,
   DragOverlay,
@@ -498,9 +499,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                       </div>
 
                       <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const colEstHours = columnTasks.reduce((sum, t) => sum + (t.estimate_hours ? Number(t.estimate_hours) : 0), 0);
+                          if (colEstHours <= 0) return null;
+                          return (
+                            <span className="px-2 py-0.5 rounded-full bg-brand-surface-low text-brand-text-muted border border-brand-border text-xs font-semibold shrink-0 flex items-center gap-1" title="Total Estimated Hours for Column">
+                              <Clock size={11} className="text-brand-primary" />
+                              {colEstHours % 1 === 0 ? colEstHours : colEstHours.toFixed(1)}h
+                            </span>
+                          );
+                        })()}
                         <span className="px-2.5 py-0.5 rounded-full bg-brand-surface-low text-brand-text-muted border border-brand-border text-xs font-semibold shrink-0">
                           {columnTasks.length}
                         </span>
+
 
                         {canManageColumns && (
                           <div className="relative">

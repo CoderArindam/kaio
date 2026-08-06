@@ -3,12 +3,13 @@ from typing import Optional, List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
-from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest, BulkDeleteTasksRequest
+from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest, BulkDeleteTasksRequest, LogTaskTimeRequest
 from app.schemas.envelope import DataEnvelope
 from app.services.notification_service import dispatch_task_email, NotificationService, _dispatch_notification_event
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
 from app.services.task_service import TaskService
+
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,26 @@ async def get_task(
 ):
     task = await task_service.get_task(task_id, current_user)
     return DataEnvelope(data=task)
+
+
+@router.post("/tasks/{task_id}/log-time", response_model=DataEnvelope[CanonicalTaskResponse])
+async def log_task_time(
+    task_id: int,
+    log_in: LogTaskTimeRequest,
+    current_user: dict = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    task = await task_service.log_task_time(task_id, log_in, current_user)
+    try:
+        await connection_manager.send_to_board(
+            board_id=task.board_id,
+            message={"type": "task_updated", "board_id": task.board_id, "task_id": task.id, "action": "logged_time"},
+            exclude_user_id=current_user["id"],
+        )
+    except Exception:
+        pass
+    return DataEnvelope(data=task)
+
 
 
 @router.get("/boards/{board_id}/tasks", response_model=DataEnvelope[BoardDataResponse])

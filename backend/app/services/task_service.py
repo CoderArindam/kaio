@@ -3,7 +3,8 @@ from typing import Optional, List, Dict, Any
 import asyncpg
 from fastapi import HTTPException
 
-from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse
+from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, LogTaskTimeRequest
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +59,12 @@ class TaskService:
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
                 task_id = await self.conn.fetchval(
                     """
-                    INSERT INTO tasks (board_id, column_id, title, description, priority, assigned_to, created_by, due_date, reminder_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    INSERT INTO tasks (board_id, column_id, title, description, priority, estimate_hours, assigned_to, created_by, due_date, reminder_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     RETURNING id
                     """,
                     task_in.board_id, task_in.column_id, task_in.title, task_in.description,
-                    task_in.priority, task_in.assigned_to, current_user["id"], task_in.due_date, task_in.reminder_at
+                    task_in.priority, task_in.estimate_hours, task_in.assigned_to, current_user["id"], task_in.due_date, task_in.reminder_at
                 )
                 
                 if task_in.label_ids:
@@ -77,6 +78,37 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error creating task: {e}")
             raise HTTPException(status_code=400, detail="An unexpected error occurred")
+
+    async def log_task_time(self, task_id: int, log_in: LogTaskTimeRequest, current_user: dict) -> CanonicalTaskResponse:
+        try:
+            has_access = await self.conn.fetchval("SELECT can_edit_task($1, $2)", current_user["id"], task_id)
+            if not has_access:
+                raise HTTPException(status_code=403, detail="Task not found or access denied")
+
+            user_id = current_user.get("id")
+            org_id = current_user.get("organization_id")
+
+            user_uuid = UUID(f"00000000-0000-0000-0000-{int(user_id):012d}") if str(user_id).isdigit() else user_id
+            org_uuid = UUID(f"00000000-0000-0000-0000-{int(org_id):012d}") if str(org_id).isdigit() else org_id
+
+            row = await self.conn.fetchrow(
+                "SELECT * FROM fn_log_task_time($1, $2, $3, $4, $5, $6)",
+                user_uuid, org_uuid, task_id, log_in.entry_date, log_in.hours, log_in.description
+            )
+            if not row:
+                raise HTTPException(status_code=404, detail="Task not found")
+            return CanonicalTaskResponse(**_format_task_row(row))
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error logging task time: {e}")
+            err_msg = str(e)
+            if "TIMESHEET_LOCKED" in err_msg:
+                raise HTTPException(status_code=400, detail=err_msg.split("TIMESHEET_LOCKED: ")[-1])
+            elif "TASK_NOT_FOUND" in err_msg:
+                raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(status_code=400, detail="Failed to log task time")
+
 
     async def get_board_tasks(self, board_id: int, assigned_to: Optional[int], current_user: dict) -> BoardDataResponse:
         try:

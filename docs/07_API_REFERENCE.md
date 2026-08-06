@@ -92,7 +92,9 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | `/tasks/{id}` | `GET` | Cookie | Fetches detailed task information (`v_tasks_canonical`). |
 | `/tasks/{id}` | `PUT` | Cookie | Updates task title, description, assignee, priority, or due date. |
 | `/tasks/{id}/move` | `POST` | Cookie | Atomically moves task to a new column and position (`fn_move_task`). |
+| `/tasks/{id}/log-time` | `POST` | Cookie | Logs work hours directly to task (`fn_log_task_time`). Auto-creates draft timesheet for week if needed. Body: `{entry_date: string, hours: number, description?: string}`. |
 | `/tasks/bulk-move` | `POST` | Cookie | Atomically moves multiple tasks into a target column (`fn_bulk_move_tasks`). Body: `{task_ids: number[], column_id: number}`. |
+
 | `/tasks/bulk-delete` | `POST` | Cookie (Manager+) | Atomically soft-deletes multiple tasks, task comments, and associated notifications (`fn_bulk_delete_tasks`). Body: `{task_ids: number[]}`. |
 | `/tasks/{id}` | `DELETE` | Cookie | Soft-deletes a task card (`fn_delete_task`). |
 

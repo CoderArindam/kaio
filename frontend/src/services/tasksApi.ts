@@ -15,6 +15,8 @@ export interface Task {
   title: string;
   description?: string;
   priority?: string;
+  estimate_hours?: number | null;
+  logged_hours?: number;
   due_date?: string | null;
   reminder_at?: string | null;
   completed_at?: string | null;
@@ -83,11 +85,20 @@ export const updateTaskAssignee = async (taskId: number, assignedTo: number | nu
 
 export const updateTask = async (
   taskId: number,
-  data: { title?: string; description?: string; priority?: string; column_id?: number; due_date?: string | null; reminder_at?: string | null }
+  data: { title?: string; description?: string; priority?: string; column_id?: number; estimate_hours?: number | null; due_date?: string | null; reminder_at?: string | null }
 ): Promise<Task> => {
   const response = await api.patch(`/tasks/${taskId}`, data);
   return response.data.data;
 };
+
+export const logTaskTime = async (
+  taskId: number,
+  data: { entry_date: string; hours: number; description?: string }
+): Promise<Task> => {
+  const response = await api.post(`/tasks/${taskId}/log-time`, data);
+  return response.data.data;
+};
+
 
 export interface TaskSearchResult {
   items: Task[];

@@ -38,8 +38,8 @@ export const TimesheetBoardSection: React.FC<TimesheetBoardSectionProps> = ({
   return (
     <React.Fragment>
       {/* Board Section Header */}
-      <tr className="bg-brand-surface-low/80 border-y border-brand-border/60">
-        <td colSpan={9} className="py-2 px-4">
+      <tr className="bg-brand-surface-low/30 border-t border-brand-border/40 group/board-header">
+        <td colSpan={9} className="py-2.5 px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold text-brand-text">
               <Building size={14} className="text-brand-primary" />
@@ -53,7 +53,7 @@ export const TimesheetBoardSection: React.FC<TimesheetBoardSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onAddEntry(group.boardId, group.boardName)}
-                className="flex items-center gap-1 text-[11px] font-medium text-brand-primary hover:text-brand-primary-hover transition-colors px-2 py-1 rounded hover:bg-brand-primary/10"
+                className="opacity-0 group-hover/board-header:opacity-100 flex items-center gap-1 text-[11px] font-medium text-brand-text-muted hover:text-brand-primary transition-all px-2 py-1 rounded hover:bg-brand-surface-low"
               >
                 <Plus size={12} /> Add Entry
               </button>

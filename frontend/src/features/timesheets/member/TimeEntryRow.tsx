@@ -139,9 +139,9 @@ export const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
                   hours === 0
                     ? "text-brand-text-muted/40"
                     : isOverMax
-                      ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                      ? "bg-red-500/10 text-red-400"
                       : isOvertime
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        ? "bg-amber-500/10 text-amber-300"
                         : "text-brand-text bg-brand-surface-low/40"
                 }`}
               >
@@ -160,14 +160,14 @@ export const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
                     const val = parseFloat(e.target.value);
                     onHoursChange(date, isNaN(val) ? 0 : val);
                   }}
-                  className={`w-14 h-8 text-center text-xs font-mono rounded bg-brand-surface border transition-colors outline-none focus:ring-1 focus:ring-brand-primary ${
+                  className={`w-14 h-8 text-center text-xs font-mono rounded bg-brand-surface-low/30 border border-transparent transition-all outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-brand-surface [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                     isOverMax
-                      ? "border-red-500 bg-red-500/10 text-red-400 font-bold"
+                      ? "border-red-500/30 bg-red-500/10 text-red-400 font-bold"
                       : isOvertime
-                        ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
+                        ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
                         : hours > 0
-                          ? "border-brand-primary/40 text-brand-text bg-brand-surface"
-                          : "border-brand-border/60 text-brand-text-muted placeholder-brand-text-muted/40 hover:border-brand-border"
+                          ? "border-brand-border/60 text-brand-text bg-brand-surface-low/80 font-medium"
+                          : "text-brand-text-muted hover:border-brand-border/60 hover:bg-brand-surface-low/60"
                   }`}
                 />
 
@@ -182,7 +182,7 @@ export const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
                         onHoursChange(date, 0);
                       }
                     }}
-                    className="absolute -top-1 -right-1 opacity-0 group-hover/cell:opacity-100 bg-red-500 text-white rounded-full p-0.5 shadow transition-opacity hover:bg-red-600"
+                    className="absolute -top-1.5 -right-1.5 opacity-0 group-hover/cell:opacity-100 bg-brand-surface border border-brand-border text-brand-text-muted hover:text-red-400 hover:border-red-400/50 rounded-full p-0.5 shadow-sm transition-all"
                     title="Delete cell entry"
                   >
                     <X size={10} />
@@ -201,10 +201,10 @@ export const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
                       );
                     }
                   }}
-                  className={`absolute top-0.5 left-0.5 p-0.5 rounded transition-opacity ${
+                  className={`absolute -top-1.5 -left-1.5 rounded-full p-0.5 transition-all shadow-sm border ${
                     hasDescription
-                      ? "text-brand-primary opacity-100"
-                      : "text-brand-text-muted opacity-0 group-hover/cell:opacity-100 hover:text-brand-text"
+                      ? "bg-brand-surface border-brand-primary/50 text-brand-primary opacity-100"
+                      : "bg-brand-surface border-brand-border text-brand-text-muted opacity-0 group-hover/cell:opacity-100 hover:text-brand-primary hover:border-brand-primary/50"
                   }`}
                   title={entry?.description || "Edit / Add note"}
                 >

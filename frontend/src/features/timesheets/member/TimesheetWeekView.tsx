@@ -404,8 +404,8 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
       <div className="w-full overflow-x-auto bg-brand-surface border border-brand-border rounded-xl shadow-lg">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-brand-border bg-brand-surface-low/60 text-[11px] font-bold text-brand-text-muted uppercase tracking-wider">
-              <th className="py-3.5 px-4 text-left min-w-[240px]">PROJECT / TASK</th>
+            <tr className="border-b-2 border-brand-border/40 bg-brand-surface-low/30 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">
+              <th className="py-3 px-4 text-left min-w-[240px]">PROJECT / TASK</th>
               {weekDates.map((date, idx) => {
                 const dateKey = toDateStr(date);
                 const isToday = dateKey === todayStr;
@@ -415,9 +415,9 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
                 return (
                   <th
                     key={dateKey}
-                    className={`py-2.5 px-2 text-center min-w-[64px] ${isToday ? 'bg-brand-primary/10 text-brand-primary font-bold' : ''}`}
+                    className={`py-2 px-2 text-center min-w-[64px] ${isToday ? 'text-brand-primary' : ''}`}
                   >
-                    <div className="text-[11px] font-bold tracking-wider">{dayName} {dayNum}</div>
+                    <div className="text-[10px] font-bold tracking-wider">{dayName} {dayNum}</div>
                     <div className={`text-[10px] font-mono mt-0.5 ${
                       hrs > 0 ? (isToday ? 'text-brand-primary font-bold' : 'text-brand-text font-bold') : 'text-brand-text-muted/60'
                     }`}>
@@ -426,7 +426,7 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
                   </th>
                 );
               })}
-              <th className="py-3.5 px-4 text-right min-w-[80px]">TOTAL</th>
+              <th className="py-3 px-4 text-right min-w-[80px]">TOTAL</th>
             </tr>
           </thead>
 
@@ -467,7 +467,7 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
           </tbody>
 
           {boardGroups.length > 0 && (
-            <tfoot className="border-t-2 border-brand-border/80 bg-brand-surface-low/80 font-semibold text-xs">
+            <tfoot className="border-t border-brand-border/60 bg-brand-surface-low/30 font-semibold text-xs">
               <tr>
                 <td className="py-3 px-4 text-left font-bold text-brand-text flex items-center gap-1.5">
                   <Clock size={14} className="text-brand-primary" />
@@ -483,10 +483,10 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
                           hrs === 0
                             ? 'text-brand-text-muted/40'
                             : isOverMax
-                              ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                              ? 'bg-red-500/10 text-red-400'
                               : isOverStd
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+                                ? 'bg-amber-500/10 text-amber-300'
+                                : 'text-brand-text'
                         }`}
                       >
                         {hrs > 0 ? `${hrs.toFixed(1)}h` : '0h'}
@@ -503,12 +503,12 @@ export const TimesheetWeekView: React.FC<TimesheetWeekViewProps> = ({
         </table>
 
         {!readOnly && boardGroups.length > 0 && (
-          <div className="p-3 border-t border-brand-border bg-brand-surface-low/30">
+          <div className="p-2 border-t border-brand-border/40 bg-brand-surface-low/20">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowAddBoardModal(true)}
-              className="w-full flex items-center justify-center gap-2 text-brand-text-muted hover:text-brand-text border border-dashed border-brand-border/60 hover:border-brand-primary/50"
+              className="w-full flex items-center justify-center gap-2 text-brand-text-muted hover:text-brand-text border border-transparent hover:border-brand-border/60 hover:bg-brand-surface-low/50"
             >
               <FolderPlus size={15} /> Add Board to Timesheet
             </Button>

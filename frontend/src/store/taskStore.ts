@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getBoardTasks, getTask, createTask, updateTaskStatus, deleteTask, updateTaskAssignee, updateTask, type Task, type Column } from '../services/tasksApi';
+import { getBoardTasks, getTask, createTask, updateTaskStatus, deleteTask, updateTaskAssignee, updateTask, logTaskTime as apiLogTaskTime, type Task, type Column } from '../services/tasksApi';
 import { createColumn, updateColumn, deleteColumn, reorderColumns, type CreateColumnPayload, type UpdateColumnPayload } from '../services/columnsApi';
 import { useActivityStore } from './activityStore';
 import { getUsers, getBoardMembers, type User, type BoardMember } from '../services/usersApi';
@@ -49,6 +49,8 @@ interface TaskState {
   removeTask: (taskId: number) => Promise<void>;
   assignTask: (taskId: number, assigneeId: number | null) => Promise<void>;
   updateTaskData: (taskId: number, data: Partial<Task>) => Promise<void>;
+  logTaskTime: (taskId: number, data: { entry_date: string; hours: number; description?: string }) => Promise<void>;
+
 
   // Column actions
   addColumn: (boardId: number, data: CreateColumnPayload) => Promise<Column | undefined>;
@@ -609,7 +611,20 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
   },
 
+  logTaskTime: async (taskId, data) => {
+    try {
+      const updatedTask = await apiLogTaskTime(taskId, data);
+      get()._updateTaskEntity(taskId, () => updatedTask);
+      toast.success(`Logged ${data.hours} hours on task`);
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail || error?.message || "Failed to log time";
+      toast.error(typeof detail === 'string' ? detail : "Failed to log time");
+      throw error;
+    }
+  },
+
   // Column actions
+
   addColumn: async (boardId, data) => {
     if (!data.name?.trim()) return;
     set({ isSubmitting: true });

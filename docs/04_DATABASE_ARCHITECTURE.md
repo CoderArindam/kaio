@@ -255,6 +255,8 @@ erDiagram
 | `077_fix_deleting_org_users.sql` | Fix | Soft-deletes users associated with organizations pending deletion. |
 | `078_board_favorites.sql` | `user_board_favorites` | Creates board favorites junction table, `fn_toggle_board_favorite` procedure, and updates `v_boards_canonical` with `is_favorited`. |
 | `079_comment_reactions.sql` | `comment_reactions` | Creates comment reactions table, `fn_toggle_comment_reaction` procedure, and updates `v_comments_canonical` with aggregated `reactions` array. |
+| `080_task_estimation.sql` | Task Estimation & Hours | Adds `estimate_hours` column to `tasks`, updates `v_tasks_canonical` with `estimate_hours` and `logged_hours`, and adds `fn_log_task_time` procedure. |
+
 
 
 ---

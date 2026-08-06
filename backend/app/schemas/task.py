@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 
 class TaskCreate(BaseModel):
     board_id: int
@@ -8,6 +8,7 @@ class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[str] = None
+    estimate_hours: Optional[float] = None
     assigned_to: Optional[int] = None
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
@@ -18,11 +19,17 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = None
+    estimate_hours: Optional[float] = None
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
 
 class TaskAssigneeUpdate(BaseModel):
     assigned_to: Optional[int] = None
+
+class LogTaskTimeRequest(BaseModel):
+    entry_date: date
+    hours: float = Field(..., gt=0, le=24, description="Hours worked must be greater than 0 and at most 24")
+    description: Optional[str] = None
 
 from app.schemas.label import LabelResponse
 
@@ -39,6 +46,8 @@ class CanonicalTaskResponse(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[str] = None
+    estimate_hours: Optional[float] = None
+    logged_hours: Optional[float] = 0.0
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -59,6 +68,7 @@ class CanonicalTaskResponse(BaseModel):
     labels: List[LabelResponse] = []
     subtask_count: int = 0
     completed_subtask_count: int = 0
+
 
 class ColumnResponse(BaseModel):
     id: int

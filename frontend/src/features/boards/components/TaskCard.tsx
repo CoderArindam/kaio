@@ -1,5 +1,7 @@
 import React from 'react';
-import { Trash2, UserRound, CalendarClock, CheckSquare } from 'lucide-react';
+import { Trash2, UserRound, CalendarClock, CheckSquare, Clock } from 'lucide-react';
+
+
 import { type Task, type Column } from '../../../services/tasksApi';
 import { type User } from '../../../services/usersApi';
 import { UserAvatar } from '../../../components/common/UserAvatar';
@@ -114,6 +116,22 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-brand-border/50">
+          {(task.estimate_hours || (task.logged_hours && task.logged_hours > 0)) && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-surface-low text-brand-text-muted"
+              title={
+                task.estimate_hours
+                  ? `${task.logged_hours || 0}h logged of ${task.estimate_hours}h estimated`
+                  : `${task.logged_hours || 0}h logged`
+              }
+            >
+              <Clock size={12} className="text-brand-primary" />
+              <span>
+                {task.logged_hours ? `${task.logged_hours}/` : ''}
+                {task.estimate_hours ? `${task.estimate_hours}h` : ''}
+              </span>
+            </span>
+          )}
           {dueDateBadge}
           <div className="shrink-0">
             {assignee ? (
@@ -125,6 +143,7 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
             )}
           </div>
         </div>
+
       </div>
     );
   }
@@ -246,7 +265,24 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
               </span>
             </span>
           )}
+          {(task.estimate_hours || (task.logged_hours && task.logged_hours > 0)) && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-surface-low text-brand-text-muted"
+              title={
+                task.estimate_hours
+                  ? `${task.logged_hours || 0}h logged of ${task.estimate_hours}h estimated`
+                  : `${task.logged_hours || 0}h logged`
+              }
+            >
+              <Clock size={11} className="text-brand-primary" />
+              <span>
+                {task.logged_hours ? `${task.logged_hours}/` : ''}
+                {task.estimate_hours ? `${task.estimate_hours}h` : ''}
+              </span>
+            </span>
+          )}
         </div>
+
 
         {/* Assignee Avatar Dropdown with Tooltip */}
         <div className="relative shrink-0" title={assignee ? `Assigned to: ${formatUserName(assignee)}` : "Unassigned"}>
