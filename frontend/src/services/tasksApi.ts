@@ -100,7 +100,7 @@ export const updateTask = async (
 
 export const logTaskTime = async (
   taskId: number,
-  data: { entry_date: string; hours: number; description?: string }
+  data: { entry_date: string; hours: number; description?: string; subtask_id?: string | number }
 ): Promise<Task> => {
   const response = await api.post(`/tasks/${taskId}/log-time`, data);
   return response.data.data;

@@ -49,7 +49,7 @@ interface TaskState {
   removeTask: (taskId: number) => Promise<void>;
   assignTask: (taskId: number, assigneeId: number | null) => Promise<void>;
   updateTaskData: (taskId: number, data: Partial<Task>) => Promise<void>;
-  logTaskTime: (taskId: number, data: { entry_date: string; hours: number; description?: string }) => Promise<void>;
+  logTaskTime: (taskId: number, data: { entry_date: string; hours: number; description?: string; subtask_id?: string | number }) => Promise<void>;
 
 
   // Column actions
