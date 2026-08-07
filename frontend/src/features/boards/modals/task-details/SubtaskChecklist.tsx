@@ -23,28 +23,36 @@ import {
   toggleSubtask,
   deleteSubtask,
   reorderSubtasks,
+  assignSubtask,
   type Subtask,
 } from '../../../../services/subtasksApi';
 import { type Task } from '../../../../services/tasksApi';
+import { type User } from '../../../../services/usersApi';
 import { useTaskStore } from '../../../../store/taskStore';
+import AssigneeSelector from '../../../../components/shared/AssigneeSelector';
 
 interface SubtaskChecklistProps {
   task: Task;
   canEdit: boolean;
+  boardMembers: User[];
 }
 
 interface SortableSubtaskItemProps {
   subtask: Subtask;
   canEdit: boolean;
+  boardMembers: User[];
   onToggle: (id: number) => void;
   onDelete: (id: number) => void;
+  onAssign: (id: number, assigneeId: number | null) => void;
 }
 
 const SortableSubtaskItem: React.FC<SortableSubtaskItemProps> = ({
   subtask,
   canEdit,
+  boardMembers,
   onToggle,
   onDelete,
+  onAssign,
 }) => {
   const {
     attributes,
@@ -102,21 +110,30 @@ const SortableSubtaskItem: React.FC<SortableSubtaskItemProps> = ({
         </label>
       </div>
 
-      {canEdit && (
-        <button
-          type="button"
-          onClick={() => onDelete(subtask.id)}
-          className="opacity-0 group-hover:opacity-100 text-brand-outline hover:text-brand-error p-1 rounded-lg hover:bg-brand-surface-container transition-all"
-          title="Delete subtask"
-        >
-          <Trash2 size={15} />
-        </button>
-      )}
+      <div className="flex items-center gap-2">
+        <AssigneeSelector
+          assigneeId={subtask.assignee_id ?? null}
+          users={boardMembers}
+          onChange={(newAssignee) => onAssign(subtask.id, newAssignee)}
+          disabled={!canEdit}
+        />
+
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => onDelete(subtask.id)}
+            className="opacity-0 group-hover:opacity-100 text-brand-outline hover:text-brand-error p-1 rounded-lg hover:bg-brand-surface-container transition-all"
+            title="Delete subtask"
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
-export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdit }) => {
+export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdit, boardMembers }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -173,6 +190,7 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
 
     setIsAdding(true);
     try {
+      // Default to task assigned_to, wait, the backend does this automatically.
       const created = await createSubtask(task.id, title);
       const updatedList = [...subtasks, created];
       setSubtasks(updatedList);
@@ -182,6 +200,22 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
       toast.error(err instanceof Error ? err.message : 'Failed to add subtask');
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleAssignSubtask = async (subtaskId: number, assigneeId: number | null) => {
+    const prevList = [...subtasks];
+    const updatedList = subtasks.map((s) =>
+      s.id === subtaskId ? { ...s, assignee_id: assigneeId ?? undefined } : s
+    );
+    setSubtasks(updatedList);
+
+    try {
+      const updatedSubtask = await assignSubtask(subtaskId, assigneeId);
+      setSubtasks((curr) => curr.map((s) => s.id === subtaskId ? updatedSubtask : s));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to assign subtask');
+      setSubtasks(prevList);
     }
   };
 
@@ -286,7 +320,7 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
               <span>Loading subtasks...</span>
             </div>
           ) : (
-            <div className="max-h-60 overflow-y-auto pr-1 space-y-1 custom-scrollbar">
+            <div className="pr-1 space-y-1 custom-scrollbar">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={subtasks.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
@@ -295,8 +329,10 @@ export const SubtaskChecklist: React.FC<SubtaskChecklistProps> = ({ task, canEdi
                         key={subtask.id}
                         subtask={subtask}
                         canEdit={canEdit}
+                        boardMembers={boardMembers}
                         onToggle={handleToggleSubtask}
                         onDelete={handleDeleteSubtask}
+                        onAssign={handleAssignSubtask}
                       />
                     ))}
                   </div>

@@ -272,7 +272,7 @@ export const ApplicationSidebar: React.FC = () => {
             {isNotificationsOpen && (
               <NotificationPanel 
                 onClose={() => setIsNotificationsOpen(false)} 
-                className="left-full bottom-0 ml-2 w-[calc(100vw-5rem)] sm:w-[410px] max-h-[calc(100vh-4rem)] sm:max-h-[580px] animate-in fade-in slide-in-from-left-2 duration-150"
+                className={`fixed z-[100] bottom-4 left-4 right-4 md:right-auto md:bottom-4 ${isSidebarCollapsed ? 'md:left-20' : 'md:left-68'} md:w-[410px] max-h-[min(580px,calc(100vh-2rem))] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-150`}
               />
             )}
           </div>

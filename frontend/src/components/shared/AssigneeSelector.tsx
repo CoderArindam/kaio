@@ -77,7 +77,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assigneeId, users =
 
       {/* Dropdown Menu - 100% Solid Opacity */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface text-brand-text shadow-2xl p-1.5 flex flex-col gap-1 opacity-100">
+        <div className="absolute z-50 right-0 sm:left-0 sm:right-auto mt-1 min-w-[240px] max-h-72 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface text-brand-text shadow-2xl p-1.5 flex flex-col gap-1 opacity-100">
           {/* Search Input Box */}
           <div className="relative p-1 border-b border-brand-border/60 mb-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted" />

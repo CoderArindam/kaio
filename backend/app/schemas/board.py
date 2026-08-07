@@ -29,6 +29,7 @@ class CanonicalBoardResponse(BaseModel):
     member_count: int
     task_count: int
     is_favorited: bool = False
+    user_can_manage: bool = False
 
 class BoardFavoriteToggleResponse(BaseModel):
     board_id: int

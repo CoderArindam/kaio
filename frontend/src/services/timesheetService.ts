@@ -27,6 +27,8 @@ export interface TimesheetEntry {
   board_name?: string | null;
   task_id?: string | null;
   task_title?: string | null;
+  subtask_id?: string | null;
+  subtask_title?: string | null;
   entry_date: string;
   hours: number;
   entry_type: 'task' | 'meeting' | 'general' | 'leave' | 'holiday' | string;
@@ -56,6 +58,7 @@ export interface CreateTimesheetRequest {
 export interface UpsertEntryRequest {
   board_id?: string | null;
   task_id?: string | null;
+  subtask_id?: string | null;
   entry_date: string;
   hours: number;
   entry_type: 'task' | 'meeting' | 'general' | 'leave' | 'holiday' | string;

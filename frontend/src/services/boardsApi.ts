@@ -17,6 +17,7 @@ export interface Board {
   member_count: number;
   task_count: number;
   is_favorited?: boolean;
+  user_can_manage?: boolean;
 }
 
 export const getBoards = async (): Promise<Board[]> => {

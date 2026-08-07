@@ -82,23 +82,25 @@ class BoardService:
 
 
     async def get_project_settings(self, board_id: int, current_user: dict) -> ProjectSettingsResponse:
-        has_access = await self.conn.fetchval("SELECT can_view_board($1, $2)", current_user["id"], board_id)
-        if not has_access:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        
+        # SUPER_ADMIN can access any project's settings; managers only their assigned boards
         role = current_user.get("role", "MEMBER")
-        if role not in ("SUPER_ADMIN", "MANAGER"):
-            raise HTTPException(status_code=403, detail="Only Managers or Super Admins can access project settings")
-        
+        if role == "SUPER_ADMIN":
+            return await ProjectSettingsService.get_settings(self.conn, board_id)
+
+        if role != "MANAGER":
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        can_manage = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+        if not can_manage:
+            raise HTTPException(status_code=403, detail="You are not assigned to manage this project")
+
         return await ProjectSettingsService.get_settings(self.conn, board_id)
 
     async def update_project_settings(self, board_id: int, updates: ProjectSettingsUpdate, current_user: dict) -> ProjectSettingsResponse:
-        has_access = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
-        if not has_access:
-            role = current_user.get("role", "MEMBER")
-            if role != "SUPER_ADMIN" and role != "MANAGER":
-                raise HTTPException(status_code=403, detail="Insufficient permissions to update settings")
-                
+        can_manage = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+        if not can_manage:
+            raise HTTPException(status_code=403, detail="Insufficient permissions to update settings")
+
         try:
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
@@ -108,12 +110,10 @@ class BoardService:
             raise HTTPException(status_code=400, detail="Failed to update project settings")
 
     async def archive_project(self, board_id: int, current_user: dict) -> ProjectSettingsResponse:
-        has_access = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
-        if not has_access:
-            role = current_user.get("role", "MEMBER")
-            if role != "SUPER_ADMIN":
-                raise HTTPException(status_code=403, detail="Insufficient permissions to archive project")
-                
+        can_manage = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+        if not can_manage:
+            raise HTTPException(status_code=403, detail="Insufficient permissions to archive project")
+
         try:
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
@@ -124,11 +124,9 @@ class BoardService:
 
     async def delete_board(self, board_id: int, current_user: dict):
         try:
-            has_access = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
-            if not has_access:
-                role = current_user.get("role", "MEMBER")
-                if role != "SUPER_ADMIN":
-                    raise HTTPException(status_code=403, detail="Insufficient permissions to delete a board")
+            can_manage = await self.conn.fetchval("SELECT can_manage_board($1, $2)", current_user["id"], board_id)
+            if not can_manage:
+                raise HTTPException(status_code=403, detail="Insufficient permissions to delete a board")
 
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))

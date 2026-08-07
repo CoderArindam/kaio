@@ -204,6 +204,237 @@ class NotificationService:
         except Exception as e:
             logger.error(f"notify_task_assigned failed task={task_id} assignee={assignee_id}: {e}")
 
+    async def notify_assignee_changed(
+        self,
+        task_id: int,
+        task_title: str,
+        board_id: int,
+        new_assignee_id: Optional[int],
+        old_assignee_id: Optional[int],
+        actor_id: int,
+        org_id: int,
+    ) -> None:
+        """
+        DB trigger already inserts the activity + notification rows.
+        Python just pushes the real-time WS event to the right recipients.
+        Reassign (A→B): push WS to B only.
+        Unassign (A→None): push WS to A only.
+        """
+        try:
+            if new_assignee_id and new_assignee_id != actor_id:
+                await _dispatch_notification_event(self.conn, new_assignee_id)
+            elif not new_assignee_id and old_assignee_id and old_assignee_id != actor_id:
+                await _dispatch_notification_event(self.conn, old_assignee_id)
+        except Exception as e:
+            logger.error(f"notify_assignee_changed WS push failed task={task_id}: {e}")
+
+    async def notify_due_date_changed(
+        self,
+        task_id: int,
+        task_title: str,
+        board_id: int,
+        assignee_id: Optional[int],
+        reporter_id: Optional[int],
+        actor_id: int,
+        org_id: int,
+        old_due_date=None,
+        new_due_date=None,
+    ) -> None:
+        """
+        DB trigger already notifies the assignee via DUE_DATE_CHANGED activity.
+        Python pushes WS to assignee (real-time) + creates a notification row for
+        the task creator if they differ from the assignee and actor.
+        """
+        try:
+            # WS push to assignee (DB trigger row is already there)
+            if assignee_id and assignee_id != actor_id:
+                await _dispatch_notification_event(self.conn, assignee_id)
+
+            # Notification row for reporter (not covered by DB trigger)
+            if reporter_id and reporter_id != actor_id and reporter_id != assignee_id:
+                actor_name = await self.conn.fetchval(
+                    "SELECT first_name FROM users WHERE id = $1", actor_id
+                ) or "Someone"
+                deep_link = f"/boards/{board_id}?task={task_id}"
+
+                def _fmt(d) -> str:
+                    if d is None:
+                        return "none"
+                    if hasattr(d, "strftime"):
+                        return d.strftime("%d %b %Y")
+                    return str(d)[:10]
+
+                act_id = await self.conn.fetchval(
+                    """
+                    INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, old_value, new_value)
+                    VALUES ($1, 'TASK', $2, $3, 'DUE_DATE_CHANGED', $4::jsonb, $5::jsonb)
+                    RETURNING id
+                    """,
+                    org_id, task_id, actor_id,
+                    {"due_date": str(old_due_date)[:10] if old_due_date else None},
+                    {"due_date": str(new_due_date)[:10] if new_due_date else None},
+                )
+                await self.conn.execute(
+                    "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                    reporter_id, act_id,
+                )
+                await _dispatch_notification_event(self.conn, reporter_id)
+        except Exception as e:
+            logger.error(f"notify_due_date_changed failed task={task_id}: {e}")
+
+    async def notify_reporter_changed(
+        self,
+        task_id: int,
+        task_title: str,
+        board_id: int,
+        new_reporter_id: Optional[int],
+        old_reporter_id: Optional[int],
+        assignee_id: Optional[int],
+        actor_id: int,
+        org_id: int,
+    ) -> None:
+        try:
+            actor_name = await self.conn.fetchval(
+                "SELECT first_name FROM users WHERE id = $1", actor_id
+            ) or "Someone"
+            
+            deep_link = f"/boards/{board_id}?task={task_id}"
+            
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, old_value, new_value)
+                VALUES ($1, 'TASK', $2, $3, 'REPORTER_CHANGED', $4::jsonb, $5::jsonb)
+                RETURNING id
+                """,
+                org_id, task_id, actor_id,
+                {"reporter_id": old_reporter_id},
+                {"reporter_id": new_reporter_id, "deep_link": deep_link}
+            )
+            
+            notify_users = set()
+            if assignee_id and assignee_id != actor_id:
+                notify_users.add(assignee_id)
+            if old_reporter_id and old_reporter_id != actor_id:
+                notify_users.add(old_reporter_id)
+            if new_reporter_id and new_reporter_id != actor_id:
+                notify_users.add(new_reporter_id)
+                
+            for user_id in notify_users:
+                await self.conn.execute(
+                    "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                    user_id, act_id
+                )
+                await _dispatch_notification_event(self.conn, user_id)
+                
+        except Exception as e:
+            logger.error(f"notify_reporter_changed failed task={task_id}: {e}")
+
+    async def notify_comment_reply(
+        self,
+        task_id: int,
+        task_title: str,
+        board_id: int,
+        parent_author_id: int,
+        commenter_id: int,
+        org_id: int,
+    ) -> None:
+        """Notify the author of the parent comment that someone replied."""
+        if parent_author_id == commenter_id:
+            return
+        try:
+            commenter_name = await self.conn.fetchval(
+                "SELECT first_name FROM users WHERE id = $1", commenter_id
+            ) or "Someone"
+            title = f"{commenter_name} replied to your comment on: {task_title}"
+            deep_link = f"/boards/{board_id}?task={task_id}"
+
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'TASK', $2, $3, 'COMMENTED', $4::jsonb)
+                RETURNING id
+                """,
+                org_id, task_id, commenter_id,
+                {"title": title, "deep_link": deep_link},
+            )
+            await self.conn.execute(
+                "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                parent_author_id, act_id,
+            )
+            await _dispatch_notification_event(self.conn, parent_author_id)
+        except Exception as e:
+            logger.error(f"notify_comment_reply failed task={task_id}: {e}")
+
+    async def notify_board_member_added(
+        self,
+        board_id: int,
+        board_name: str,
+        user_id: int,
+        actor_id: int,
+        org_id: int,
+    ) -> None:
+        """Notify a user they were added to a project/board."""
+        if user_id == actor_id:
+            return
+        try:
+            actor_name = await self.conn.fetchval(
+                "SELECT first_name FROM users WHERE id = $1", actor_id
+            ) or "Someone"
+            title = f"{actor_name} added you to the project: {board_name}"
+            deep_link = f"/boards/{board_id}"
+
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'BOARD', $2, $3, 'UPDATED', $4::jsonb)
+                RETURNING id
+                """,
+                org_id, board_id, actor_id,
+                {"title": title, "deep_link": deep_link},
+            )
+            await self.conn.execute(
+                "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                user_id, act_id,
+            )
+            await _dispatch_notification_event(self.conn, user_id)
+        except Exception as e:
+            logger.error(f"notify_board_member_added failed board={board_id} user={user_id}: {e}")
+
+    async def notify_board_member_removed(
+        self,
+        board_id: int,
+        board_name: str,
+        user_id: int,
+        actor_id: int,
+        org_id: int,
+    ) -> None:
+        """Notify a user they were removed from a project/board."""
+        if user_id == actor_id:
+            return
+        try:
+            actor_name = await self.conn.fetchval(
+                "SELECT first_name FROM users WHERE id = $1", actor_id
+            ) or "Someone"
+            title = f"{actor_name} removed you from the project: {board_name}"
+            deep_link = f"/boards"
+
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'BOARD', $2, $3, 'UPDATED', $4::jsonb)
+                RETURNING id
+                """,
+                org_id, board_id, actor_id,
+                {"title": title, "deep_link": deep_link},
+            )
+            await self.conn.execute(
+                "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                user_id, act_id,
+            )
+            await _dispatch_notification_event(self.conn, user_id)
+        except Exception as e:
+            logger.error(f"notify_board_member_removed failed board={board_id} user={user_id}: {e}")
+
 
 from uuid import UUID
 

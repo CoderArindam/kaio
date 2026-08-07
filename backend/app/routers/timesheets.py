@@ -270,7 +270,7 @@ async def upsert_timesheet_entry(
         entry_row = await conn.fetchrow(
             """
             SELECT * FROM fn_upsert_timesheet_entry(
-                $1, $2, $3, $4, $5, $6, $7, $8
+                $1, $2, $3, $4, $5, $6, $7, $8, NULL, $9
             )
             """,
             timesheet_id,
@@ -281,6 +281,7 @@ async def upsert_timesheet_entry(
             body.hours,
             body.entry_type,
             body.description,
+            body.subtask_id,
         )
     except Exception as e:
         _handle_db_exception(e)

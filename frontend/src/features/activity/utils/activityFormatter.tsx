@@ -191,6 +191,62 @@ export const formatActivity = (
       };
     }
 
+    case ACTIVITY_TYPES.REPORTER_CHANGED: {
+      const isUnassigned = activity.new_value?.reporter_id === null || activity.new_value?.reporter_id === undefined;
+      const oldReporterName = getAssigneeDisplayName(activity.old_value?.reporter_id, activity.old_value?.reporter_name);
+      const newReporterName = getAssigneeDisplayName(activity.new_value?.reporter_id, activity.new_value?.reporter_name);
+      const isRecipientNewReporter = recipientUserId && activity.new_value?.reporter_id === recipientUserId;
+      const isRecipientOldReporter = recipientUserId && activity.old_value?.reporter_id === recipientUserId;
+
+      let descriptionNode: React.ReactNode;
+      if (isUnassigned) {
+        if (isRecipientOldReporter) {
+          descriptionNode = `${actorName} removed you as reporter from this task`;
+        } else if (oldReporterName) {
+          descriptionNode = (
+            <span>
+              {actorName} removed <strong className="text-brand-text-primary">{oldReporterName}</strong> as reporter from this task
+            </span>
+          );
+        } else {
+          descriptionNode = `${actorName} removed the reporter from this task`;
+        }
+      } else if (isRecipientNewReporter) {
+        descriptionNode = (
+          <span>
+            {actorName} added <strong className="text-brand-text-primary">you</strong> as reporter to this task
+          </span>
+        );
+      } else if (oldReporterName && newReporterName && oldReporterName !== newReporterName) {
+        if (isRecipientOldReporter) {
+          descriptionNode = (
+            <span>
+              {actorName} removed <strong className="text-brand-text-primary">you</strong> as reporter from this task and added <strong className="text-brand-text-primary">{newReporterName}</strong>
+            </span>
+          );
+        } else {
+          descriptionNode = (
+            <span>
+              {actorName} changed the reporter from <del className="text-brand-text-muted">{oldReporterName}</del> to <strong className="text-brand-text-primary">{newReporterName}</strong>
+            </span>
+          );
+        }
+      } else {
+        descriptionNode = (
+          <span>
+            {actorName} added <strong className="text-brand-text-primary">{newReporterName || 'a member'}</strong> as reporter to this task
+          </span>
+        );
+      }
+
+      return {
+        icon: UserRound,
+        title: 'Reporter changed',
+        description: descriptionNode,
+        accentColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+      };
+    }
+
     case ACTIVITY_TYPES.COMMENT_ADDED:
       return {
         icon: MessageCircle,

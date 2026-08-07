@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 
 from app.schemas.comments import CommentCreate, CommentUpdate, CommentResponse
 from app.schemas.envelope import DataEnvelope
-from app.services.notification_service import dispatch_task_email
+from app.services.notification_service import NotificationService
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
 from app.services.comment_service import CommentService
@@ -26,32 +26,22 @@ async def create_comment(
     comment_service: CommentService = Depends(get_comment_service)
 ):
     comment, task_row, parent_user = await comment_service.create_comment(task_id, comment_in, current_user)
-    
-    actor_name = current_user.get("first_name") or current_user.get("email")
 
-    if task_row and task_row["assigned_to"] and task_row["assigned_to"] != current_user["id"]:
-        background_tasks.add_task(
-            dispatch_task_email,
-            activity_type="COMMENT_ADDED",
-            task_title=task_row["title"],
-            board_name=task_row["board_name"],
-            actor_name=actor_name,
-            assignee_email=task_row["assignee_email"],
-            assignee_name=task_row["assignee_first_name"],
-            comment=comment_in.content
-        )
-
+    # Notify parent comment author of reply (skip if they were already notified via mention)
     if parent_user and parent_user["id"] != current_user["id"]:
-        if not task_row or parent_user["id"] != task_row["assigned_to"]:
+        board_id = task_row.get("board_id") if task_row else None
+        task_title = task_row.get("title", "a task") if task_row else "a task"
+        org_id = current_user["organization_id"]
+        if board_id:
+            notif_svc = NotificationService(comment_service.conn)
             background_tasks.add_task(
-                dispatch_task_email,
-                activity_type="COMMENT_ADDED",
-                task_title=task_row["title"] if task_row else "a task",
-                board_name=task_row["board_name"] if task_row else "your board",
-                actor_name=actor_name,
-                assignee_email=parent_user["email"],
-                assignee_name=parent_user["first_name"],
-                comment=comment_in.content
+                notif_svc.notify_comment_reply,
+                task_id=task_id,
+                task_title=task_title,
+                board_id=board_id,
+                parent_author_id=parent_user["id"],
+                commenter_id=current_user["id"],
+                org_id=org_id,
             )
 
     if task_row and task_row.get("board_id"):
@@ -126,7 +116,7 @@ async def add_or_toggle_reaction(
     current_user: dict = Depends(get_current_user),
     comment_service: CommentService = Depends(get_comment_service)
 ):
-    added, task_id, board_id = await comment_service.toggle_reaction(comment_id, emoji, current_user)
+    added, task_id, board_id = await comment_service.add_reaction(comment_id, emoji, current_user)
     if board_id and task_id:
         await connection_manager.send_to_board(
             board_id=board_id,
@@ -147,7 +137,7 @@ async def remove_reaction(
     current_user: dict = Depends(get_current_user),
     comment_service: CommentService = Depends(get_comment_service)
 ):
-    added, task_id, board_id = await comment_service.toggle_reaction(comment_id, emoji, current_user)
+    added, task_id, board_id = await comment_service.remove_reaction(comment_id, emoji, current_user)
     if board_id and task_id:
         await connection_manager.send_to_board(
             board_id=board_id,

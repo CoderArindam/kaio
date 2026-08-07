@@ -21,7 +21,7 @@ export const Board: React.FC = () => {
   const { user } = useAuthStore();
   
   const userRole = (user?.role || '').toUpperCase();
-  const isManagerOrAdmin = ['SUPER_ADMIN', 'MANAGER'].includes(userRole);
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
 
   useEffect(() => {
     if (boards.length === 0) {
@@ -122,7 +122,7 @@ export const Board: React.FC = () => {
         {/* Settings & Proposal Badge Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {boardId > 0 && <BoardProposalsBadge boardId={boardId} />}
-          {isManagerOrAdmin && (
+          {(board?.user_can_manage || isSuperAdmin) && (
             <Link
               to={`/board/${boardId}/settings`}
               className="px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-surface-low border border-brand-border hover:bg-brand-surface-hover rounded-md text-xs sm:text-sm font-medium text-brand-text flex items-center gap-1.5 sm:gap-2 transition-colors"

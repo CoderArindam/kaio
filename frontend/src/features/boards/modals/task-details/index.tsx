@@ -107,7 +107,7 @@ const TaskDetailsModal: React.FC = () => {
         <div className="flex flex-1 overflow-hidden">
           <div className="flex-1 p-8 overflow-y-auto space-y-8">
             <TaskDescription task={task} canEdit={canEdit} />
-            <SubtaskChecklist task={task} canEdit={canEdit} />
+            <SubtaskChecklist task={task} canEdit={canEdit} boardMembers={boardMembers} />
             <TaskTabs
               task={task}
               currentUserId={user?.id || null}

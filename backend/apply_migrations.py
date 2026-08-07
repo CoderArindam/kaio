@@ -44,9 +44,17 @@ async def main():
         await conn.execute(f.read())
     print('Applied 065_comment_mentions.sql')
 
+    with open('../database/migrations/079_comment_reactions.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 079_comment_reactions.sql')
+
     with open('../database/migrations/080_task_estimation.sql', 'r') as f:
         await conn.execute(f.read())
     print('Applied 080_task_estimation.sql')
+
+    with open('../database/migrations/086_explicit_comment_reactions.sql', 'r') as f:
+        await conn.execute(f.read())
+    print('Applied 086_explicit_comment_reactions.sql')
 
     await conn.close()
 

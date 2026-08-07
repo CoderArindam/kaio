@@ -34,6 +34,13 @@ export interface Task {
   creator_first_name?: string;
   creator_last_name?: string;
   creator_avatar_url?: string;
+  
+  reporter_id?: number | null;
+  reporter_email?: string;
+  reporter_first_name?: string;
+  reporter_last_name?: string;
+  reporter_avatar_url?: string;
+  
   labels?: Label[];
   label_ids?: number[];
   subtask_count?: number;
@@ -85,7 +92,7 @@ export const updateTaskAssignee = async (taskId: number, assignedTo: number | nu
 
 export const updateTask = async (
   taskId: number,
-  data: { title?: string; description?: string; priority?: string; column_id?: number; estimate_hours?: number | null; due_date?: string | null; reminder_at?: string | null }
+  data: { title?: string; description?: string; priority?: string; column_id?: number; estimate_hours?: number | null; due_date?: string | null; reminder_at?: string | null; reporter_id?: number | null }
 ): Promise<Task> => {
   const response = await api.patch(`/tasks/${taskId}`, data);
   return response.data.data;

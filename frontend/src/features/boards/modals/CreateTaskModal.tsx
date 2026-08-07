@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTaskStore } from '../../../store/taskStore';
 import { useUiStore } from '../../../store/uiStore';
+import { useAuthStore } from '../../../store/authStore';
 import StatusSelector from '../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../components/shared/PrioritySelector';
@@ -17,10 +18,12 @@ const CreateTaskModal: React.FC = () => {
   const columns = getColumnsList();
   const boardId = boardView.boardId;
 
+  const { user } = useAuthStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('Medium');
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
+  const [reporterId, setReporterId] = useState<number | null>(user?.id || null);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [estimateHours, setEstimateHours] = useState<string>('');
   const [columnId, setColumnId] = useState<number | undefined>(undefined);
@@ -45,6 +48,7 @@ const CreateTaskModal: React.FC = () => {
       priority,
       estimate_hours: estNum && !isNaN(estNum) ? estNum : undefined,
       assigned_to: assigneeId || undefined,
+      reporter_id: reporterId || undefined,
       due_date: dueDate,
       column_id: columnId,
       label_ids: selectedLabelIds,
@@ -55,6 +59,7 @@ const CreateTaskModal: React.FC = () => {
     setPriority('Medium');
     setEstimateHours('');
     setAssigneeId(null);
+    setReporterId(user?.id || null);
     setDueDate(null);
     setSelectedLabelIds([]);
     setColumnId(columns[0]?.id);
@@ -109,6 +114,15 @@ const CreateTaskModal: React.FC = () => {
                 assigneeId={assigneeId} 
                 users={boardMembers} 
                 onChange={(newAssignee: any) => setAssigneeId(newAssignee)} 
+              />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
+              <AssigneeSelector 
+                assigneeId={reporterId} 
+                users={boardMembers} 
+                onChange={(newReporter: any) => setReporterId(newReporter)} 
               />
             </div>
 

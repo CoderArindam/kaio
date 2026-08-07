@@ -8,6 +8,10 @@ export interface Subtask {
   position: number;
   created_by?: number;
   creator_name?: string;
+  assignee_id?: number;
+  assignee_name?: string;
+  assignee_email?: string;
+  assignee_avatar_url?: string;
   created_at?: string;
 }
 
@@ -16,13 +20,22 @@ export const getSubtasks = async (taskId: number): Promise<Subtask[]> => {
   return response.data.data;
 };
 
-export const createSubtask = async (taskId: number, title: string): Promise<Subtask> => {
-  const response = await api.post(`/tasks/${taskId}/subtasks`, { title });
+export const createSubtask = async (taskId: number, title: string, assigneeId?: number | null): Promise<Subtask> => {
+  const payload: any = { title };
+  if (assigneeId !== undefined) {
+    payload.assignee_id = assigneeId;
+  }
+  const response = await api.post(`/tasks/${taskId}/subtasks`, payload);
   return response.data.data;
 };
 
 export const toggleSubtask = async (subtaskId: number): Promise<Subtask> => {
   const response = await api.patch(`/subtasks/${subtaskId}/toggle`);
+  return response.data.data;
+};
+
+export const assignSubtask = async (subtaskId: number, assigneeId: number | null): Promise<Subtask> => {
+  const response = await api.patch(`/subtasks/${subtaskId}/assign`, { assignee_id: assigneeId });
   return response.data.data;
 };
 

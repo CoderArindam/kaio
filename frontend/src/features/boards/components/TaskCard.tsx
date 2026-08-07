@@ -86,6 +86,11 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
     );
   }
 
+  const estHours = task.estimate_hours !== undefined && task.estimate_hours !== null ? Number(task.estimate_hours) : 0;
+  const loggedHrs = task.logged_hours !== undefined && task.logged_hours !== null ? Number(task.logged_hours) : 0;
+  const hasEstimate = estHours > 0;
+  const hasLogged = loggedHrs > 0;
+
   if (variant === 'list') {
     return (
       <div
@@ -116,19 +121,22 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-brand-border/50">
-          {(task.estimate_hours || (task.logged_hours && task.logged_hours > 0)) && (
+          {(hasEstimate || hasLogged) && (
             <span
               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-surface-low text-brand-text-muted"
               title={
-                task.estimate_hours
-                  ? `${task.logged_hours || 0}h logged of ${task.estimate_hours}h estimated`
-                  : `${task.logged_hours || 0}h logged`
+                hasEstimate
+                  ? `${loggedHrs}h logged of ${estHours}h estimated`
+                  : `${loggedHrs}h logged`
               }
             >
               <Clock size={12} className="text-brand-primary" />
               <span>
-                {task.logged_hours ? `${task.logged_hours}/` : ''}
-                {task.estimate_hours ? `${task.estimate_hours}h` : ''}
+                {hasLogged && hasEstimate
+                  ? `${loggedHrs}/${estHours}h`
+                  : hasLogged
+                  ? `${loggedHrs}h`
+                  : `${estHours}h`}
               </span>
             </span>
           )}
@@ -265,19 +273,22 @@ export const TaskCard: React.FC<TaskCardProps> = React.memo(({
               </span>
             </span>
           )}
-          {(task.estimate_hours || (task.logged_hours && task.logged_hours > 0)) && (
+          {(hasEstimate || hasLogged) && (
             <span
               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-surface-low text-brand-text-muted"
               title={
-                task.estimate_hours
-                  ? `${task.logged_hours || 0}h logged of ${task.estimate_hours}h estimated`
-                  : `${task.logged_hours || 0}h logged`
+                hasEstimate
+                  ? `${loggedHrs}h logged of ${estHours}h estimated`
+                  : `${loggedHrs}h logged`
               }
             >
               <Clock size={11} className="text-brand-primary" />
               <span>
-                {task.logged_hours ? `${task.logged_hours}/` : ''}
-                {task.estimate_hours ? `${task.estimate_hours}h` : ''}
+                {hasLogged && hasEstimate
+                  ? `${loggedHrs}/${estHours}h`
+                  : hasLogged
+                  ? `${loggedHrs}h`
+                  : `${estHours}h`}
               </span>
             </span>
           )}

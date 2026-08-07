@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
 from app.schemas.task import TaskCreate, TaskUpdate, TaskAssigneeUpdate, CanonicalTaskResponse, BoardDataResponse, TaskSearchResponse, BulkMoveTasksRequest, BulkDeleteTasksRequest, LogTaskTimeRequest
 from app.schemas.envelope import DataEnvelope
-from app.services.notification_service import dispatch_task_email, NotificationService, _dispatch_notification_event
+from app.services.notification_service import NotificationService, _dispatch_notification_event
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
 from app.services.task_service import TaskService
@@ -133,7 +133,8 @@ async def update_task(
     task_in: TaskUpdate,
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
-    task_service: TaskService = Depends(get_task_service)
+    task_service: TaskService = Depends(get_task_service),
+    conn: asyncpg.Connection = Depends(get_db_connection),
 ):
     new_task, old_dict, new_dict = await task_service.update_task(task_id, task_in, current_user)
     try:
@@ -144,52 +145,49 @@ async def update_task(
         )
     except Exception:
         pass
-    
+
     if old_dict and new_dict:
-        actor_name = current_user.get("first_name") or current_user.get("email")
+        notif_svc = NotificationService(conn)
+        actor_id = current_user["id"]
+        org_id = current_user["organization_id"]
 
         if old_dict.get("assigned_to") != new_dict.get("assigned_to"):
             background_tasks.add_task(
-                dispatch_task_email,
-                activity_type="ASSIGNEE_CHANGED",
+                notif_svc.notify_assignee_changed,
+                task_id=new_task.id,
                 task_title=new_dict["title"],
-                board_name=new_dict["board_name"],
-                actor_name=actor_name,
-                assignee_email=new_dict["assignee_email"],
-                assignee_name=new_dict["assignee_first_name"],
-                old_assignee_email=old_dict["assignee_email"],
-                old_assignee_name=old_dict["assignee_first_name"],
+                board_id=new_task.board_id,
+                new_assignee_id=new_dict.get("assigned_to"),
+                old_assignee_id=old_dict.get("assigned_to"),
+                actor_id=actor_id,
+                org_id=org_id,
             )
-            # Push real-time WS event — DB trigger already inserted the notification row
-            new_assignee_id = new_dict.get("assigned_to")
-            if new_assignee_id and new_assignee_id != current_user["id"]:
-                try:
-                    await _dispatch_notification_event(task_service.conn, new_assignee_id)
-                except Exception as e:
-                    logger.error(f"WS push failed for task={new_task.id} assignee={new_assignee_id}: {e}")
 
         if old_dict.get("due_date") != new_dict.get("due_date"):
             background_tasks.add_task(
-                dispatch_task_email,
-                activity_type="DUE_DATE_CHANGED",
+                notif_svc.notify_due_date_changed,
+                task_id=new_task.id,
                 task_title=new_dict["title"],
-                board_name=new_dict["board_name"],
-                actor_name=actor_name,
-                assignee_email=new_dict["assignee_email"],
-                assignee_name=new_dict["assignee_first_name"],
+                board_id=new_task.board_id,
+                assignee_id=new_dict.get("assigned_to"),
+                reporter_id=new_dict.get("reporter_id"),
+                actor_id=actor_id,
+                org_id=org_id,
+                old_due_date=old_dict.get("due_date"),
+                new_due_date=new_dict.get("due_date"),
             )
 
-        if old_dict.get("column_id") != new_dict.get("column_id"):
+        if old_dict.get("reporter_id") != new_dict.get("reporter_id"):
             background_tasks.add_task(
-                dispatch_task_email,
-                activity_type="STATUS_CHANGED",
+                notif_svc.notify_reporter_changed,
+                task_id=new_task.id,
                 task_title=new_dict["title"],
-                board_name=new_dict["board_name"],
-                actor_name=actor_name,
-                assignee_email=new_dict["assignee_email"],
-                assignee_name=new_dict["assignee_first_name"],
-                old_status=old_dict["column_name"],
-                new_status=new_dict["column_name"],
+                board_id=new_task.board_id,
+                new_reporter_id=new_dict.get("reporter_id"),
+                old_reporter_id=old_dict.get("reporter_id"),
+                assignee_id=new_dict.get("assigned_to"),
+                actor_id=actor_id,
+                org_id=org_id,
             )
 
     return DataEnvelope(data=new_task)
@@ -248,7 +246,8 @@ async def update_task_assignee(
     body: TaskAssigneeUpdate,
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
-    task_service: TaskService = Depends(get_task_service)
+    task_service: TaskService = Depends(get_task_service),
+    conn: asyncpg.Connection = Depends(get_db_connection),
 ):
     new_task, old_dict, new_dict = await task_service.update_task_assignee(task_id, body, current_user)
 
@@ -261,27 +260,18 @@ async def update_task_assignee(
     except Exception:
         pass
 
-    if old_dict and new_dict:
-        actor_name = current_user.get("first_name") or current_user.get("email")
-        if old_dict.get("assigned_to") != new_dict.get("assigned_to"):
-            background_tasks.add_task(
-                dispatch_task_email,
-                activity_type="ASSIGNEE_CHANGED",
-                task_title=new_dict["title"],
-                board_name=new_dict["board_name"],
-                actor_name=actor_name,
-                assignee_email=new_dict["assignee_email"],
-                assignee_name=new_dict["assignee_first_name"],
-                old_assignee_email=old_dict["assignee_email"],
-                old_assignee_name=old_dict["assignee_first_name"],
-            )
-            # Push real-time WS event — DB trigger already inserted the notification row
-            new_assignee_id = new_dict.get("assigned_to")
-            if new_assignee_id and new_assignee_id != current_user["id"]:
-                try:
-                    await _dispatch_notification_event(task_service.conn, new_assignee_id)
-                except Exception as e:
-                    logger.error(f"WS push failed for task={new_task.id} assignee={new_assignee_id}: {e}")
+    if old_dict and new_dict and old_dict.get("assigned_to") != new_dict.get("assigned_to"):
+        notif_svc = NotificationService(conn)
+        background_tasks.add_task(
+            notif_svc.notify_assignee_changed,
+            task_id=new_task.id,
+            task_title=new_dict["title"],
+            board_id=new_task.board_id,
+            new_assignee_id=new_dict.get("assigned_to"),
+            old_assignee_id=old_dict.get("assigned_to"),
+            actor_id=current_user["id"],
+            org_id=current_user["organization_id"],
+        )
 
     return DataEnvelope(data=new_task)
 

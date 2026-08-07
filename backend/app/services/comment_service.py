@@ -175,7 +175,7 @@ class CommentService:
                 raise HTTPException(status_code=403, detail="Not authorized to edit this comment")
             raise HTTPException(status_code=400, detail=err_msg if isinstance(e, asyncpg.exceptions.PostgresError) else 'An unexpected error occurred')
 
-    async def toggle_reaction(self, comment_id: int, emoji: str, current_user: dict) -> Tuple[bool, Optional[int], Optional[int]]:
+    async def add_reaction(self, comment_id: int, emoji: str, current_user: dict) -> Tuple[bool, Optional[int], Optional[int]]:
         try:
             comment_row = await self.conn.fetchrow(
                 "SELECT task_id FROM v_comments_canonical WHERE id = $1", comment_id
@@ -196,7 +196,43 @@ class CommentService:
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
                 added = await self.conn.fetchval(
-                    "SELECT fn_toggle_comment_reaction($1::integer, $2::integer, $3::text)",
+                    "SELECT fn_add_comment_reaction($1::integer, $2::integer, $3::text)",
+                    comment_id, current_user["id"], emoji
+                )
+
+
+            return added, task_id, board_id
+        except HTTPException:
+            raise
+        except Exception as e:
+            err_msg = str(e)
+            logger.error(f'Error toggling comment reaction: {err_msg}')
+            if 'Comment not found' in err_msg:
+                raise HTTPException(status_code=404, detail="Comment not found")
+            raise HTTPException(status_code=400, detail=err_msg if isinstance(e, asyncpg.exceptions.PostgresError) else 'An unexpected error occurred')
+
+    async def remove_reaction(self, comment_id: int, emoji: str, current_user: dict) -> Tuple[bool, Optional[int], Optional[int]]:
+        try:
+            comment_row = await self.conn.fetchrow(
+                "SELECT task_id FROM v_comments_canonical WHERE id = $1", comment_id
+            )
+            if not comment_row:
+                raise HTTPException(status_code=404, detail="Comment not found")
+            task_id = comment_row["task_id"]
+
+            has_access = await self.conn.fetchval("SELECT can_view_task($1, $2)", current_user["id"], task_id)
+            if not has_access:
+                raise HTTPException(status_code=403, detail="Task not found or access denied")
+
+            task_row = await self.conn.fetchrow(
+                "SELECT board_id FROM v_tasks_canonical WHERE id = $1", task_id
+            )
+            board_id = task_row["board_id"] if task_row else None
+
+            async with self.conn.transaction():
+                await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
+                added = await self.conn.fetchval(
+                    "SELECT fn_remove_comment_reaction($1::integer, $2::integer, $3::text)",
                     comment_id, current_user["id"], emoji
                 )
 

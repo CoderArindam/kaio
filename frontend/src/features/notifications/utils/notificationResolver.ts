@@ -41,6 +41,7 @@ export const resolveNotificationDestination = (notification: Notification): Noti
       'PRIORITY_CHANGED',
       'DUE_DATE_CHANGED',
       'ASSIGNEE_CHANGED',
+      'REPORTER_CHANGED',
       'TASK_ASSIGNED',
       'ATTACHMENT_ADDED',
       'ATTACHMENT_REMOVED'

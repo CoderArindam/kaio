@@ -13,6 +13,7 @@ class TaskCreate(BaseModel):
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
     label_ids: Optional[List[int]] = []
+    reporter_id: Optional[int] = None
 
 class TaskUpdate(BaseModel):
     column_id: Optional[int] = None
@@ -22,6 +23,7 @@ class TaskUpdate(BaseModel):
     estimate_hours: Optional[float] = None
     due_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
+    reporter_id: Optional[int] = None
 
 class TaskAssigneeUpdate(BaseModel):
     assigned_to: Optional[int] = None
@@ -65,6 +67,13 @@ class CanonicalTaskResponse(BaseModel):
     creator_first_name: Optional[str] = None
     creator_last_name: Optional[str] = None
     creator_avatar_url: Optional[str] = None
+    
+    reporter_id: Optional[int] = None
+    reporter_email: Optional[str] = None
+    reporter_first_name: Optional[str] = None
+    reporter_last_name: Optional[str] = None
+    reporter_avatar_url: Optional[str] = None
+    
     labels: List[LabelResponse] = []
     subtask_count: int = 0
     completed_subtask_count: int = 0

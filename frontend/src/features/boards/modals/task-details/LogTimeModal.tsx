@@ -3,6 +3,7 @@ import { Loader2, Clock } from 'lucide-react';
 import Modal from '../../../../components/common/Modal';
 import { useTaskStore } from '../../../../store/taskStore';
 import { type Task } from '../../../../services/tasksApi';
+import { getSubtasks, type Subtask } from '../../../../services/subtasksApi';
 
 interface LogTimeModalProps {
   isOpen: boolean;
@@ -47,8 +48,23 @@ export const LogTimeModal: React.FC<LogTimeModalProps> = ({ isOpen, onClose, tas
   const [entryDate, setEntryDate] = useState<string>(today);
   const [hours, setHours] = useState<string>('');
   const [description, setDescription] = useState<string>('');
+  const [subtaskId, setSubtaskId] = useState<number | ''>('');
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      getSubtasks(task.id)
+        .then(setSubtasks)
+        .catch(console.error);
+    } else {
+      setSubtaskId('');
+      setHours('');
+      setDescription('');
+      setErrorMsg(null);
+    }
+  }, [isOpen, task.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,9 +86,11 @@ export const LogTimeModal: React.FC<LogTimeModalProps> = ({ isOpen, onClose, tas
         entry_date: entryDate,
         hours: parsedHours,
         description: description.trim() || undefined,
+        subtask_id: subtaskId !== '' ? String(subtaskId) : undefined,
       });
       setHours('');
       setDescription('');
+      setSubtaskId('');
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.message || 'Failed to log time';
@@ -110,6 +128,26 @@ export const LogTimeModal: React.FC<LogTimeModalProps> = ({ isOpen, onClose, tas
             className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-brand-primary"
           />
         </div>
+
+        {subtasks.length > 0 && (
+          <div>
+            <label className="block text-xs font-semibold text-brand-text-muted mb-1.5 uppercase tracking-wider">
+              Subtask (Optional)
+            </label>
+            <select
+              value={subtaskId}
+              onChange={(e) => setSubtaskId(e.target.value ? Number(e.target.value) : '')}
+              className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-brand-primary"
+            >
+              <option value="">-- No subtask --</option>
+              {subtasks.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-brand-text-muted mb-1.5 uppercase tracking-wider">

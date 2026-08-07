@@ -55,16 +55,18 @@ class TaskService:
             if not has_access:
                 raise HTTPException(status_code=403, detail="Board not found or access denied")
 
+            reporter_id = task_in.reporter_id if task_in.reporter_id else current_user["id"]
+
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
                 task_id = await self.conn.fetchval(
                     """
-                    INSERT INTO tasks (board_id, column_id, title, description, priority, estimate_hours, assigned_to, created_by, due_date, reminder_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    INSERT INTO tasks (board_id, column_id, title, description, priority, estimate_hours, assigned_to, created_by, due_date, reminder_at, reporter_id)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     RETURNING id
                     """,
                     task_in.board_id, task_in.column_id, task_in.title, task_in.description,
-                    task_in.priority, task_in.estimate_hours, task_in.assigned_to, current_user["id"], task_in.due_date, task_in.reminder_at
+                    task_in.priority, task_in.estimate_hours, task_in.assigned_to, current_user["id"], task_in.due_date, task_in.reminder_at, reporter_id
                 )
                 
                 if task_in.label_ids:
@@ -150,6 +152,14 @@ class TaskService:
             async with self.conn.transaction():
                 await self.conn.execute("SELECT set_config('app.current_user_id', $1, true)", str(current_user["id"]))
                 
+                old_task = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
+
+                if "reporter_id" in task_in.model_fields_set:
+                    role = current_user.get("role", "MEMBER")
+                    if role not in ("MANAGER", "SUPER_ADMIN"):
+                        if old_task["created_by"] != current_user["id"] and old_task["reporter_id"] != current_user["id"]:
+                            raise HTTPException(status_code=403, detail="Only managers, the task creator, or current reporter can change the reporter")
+
                 update_fields = []
                 args = []
                 idx = 1
@@ -159,10 +169,7 @@ class TaskService:
                     idx += 1
                     
                 if not update_fields:
-                    row = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
-                    return CanonicalTaskResponse(**dict(row)), None, dict(row)
-
-                old_task = await self.conn.fetchrow("SELECT * FROM v_tasks_canonical WHERE id = $1", task_id)
+                    return CanonicalTaskResponse(**dict(old_task)), None, dict(old_task)
 
                 args.append(task_id)
                 update_query = f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ${idx} RETURNING id"

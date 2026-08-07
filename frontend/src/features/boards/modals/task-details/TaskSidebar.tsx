@@ -3,6 +3,7 @@ import { Clock, Plus, Edit2, Check, X } from 'lucide-react';
 import { type Task, type Column } from '../../../../services/tasksApi';
 import { type User } from '../../../../services/usersApi';
 import { useTaskStore } from '../../../../store/taskStore';
+import { useAuthStore } from '../../../../store/authStore';
 import StatusSelector from '../../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../../components/shared/PrioritySelector';
@@ -22,6 +23,7 @@ interface TaskSidebarProps {
 
 const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, canEdit, createdDate }) => {
   const { updateTaskData, moveTask, assignTask } = useTaskStore();
+  const { user } = useAuthStore();
   const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
 
   const [isEditingEstimate, setIsEditingEstimate] = useState(false);
@@ -51,9 +53,16 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
   };
 
   const loggedHours = Number(task.logged_hours || 0);
-  const estimateHours = task.estimate_hours !== undefined && task.estimate_hours !== null ? Number(task.estimate_hours) : null;
+  const estimateHours = task.estimate_hours !== undefined && task.estimate_hours !== null && Number(task.estimate_hours) > 0 ? Number(task.estimate_hours) : null;
   const remainingHours = estimateHours !== null ? Math.max(0, estimateHours - loggedHours) : null;
   const percentLogged = estimateHours && estimateHours > 0 ? Math.min(100, Math.round((loggedHours / estimateHours) * 100)) : 0;
+
+  const canChangeReporter = canEdit && (
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'MANAGER' ||
+    task.created_by === user?.id ||
+    task.reporter_id === user?.id
+  );
 
   return (
     <>
@@ -75,6 +84,16 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
             users={boardMembers} 
             onChange={(newAssignee: number | null) => assignTask(task.id, newAssignee)} 
             disabled={!canEdit}
+          />
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
+          <AssigneeSelector 
+            assigneeId={task.reporter_id ?? null} 
+            users={boardMembers} 
+            onChange={(newReporter: number | null) => updateTaskData(task.id, { reporter_id: newReporter })} 
+            disabled={!canChangeReporter}
           />
         </div>
 
@@ -204,16 +223,14 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
         </div>
 
         <div className="pt-4 border-t border-brand-border">
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
-          <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Created By</p>
+          <div className="flex items-center gap-2 mb-4">
             <UserAvatar user={creatorUser} size="sm" />
             <span className="text-sm font-medium text-brand-text">
               {formatUserName(creatorUser, task.created_by ? `User #${task.created_by}` : 'Unknown')}
             </span>
           </div>
-        </div>
-
-        <div>
+          
           <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Created</p>
           <p className="text-sm text-brand-text">{createdDate}</p>
         </div>

@@ -3,7 +3,7 @@ from typing import List
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.subtask import SubtaskCreate, SubtaskReorder, SubtaskResponse
+from app.schemas.subtask import SubtaskCreate, SubtaskReorder, SubtaskResponse, SubtaskAssign
 from app.schemas.envelope import DataEnvelope
 from app.auth.dependencies import get_current_user
 from app.database.connection import get_db_connection
@@ -29,7 +29,7 @@ async def list_subtasks(
             raise HTTPException(status_code=403, detail="Access denied")
 
         rows = await conn.fetch(
-            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, created_at FROM v_subtasks_canonical WHERE task_id = $1 ORDER BY position ASC, id ASC",
+            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, assignee_id, assignee_name, assignee_email, assignee_avatar_url, created_at FROM v_subtasks_canonical WHERE task_id = $1 ORDER BY position ASC, id ASC",
             task_id
         )
         subtasks = [SubtaskResponse(**dict(r)) for r in rows]
@@ -50,15 +50,15 @@ async def create_subtask(
 ):
     try:
         row = await conn.fetchrow(
-            "SELECT * FROM fn_create_subtask($1, $2, $3)",
-            task_id, subtask_in.title, current_user["id"]
+            "SELECT * FROM fn_create_subtask($1::integer, $2::text, $3::integer, $4::integer)",
+            task_id, subtask_in.title, current_user["id"], subtask_in.assignee_id
         )
         if not row:
             raise HTTPException(status_code=400, detail="Failed to create subtask")
 
-        # Fetch canonical details including creator_name
+        # Fetch canonical details including creator_name and assignee details
         canonical_row = await conn.fetchrow(
-            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, created_at FROM v_subtasks_canonical WHERE id = $1",
+            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, assignee_id, assignee_name, assignee_email, assignee_avatar_url, created_at FROM v_subtasks_canonical WHERE id = $1",
             row["id"]
         )
         subtask = SubtaskResponse(**dict(canonical_row or row))
@@ -98,7 +98,7 @@ async def toggle_subtask(
             raise HTTPException(status_code=400, detail="Failed to toggle subtask")
 
         canonical_row = await conn.fetchrow(
-            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, created_at FROM v_subtasks_canonical WHERE id = $1",
+            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, assignee_id, assignee_name, assignee_email, assignee_avatar_url, created_at FROM v_subtasks_canonical WHERE id = $1",
             subtask_id
         )
         subtask = SubtaskResponse(**dict(canonical_row or row))
@@ -121,6 +121,49 @@ async def toggle_subtask(
             raise HTTPException(status_code=404, detail="Subtask not found")
         logger.error(f"Error toggling subtask: {e}")
         raise HTTPException(status_code=400, detail="Failed to toggle subtask")
+
+
+@router.patch("/subtasks/{subtask_id}/assign", response_model=DataEnvelope[SubtaskResponse])
+async def assign_subtask(
+    subtask_id: int,
+    payload: SubtaskAssign,
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    try:
+        subtask_row = await conn.fetchrow("SELECT task_id, assignee_id FROM v_subtasks_canonical WHERE id = $1", subtask_id)
+        if not subtask_row:
+            raise HTTPException(status_code=404, detail="Subtask not found")
+
+        task_row = await conn.fetchrow("SELECT board_id FROM v_tasks_canonical WHERE id = $1", subtask_row["task_id"])
+        if not task_row:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        has_access = await conn.fetchval("SELECT can_view_board($1, $2)", current_user["id"], task_row["board_id"])
+        if not has_access:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Update assignee_id
+        await conn.execute("UPDATE subtasks SET assignee_id = $1 WHERE id = $2", payload.assignee_id, subtask_id)
+
+        canonical_row = await conn.fetchrow(
+            "SELECT id, task_id, title, is_completed, position, created_by, creator_name, assignee_id, assignee_name, assignee_email, assignee_avatar_url, created_at FROM v_subtasks_canonical WHERE id = $1",
+            subtask_id
+        )
+        subtask = SubtaskResponse(**dict(canonical_row))
+
+        await connection_manager.send_to_board(
+            board_id=task_row["board_id"],
+            message={"type": "task_updated", "board_id": task_row["board_id"], "task_id": subtask.task_id, "action": "subtask_assigned"}
+        )
+
+        return DataEnvelope(data=subtask)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error assigning subtask: {e}")
+        raise HTTPException(status_code=400, detail="Failed to assign subtask")
+
 
 
 @router.delete("/subtasks/{subtask_id}", response_model=DataEnvelope[dict])

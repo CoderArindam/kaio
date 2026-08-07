@@ -4,6 +4,7 @@ import { Settings, Users, GitMerge, Tag, Zap, Puzzle, ChevronRight, LayoutDashbo
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useProjectSettingsStore } from '../../store/projectSettingsStore';
 import { useAuthStore } from '../../store/authStore';
+import { useBoardStore } from '../../store/boardStore';
 
 const SETTINGS_NAV = [
   { name: 'General', path: '', icon: Settings, activeExact: true },
@@ -18,11 +19,12 @@ export const ProjectSettingsLayout: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
   const { currentSettings, fetchSettings, isLoading } = useProjectSettingsStore();
   const { user } = useAuthStore();
+  const { boards } = useBoardStore();
 
   const userRole = (user?.role || '').toUpperCase();
-  if (userRole === 'MEMBER') {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const boardIdNum = boardId ? parseInt(boardId, 10) : 0;
+  const board = boards.find(b => b.id === boardIdNum);
 
   React.useEffect(() => {
     if (boardId) {
@@ -31,6 +33,17 @@ export const ProjectSettingsLayout: React.FC = () => {
   }, [boardId, fetchSettings]);
 
   usePageTitle(currentSettings?.settings ? `Settings - ${currentSettings.settings.icon || ''} ${currentSettings.settings.name}`.trim() : 'Project Settings');
+
+  // Members never have access to project settings
+  if (userRole === 'MEMBER') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Managers can only access settings for boards they can manage
+  // Allow access while board data is still loading (board may not be in store yet)
+  if (!isSuperAdmin && board && !board.user_can_manage) {
+    return <Navigate to={`/board/${boardId}`} replace />;
+  }
 
   if (isLoading && !currentSettings) {
     return (

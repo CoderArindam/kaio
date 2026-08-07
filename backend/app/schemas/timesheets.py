@@ -49,13 +49,15 @@ class TimesheetEntryResponse(BaseModel):
     board_name: Optional[str] = None
     task_id: Optional[UUID] = None
     task_title: Optional[str] = None
+    subtask_id: Optional[UUID] = None
+    subtask_title: Optional[str] = None
     entry_date: date
     hours: float
     entry_type: str
     description: Optional[str] = None
     is_overtime: Optional[bool] = False
 
-    @field_validator('id', 'timesheet_id', 'board_id', 'task_id', mode='before')
+    @field_validator('id', 'timesheet_id', 'board_id', 'task_id', 'subtask_id', mode='before')
     @classmethod
     def parse_uuid_fields(cls, v):
         if v is None or v == '':
@@ -98,12 +100,13 @@ class UpsertTimesheetEntryRequest(BaseModel):
 
     board_id: Optional[Union[UUID, str, int]] = None
     task_id: Optional[Union[UUID, str, int]] = None
+    subtask_id: Optional[Union[UUID, str, int]] = None
     entry_date: date
     hours: float = Field(ge=0, le=24)
     entry_type: Literal['task', 'meeting', 'general', 'leave', 'holiday'] = 'task'
     description: Optional[str] = None
 
-    @field_validator('board_id', 'task_id', mode='before')
+    @field_validator('board_id', 'task_id', 'subtask_id', mode='before')
     @classmethod
     def parse_optional_uuid(cls, v):
         if v is None or v == '' or v == 'general':

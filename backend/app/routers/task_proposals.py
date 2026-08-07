@@ -15,6 +15,7 @@ from app.schemas.envelope import DataEnvelope
 from app.auth.dependencies import require_proposal_review_access
 from app.database.connection import get_db_connection
 from app.websockets.manager import connection_manager
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,22 @@ async def approve_task_proposal(
 
     if not canonical_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Created task card not found")
+
+    # Notify assignee if they differ from the approver
+    assigned_to = canonical_row["assigned_to"]
+    if assigned_to and assigned_to != current_user["id"]:
+        try:
+            notif_svc = NotificationService(conn)
+            await notif_svc.notify_task_assigned(
+                task_id=task_id,
+                task_title=canonical_row["title"],
+                board_name=canonical_row.get("board_name") or str(canonical_row["board_id"]),
+                assignee_id=assigned_to,
+                actor_id=current_user["id"],
+                org_id=current_user["organization_id"],
+            )
+        except Exception:
+            pass
 
     try:
         await connection_manager.send_to_org(

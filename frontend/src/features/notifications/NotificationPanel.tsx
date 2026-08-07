@@ -95,12 +95,12 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, classNam
   }, [onClose]);
 
   const hasUnread = notifications.some(n => !n.is_read);
-  const defaultPosition = 'right-0 top-full mt-2.5 w-[calc(100vw-2rem)] sm:w-[410px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] sm:max-h-[580px] animate-in fade-in slide-in-from-top-2 duration-150';
+  const defaultPosition = 'absolute right-0 top-full mt-2.5 w-[calc(100vw-2rem)] sm:w-[410px] max-w-[calc(100vw-2rem)] max-h-[min(580px,calc(100vh-6rem))] animate-in fade-in slide-in-from-top-2 duration-150';
 
   return (
     <div 
       ref={panelRef}
-      className={`absolute bg-brand-surface/95 backdrop-blur-xl border border-brand-border/80 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden ring-1 ring-black/5 ${className || defaultPosition}`}
+      className={`bg-brand-surface/95 backdrop-blur-xl border border-brand-border/80 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden ring-1 ring-black/5 ${className || defaultPosition}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-brand-border/60 bg-brand-surface-low/90 shrink-0">
