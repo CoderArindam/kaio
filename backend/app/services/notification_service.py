@@ -204,6 +204,41 @@ class NotificationService:
         except Exception as e:
             logger.error(f"notify_task_assigned failed task={task_id} assignee={assignee_id}: {e}")
 
+    async def notify_task_reminder(
+        self,
+        task_id: int,
+        task_title: str,
+        board_id: int,
+        assignee_id: int,
+        org_id: int,
+    ) -> None:
+        """
+        Create an in-app notification for a user reminding them of a due task,
+        and push a real-time WS notification.new event.
+        """
+        try:
+            title = f"Task reminder: '{task_title}' is due soon or overdue"
+            deep_link = f"/boards/{board_id}?task={task_id}"
+
+            act_id = await self.conn.fetchval(
+                """
+                INSERT INTO activities (organization_id, entity_type, entity_id, user_id, activity_type, new_value)
+                VALUES ($1, 'TASK', $2, $3, 'TASK_REMINDER', $4::jsonb)
+                RETURNING id
+                """,
+                org_id,
+                task_id,
+                assignee_id,
+                {"assigned_to": assignee_id, "title": title, "deep_link": deep_link},
+            )
+            await self.conn.execute(
+                "INSERT INTO notifications (user_id, activity_id, is_read) VALUES ($1, $2, false)",
+                assignee_id, act_id,
+            )
+            await _dispatch_notification_event(self.conn, assignee_id)
+        except Exception as e:
+            logger.error(f"notify_task_reminder failed task={task_id} assignee={assignee_id}: {e}")
+
     async def notify_assignee_changed(
         self,
         task_id: int,
@@ -298,6 +333,18 @@ class NotificationService:
                 "SELECT first_name FROM users WHERE id = $1", actor_id
             ) or "Someone"
             
+            old_reporter_name = None
+            if old_reporter_id:
+                old_reporter_name = await self.conn.fetchval(
+                    "SELECT COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email) FROM users WHERE id = $1", old_reporter_id
+                )
+
+            new_reporter_name = None
+            if new_reporter_id:
+                new_reporter_name = await self.conn.fetchval(
+                    "SELECT COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email) FROM users WHERE id = $1", new_reporter_id
+                )
+            
             deep_link = f"/boards/{board_id}?task={task_id}"
             
             act_id = await self.conn.fetchval(
@@ -307,8 +354,8 @@ class NotificationService:
                 RETURNING id
                 """,
                 org_id, task_id, actor_id,
-                {"reporter_id": old_reporter_id},
-                {"reporter_id": new_reporter_id, "deep_link": deep_link}
+                {"reporter_id": old_reporter_id, "reporter_name": old_reporter_name},
+                {"reporter_id": new_reporter_id, "reporter_name": new_reporter_name, "deep_link": deep_link}
             )
             
             notify_users = set()

@@ -141,3 +141,6 @@ Four PostgreSQL stored procedures in `063_column_management_functions.sql` enabl
 
 ### comment_mentions Table
 A junction table (`comment_mentions`) introduced in `065_comment_mentions.sql` recording which users were @mentioned in each comment. Joined into `v_comments_canonical` as a `mentioned_users` JSON array. Backed by `fn_create_comment_mentions` and `fn_get_comment_mentions` stored functions.
+
+### Task Reminder Worker
+An asynchronous background worker (`TaskReminderWorker`) polling every 60 seconds within the FastAPI lifespan. It reads due task reminders using `fn_get_due_reminders` with `SKIP LOCKED` concurrency control, dispatches in-app notifications via `NotificationService`, and marks them sent using `fn_mark_reminders_sent`.

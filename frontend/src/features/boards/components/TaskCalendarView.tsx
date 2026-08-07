@@ -31,14 +31,14 @@ export const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({ boardId }) =
     getBoardTasksList,
     getBoardMembersList,
     boardView,
-    setSelectedAssigneeId,
+    setSelectedAssigneeIds,
     initializeBoard,
   } = useTaskStore();
 
   const columns = getColumnsList();
   const tasks = getBoardTasksList();
   const boardMembers = getBoardMembersList();
-  const { isFetching, selectedAssigneeId } = boardView;
+  const { isFetching, selectedAssigneeIds } = boardView;
 
   const { openTaskModal, openCreateTaskModal } = useUiStore();
   const { user } = useAuthStore();
@@ -58,7 +58,7 @@ export const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({ boardId }) =
   // Filter tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      if (selectedAssigneeId !== null && task.assigned_to !== selectedAssigneeId) {
+      if (selectedAssigneeIds && selectedAssigneeIds.length > 0 && !selectedAssigneeIds.includes(task.assigned_to as number)) {
         return false;
       }
 
@@ -87,7 +87,7 @@ export const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({ boardId }) =
 
       return true;
     });
-  }, [tasks, selectedAssigneeId, selectedLabelId, selectedDueDateFilter, columns]);
+  }, [tasks, selectedAssigneeIds, selectedLabelId, selectedDueDateFilter, columns]);
 
   // Group tasks by date string (YYYY-MM-DD)
   const tasksByDate = useMemo(() => {
@@ -304,8 +304,8 @@ export const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({ boardId }) =
       <div className="px-4 sm:px-8 flex flex-wrap gap-3 sm:gap-4 items-center py-2.5 sm:py-3 border-b border-brand-border/40 shrink-0">
         <AssigneeFilter
           users={boardMembers}
-          selectedAssigneeId={selectedAssigneeId}
-          onChange={(val) => setSelectedAssigneeId(boardId, val)}
+          selectedAssigneeIds={selectedAssigneeIds}
+          onChange={(val) => setSelectedAssigneeIds(boardId, val)}
         />
         <DueDateFilter
           value={selectedDueDateFilter}

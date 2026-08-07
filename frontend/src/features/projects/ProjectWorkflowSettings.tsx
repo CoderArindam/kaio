@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   GitMerge,
@@ -11,10 +11,154 @@ import {
   ArrowDown,
   AlertTriangle,
   Loader2,
+  ChevronDown
 } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { type Column } from '../../services/tasksApi';
 import toast from 'react-hot-toast';
+
+export const PREDEFINED_COLORS = [
+  { hex: '#64748B', name: 'Slate', bgClass: 'bg-slate-500' },
+  { hex: '#EF4444', name: 'Red', bgClass: 'bg-red-500' },
+  { hex: '#F97316', name: 'Orange', bgClass: 'bg-orange-500' },
+  { hex: '#F59E0B', name: 'Amber', bgClass: 'bg-amber-500' },
+  { hex: '#10B981', name: 'Green', bgClass: 'bg-emerald-500' },
+  { hex: '#3B82F6', name: 'Blue', bgClass: 'bg-blue-500' },
+  { hex: '#6366F1', name: 'Indigo', bgClass: 'bg-indigo-500' },
+  { hex: '#A855F7', name: 'Purple', bgClass: 'bg-purple-500' },
+  { hex: '#EC4899', name: 'Pink', bgClass: 'bg-pink-500' },
+];
+
+const ColorPicker = ({ value, onChange, disabled = false }: { value?: string, onChange: (val: string) => void, disabled?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedColor = PREDEFINED_COLORS.find(c => c.hex.toLowerCase() === value?.toLowerCase()) || PREDEFINED_COLORS[0];
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-[100px] px-2.5 py-1.5 text-xs font-semibold border border-brand-border rounded-lg bg-brand-surface-low text-brand-text transition-colors ${
+          isOpen ? 'ring-2 ring-brand-primary/20' : ''
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-brand-border-highlight'}`}
+      >
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: selectedColor.hex }} />
+          <span>Color</span>
+        </div>
+        <ChevronDown size={12} className={`ml-1 text-brand-text-muted ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-50 right-0 mt-1 p-2 w-48 rounded-xl border border-brand-border bg-brand-surface text-brand-text shadow-2xl flex flex-wrap gap-2">
+          {PREDEFINED_COLORS.map((c) => (
+            <button
+              key={c.hex}
+              type="button"
+              onClick={() => { onChange(c.hex); setIsOpen(false); }}
+              className={`w-6 h-6 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center ${
+                c.hex.toLowerCase() === selectedColor.hex.toLowerCase() ? 'ring-2 ring-offset-2 ring-offset-brand-surface ring-brand-primary' : ''
+              }`}
+              style={{ backgroundColor: c.hex }}
+              title={c.name}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Reusable Category Selector Component
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '148, 163, 184';
+};
+
+const CategorySelector = ({ value, color, onChange, disabled = false, className = '' }: { value: 'TODO' | 'IN_PROGRESS' | 'DONE', color?: string, onChange: (val: 'TODO' | 'IN_PROGRESS' | 'DONE') => void, disabled?: boolean, className?: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const categories = [
+    { id: 'TODO', label: 'To Do', colorClass: 'bg-slate-500', bgClass: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30' },
+    { id: 'IN_PROGRESS', label: 'In Progress', colorClass: 'bg-blue-500', bgClass: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
+    { id: 'DONE', label: 'Done', colorClass: 'bg-emerald-500', bgClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' }
+  ];
+
+  const selected = categories.find(c => c.id === value) || categories[0];
+
+  const getCustomStyles = (hexColor?: string) => {
+    if (!hexColor) return {};
+    const rgb = hexToRgb(hexColor);
+    return {
+      backgroundColor: `rgba(${rgb}, 0.1)`,
+      color: hexColor,
+      borderColor: `rgba(${rgb}, 0.3)`,
+    };
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-full px-2.5 py-1.5 text-xs font-semibold border rounded-lg transition-colors ${
+          isOpen ? 'ring-2 ring-brand-primary/20' : ''
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${!color ? selected.bgClass : ''}`}
+        style={getCustomStyles(color)}
+      >
+        <div className="flex items-center gap-1.5">
+          <div className={`w-2 h-2 rounded-full ${!color ? selected.colorClass : ''}`} style={color ? { backgroundColor: color } : {}} />
+          <span>{selected.label}</span>
+        </div>
+        <ChevronDown size={12} className={`ml-1 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-50 right-0 mt-1 w-40 max-h-60 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface text-brand-text shadow-2xl p-1.5 flex flex-col gap-1">
+          {categories.map((c) => (
+            <div
+              key={c.id}
+              onClick={() => { onChange(c.id as any); setIsOpen(false); }}
+              className={`flex items-center gap-2 p-2 rounded-md cursor-pointer text-xs font-medium transition-colors ${
+                c.id === value && !color ? c.bgClass : (c.id === value && color ? 'border font-medium' : 'hover:bg-brand-surface-highlight text-brand-text')
+              }`}
+              style={c.id === value ? getCustomStyles(color) : {}}
+            >
+              <div className={`w-2 h-2 rounded-full ${c.id === value && color ? '' : c.colorClass}`} style={c.id === value && color ? { backgroundColor: color } : {}} />
+              {c.label}
+              {c.id === value && <Check size={12} className="ml-auto" />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ProjectWorkflowSettings: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
@@ -39,6 +183,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [newColumnType, setNewColumnType] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
+  const [newColumnColor, setNewColumnColor] = useState(PREDEFINED_COLORS[0].hex);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit state
@@ -65,10 +210,12 @@ export const ProjectWorkflowSettings: React.FC = () => {
       await addColumn(parsedBoardId, {
         name: newColumnName.trim(),
         column_type: newColumnType,
+        color: newColumnColor,
       });
       toast.success(`Column "${newColumnName.trim()}" added successfully`);
       setNewColumnName('');
       setNewColumnType('TODO');
+      setNewColumnColor(PREDEFINED_COLORS[0].hex);
       setIsAddingColumn(false);
     } catch {
       toast.error('Failed to add column');
@@ -95,9 +242,18 @@ export const ProjectWorkflowSettings: React.FC = () => {
   const handleChangeType = async (columnId: number, newType: 'TODO' | 'IN_PROGRESS' | 'DONE') => {
     try {
       await renameColumn(columnId, { column_type: newType });
-      toast.success('Column status updated');
+      toast.success('Column category updated');
     } catch {
-      toast.error('Failed to update status');
+      toast.error('Failed to update category');
+    }
+  };
+
+  const handleChangeColor = async (columnId: number, newColor: string) => {
+    try {
+      await renameColumn(columnId, { color: newColor });
+      toast.success('Column color updated');
+    } catch {
+      toast.error('Failed to update color');
     }
   };
 
@@ -169,7 +325,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
 
         <button
           onClick={() => setIsAddingColumn(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-sm hover:shadow shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-sm font-semibold rounded-xl cursor-pointer shadow-sm hover:shadow shrink-0"
         >
           <Plus size={18} />
           <span>Add Column</span>
@@ -196,7 +352,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-brand-text-muted mb-1.5">Column Name</label>
               <input
@@ -210,16 +366,21 @@ export const ProjectWorkflowSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">Column Category (Type)</label>
-              <select
-                value={newColumnType}
-                onChange={(e) => setNewColumnType(e.target.value as any)}
-                className="w-full px-3.5 py-2 bg-brand-surface-low border border-brand-border rounded-xl text-sm text-brand-text focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="TODO">To Do (Open Tasks)</option>
-                <option value="IN_PROGRESS">In Progress (Active Work)</option>
-                <option value="DONE">Done (Completed)</option>
-              </select>
+              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">Category</label>
+              <CategorySelector 
+                value={newColumnType} 
+                color={newColumnColor}
+                onChange={setNewColumnType} 
+                className="w-full h-[38px] flex items-center" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">Color</label>
+              <ColorPicker 
+                value={newColumnColor} 
+                onChange={setNewColumnColor} 
+              />
             </div>
           </div>
 
@@ -237,7 +398,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
             <button
               type="submit"
               disabled={!newColumnName.trim() || isSubmitting}
-              className="px-4 py-2 text-xs font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover rounded-xl disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover rounded-xl disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
               {isSubmitting && <Loader2 size={14} className="animate-spin" />}
               <span>Save Column</span>
@@ -261,7 +422,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
             return (
               <div
                 key={column.id}
-                className="group bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs hover:border-brand-border/80 transition-all"
+                className="group bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs hover:border-brand-border/80"
               >
                 <div className="flex items-center gap-3.5 flex-1 min-w-0">
                   {/* Reorder Buttons */}
@@ -286,13 +447,13 @@ export const ProjectWorkflowSettings: React.FC = () => {
 
                   {/* Status Indicator */}
                   <div
-                    className={`w-3 h-3 rounded-full shrink-0 ${
-                      column.column_type === 'DONE'
-                        ? 'bg-emerald-500 shadow-xs'
-                        : column.column_type === 'IN_PROGRESS'
-                        ? 'bg-amber-500 shadow-xs'
-                        : 'bg-brand-primary shadow-xs'
-                    }`}
+                    className="w-3 h-3 rounded-full shrink-0 shadow-xs"
+                    style={{ 
+                      backgroundColor: column.color || (
+                        column.column_type === 'DONE' ? '#10B981' : 
+                        column.column_type === 'IN_PROGRESS' ? '#3B82F6' : '#94A3B8'
+                      ) 
+                    }}
                   />
 
                   {/* Column Name / Rename input */}
@@ -334,7 +495,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
                           setEditingColumnId(column.id);
                           setEditingName(column.name);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-brand-text-muted hover:text-brand-text rounded hover:bg-brand-surface-low transition-opacity cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-brand-text-muted hover:text-brand-text rounded hover:bg-brand-surface-low cursor-pointer"
                         title="Rename Column"
                       >
                         <Edit2 size={13} />
@@ -350,18 +511,23 @@ export const ProjectWorkflowSettings: React.FC = () => {
                     {columnTasks.length} {columnTasks.length === 1 ? 'task' : 'tasks'}
                   </span>
 
+                  {/* Color Select */}
+                  <ColorPicker 
+                    value={column.color || (
+                      column.column_type === 'DONE' ? '#10B981' : 
+                      column.column_type === 'IN_PROGRESS' ? '#3B82F6' : '#94A3B8'
+                    )}
+                    onChange={(newColor) => handleChangeColor(column.id, newColor)} 
+                  />
+
                   {/* Type Select */}
-                  <select
-                    value={column.column_type}
-                    onChange={(e) =>
-                      handleChangeType(column.id, e.target.value as 'TODO' | 'IN_PROGRESS' | 'DONE')
-                    }
-                    className="px-2.5 py-1 text-xs font-semibold bg-brand-surface-low border border-brand-border rounded-lg text-brand-text focus:outline-none cursor-pointer"
-                  >
-                    <option value="TODO">TODO</option>
-                    <option value="IN_PROGRESS">IN_PROGRESS</option>
-                    <option value="DONE">DONE</option>
-                  </select>
+                  <div className="w-[120px] sm:w-[140px] shrink-0">
+                    <CategorySelector 
+                      value={column.column_type as 'TODO' | 'IN_PROGRESS' | 'DONE'} 
+                      color={column.color}
+                      onChange={(newType) => handleChangeType(column.id, newType)} 
+                    />
+                  </div>
 
                   {/* Delete Button */}
                   <button
@@ -375,7 +541,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
                         taskCount: columnTasks.length,
                       });
                     }}
-                    className="p-1.5 text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-20 cursor-pointer"
+                    className="p-1.5 text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg disabled:opacity-20 cursor-pointer"
                     title={columns.length <= 1 ? 'Cannot delete the only column' : 'Delete Column'}
                   >
                     <Trash2 size={16} />
@@ -433,7 +599,7 @@ export const ProjectWorkflowSettings: React.FC = () => {
               <button
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded-xl disabled:opacity-50 flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="px-4 py-2 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded-xl disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeleting && <Loader2 size={14} className="animate-spin" />}
                 <span>Delete Column</span>

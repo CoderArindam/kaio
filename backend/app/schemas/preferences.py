@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
 
@@ -13,6 +13,7 @@ class UserPreferencesBase(BaseModel):
     accent_color: str
     sidebar_theme: str
     tour_completed: bool = False
+    task_sidebar_layout: Optional[Dict[str, List[str]]] = None
 
 class UserPreferencesUpdate(BaseModel):
     theme: Optional[ThemeEnum] = None
@@ -20,6 +21,7 @@ class UserPreferencesUpdate(BaseModel):
     sidebar_theme: Optional[str] = None
     sidebar_collapsed: Optional[bool] = None
     tour_completed: Optional[bool] = None
+    task_sidebar_layout: Optional[Dict[str, List[str]]] = None
 
 class UserPreferencesResponse(UserPreferencesBase):
     id: int

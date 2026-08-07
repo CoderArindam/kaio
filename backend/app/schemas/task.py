@@ -85,6 +85,7 @@ class ColumnResponse(BaseModel):
     position: int
     column_type: str
     is_completed: bool
+    color: Optional[str] = None
 
 class BoardDataResponse(BaseModel):
     columns: List[ColumnResponse]

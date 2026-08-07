@@ -89,7 +89,7 @@ All KAIO REST API endpoints are served by FastAPI under prefix `/api/v1`. All pr
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
 | `/tasks` | `POST` | Cookie | Creates a new task card in a specific board column (`fn_create_task`). |
-| `/tasks/{id}` | `GET` | Cookie | Fetches detailed task information (`v_tasks_canonical`). |
+| `/tasks/{id}` | `GET` | Cookie | Fetches detailed task information (`v_tasks_canonical`). Note: `reminder_at` is automatically managed by database triggers based on `due_date`. |
 | `/tasks/{id}` | `PUT` | Cookie | Updates task title, description, assignee, priority, or due date. |
 | `/tasks/{id}/move` | `POST` | Cookie | Atomically moves task to a new column and position (`fn_move_task`). |
 | `/tasks/{id}/log-time` | `POST` | Cookie | Logs work hours directly to task (`fn_log_task_time`). Auto-creates draft timesheet for week if needed. Body: `{entry_date: string, hours: number, description?: string}`. |

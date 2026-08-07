@@ -116,6 +116,7 @@ backend/
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
 │       ├── storage_service.py      # Dual-mode file storage: Cloudinary integration (primary) & Local disk (fallback)
+│       ├── task_reminder_worker.py # Background worker that dispatches in-app notifications for due tasks
 │       ├── task_service.py         # Handles CRUD, reordering, bulk task move, and bulk task deletion via fn_bulk_move_tasks & fn_bulk_delete_tasks
 │       └── user_service.py
 
@@ -225,3 +226,4 @@ sequenceDiagram
 | `AuthService` | `app/services/auth_service.py` | Service | Login, registration, token refresh, session management, security events |
 | `CommentService` | `app/services/comment_service.py` | Service | Comment create, inline edit (`fn_update_comment`), delete, and @mention dispatch (`fn_create_comment_mentions`) |
 | `ColumnService` | `app/services/column_service.py` | Service | Dynamic column management: add, rename, delete with task migration (`fn_delete_column`), and reorder |
+| `TaskReminderWorker` | `app/services/task_reminder_worker.py` | Background Worker | Polling worker running in app lifespan that dispatches in-app notifications for due tasks using `fn_get_due_reminders`. |

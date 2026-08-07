@@ -5,11 +5,13 @@ export interface CreateColumnPayload {
   name: string;
   column_type?: 'TODO' | 'IN_PROGRESS' | 'DONE';
   position?: number;
+  color?: string;
 }
 
 export interface UpdateColumnPayload {
   name?: string;
   column_type?: 'TODO' | 'IN_PROGRESS' | 'DONE';
+  color?: string;
 }
 
 export const createColumn = async (boardId: number, data: CreateColumnPayload): Promise<Column> => {

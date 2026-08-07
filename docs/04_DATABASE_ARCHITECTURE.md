@@ -112,6 +112,8 @@ erDiagram
         int assigned_to FK
         string priority
         timestamp due_date
+        timestamp reminder_at
+        timestamp reminder_sent_at
         int position
         timestamp deleted_at
     }
@@ -265,6 +267,7 @@ erDiagram
 | `087_subtask_assignee_time.sql` | Subtask Tracking | Adds assignees and time tracking to subtasks, updating related views and functions. |
 | `088_task_reporter_notifications.sql` | Task Reporter Notifications | Updates notification generation logic for task reporters. |
 | `089_cleanup_orphaned_objects.sql` | Cleanup | Drops orphaned views (`v_task_labels_canonical`) and functions (`fn_toggle_comment_reaction`, `is_org_admin`, etc.). |
+| `090_due_date_reminders.sql` | Due Date Reminders | Adds `reminder_sent_at` column to tasks, `trg_auto_set_reminder_at` trigger, and `fn_get_due_reminders` / `fn_mark_reminders_sent` functions with SKIP LOCKED concurrency control. |
 
 
 
@@ -451,6 +454,7 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 087_subtask_assignee_time.sql
 088_task_reporter_notifications.sql
 089_cleanup_orphaned_objects.sql
+090_due_date_reminders.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)

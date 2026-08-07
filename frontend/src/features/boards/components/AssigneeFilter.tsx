@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Check } from 'lucide-react';
 import type { BoardMember } from '../../../services/usersApi';
 import { UserAvatar } from '../../../components/common/UserAvatar';
 import { formatUserName } from '../../../utils/userHelpers';
@@ -7,14 +7,14 @@ import { useAuthStore } from '../../../store/authStore';
 
 interface AssigneeFilterProps {
   users: BoardMember[];
-  selectedAssigneeId: number | null;
-  onChange: (userId: number | null) => void;
+  selectedAssigneeIds: number[];
+  onChange: (userIds: number[]) => void;
   maxVisible?: number;
 }
 
 const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
   users,
-  selectedAssigneeId,
+  selectedAssigneeIds,
   onChange,
   maxVisible = 5,
 }) => {
@@ -58,6 +58,14 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
   const visible = filteredUsers.slice(0, maxVisible);
   const overflow = filteredUsers.slice(maxVisible);
 
+  const toggleAssignee = (id: number) => {
+    if (selectedAssigneeIds.includes(id)) {
+      onChange(selectedAssigneeIds.filter((userId) => userId !== id));
+    } else {
+      onChange([...selectedAssigneeIds, id]);
+    }
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-2.5 shrink-0 min-h-[36px]">
       <span className="text-xs text-brand-text-muted font-medium shrink-0 select-none mr-1">
@@ -88,10 +96,10 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
       <div className="flex items-center gap-1.5 flex-wrap">
         {/* "ALL" option */}
         <button
-          onClick={() => onChange(null)}
+          onClick={() => onChange([])}
           title="All Assignees"
           className={`w-8 h-8 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 transition-all duration-150 select-none border ${
-            selectedAssigneeId === null
+            selectedAssigneeIds.length === 0
               ? "text-brand-primary border-transparent ring-2 ring-offset-1 ring-brand-primary bg-brand-primary/10 scale-105"
               : "text-brand-text-muted border-dashed border-brand-border bg-transparent hover:border-brand-primary hover:text-brand-primary"
           }`}
@@ -101,14 +109,14 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
 
         {/* Visible member avatars */}
         {visible.map((member) => {
-          const active = selectedAssigneeId === member.id;
+          const active = selectedAssigneeIds.includes(member.id);
           const isYou = currentUser?.id === member.id;
           const displayName = `${formatUserName(member)}${isYou ? ' (You)' : ''}`;
           return (
             <div
               key={member.id}
               title={displayName}
-              onClick={() => onChange(member.id)}
+              onClick={() => toggleAssignee(member.id)}
               className={`rounded-full transition-all duration-150 cursor-pointer ${
                 active
                   ? "ring-2 ring-offset-1 ring-brand-primary scale-105 opacity-100"
@@ -127,7 +135,7 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
           </span>
         )}
 
-        {/* +N overflow — opens dropdown with filtered overflow members */}
+        {/* +N overflow */}
         {overflow.length > 0 && (
           <div className="relative" ref={dropdownRef}>
             <button
@@ -142,28 +150,32 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
             </button>
 
             {dropdownOpen && (
-              <div className="absolute top-10 left-0 z-50 w-56 bg-brand-surface border border-brand-border rounded-xl shadow-2xl py-1 overflow-hidden">
+              <div className="absolute top-10 left-0 z-50 w-64 max-h-64 overflow-y-auto custom-scrollbar bg-brand-surface border border-brand-border rounded-xl shadow-2xl py-2">
                 {overflow.map((member) => {
-                  const active = selectedAssigneeId === member.id;
+                  const active = selectedAssigneeIds.includes(member.id);
                   const isYou = currentUser?.id === member.id;
                   const name = formatUserName(member);
                   return (
-                    <button
+                    <label
                       key={member.id}
-                      onClick={() => {
-                        onChange(member.id);
-                        setDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-brand-surface-low ${
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-brand-surface-low cursor-pointer ${
                         active ? "text-brand-primary font-semibold" : "text-brand-text"
                       }`}
                     >
+                      <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => toggleAssignee(member.id)}
+                          className="peer appearance-none w-4 h-4 border border-brand-border rounded-sm bg-brand-surface checked:bg-brand-primary checked:border-brand-primary transition-colors cursor-pointer"
+                        />
+                        <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" strokeWidth={3} />
+                      </div>
                       <UserAvatar user={member} size="sm" />
                       <span className="truncate flex-1 text-left">
                         {name} {isYou && <span className="text-xs text-brand-text-muted font-normal">(You)</span>}
                       </span>
-                      {active && <span className="text-brand-primary text-xs">✓</span>}
-                    </button>
+                    </label>
                   );
                 })}
               </div>
@@ -176,4 +188,3 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
 };
 
 export default AssigneeFilter;
-

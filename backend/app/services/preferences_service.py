@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 import asyncpg
 from app.schemas.preferences import UserPreferencesResponse, UserPreferencesUpdate
+import json
 
 class PreferencesService:
     def __init__(self, conn: asyncpg.Connection):
@@ -21,7 +22,10 @@ class PreferencesService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User preferences not found"
             )
-        return UserPreferencesResponse(**dict(row))
+        row_dict = dict(row)
+        if isinstance(row_dict.get('task_sidebar_layout'), str):
+            row_dict['task_sidebar_layout'] = json.loads(row_dict['task_sidebar_layout'])
+        return UserPreferencesResponse(**row_dict)
 
     async def update_preferences(self, user_id: int, updates: UserPreferencesUpdate) -> UserPreferencesResponse:
         update_data = updates.model_dump(exclude_unset=True)
@@ -36,7 +40,8 @@ class PreferencesService:
                 p_accent_color := $3,
                 p_sidebar_theme := $4,
                 p_sidebar_collapsed := $5,
-                p_tour_completed := $6
+                p_tour_completed := $6,
+                p_task_sidebar_layout := $7::jsonb
             )
             """,
             user_id,
@@ -44,7 +49,8 @@ class PreferencesService:
             update_data.get('accent_color'),
             update_data.get('sidebar_theme'),
             update_data.get('sidebar_collapsed'),
-            update_data.get('tour_completed')
+            update_data.get('tour_completed'),
+            json.dumps(update_data.get('task_sidebar_layout')) if update_data.get('task_sidebar_layout') is not None else None
         )
 
         if not row:
@@ -52,4 +58,7 @@ class PreferencesService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User preferences not found or update failed"
             )
-        return UserPreferencesResponse(**dict(row))
+        row_dict = dict(row)
+        if isinstance(row_dict.get('task_sidebar_layout'), str):
+            row_dict['task_sidebar_layout'] = json.loads(row_dict['task_sidebar_layout'])
+        return UserPreferencesResponse(**row_dict)

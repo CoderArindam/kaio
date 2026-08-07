@@ -14,12 +14,13 @@ class ColumnService:
     async def add_column(self, board_id: int, column_in: ColumnCreate, current_user: dict) -> ColumnResponse:
         try:
             row = await self.conn.fetchrow(
-                "SELECT * FROM fn_add_column($1, $2, $3, $4, $5)",
+                "SELECT * FROM fn_add_column($1, $2, $3, $4, $5, $6)",
                 board_id,
                 column_in.name,
                 column_in.column_type,
                 column_in.position,
-                current_user["id"]
+                current_user["id"],
+                column_in.color
             )
             if not row:
                 raise HTTPException(status_code=400, detail="Failed to create column")
@@ -33,11 +34,12 @@ class ColumnService:
     async def rename_column(self, column_id: int, column_in: ColumnUpdate, current_user: dict) -> ColumnResponse:
         try:
             row = await self.conn.fetchrow(
-                "SELECT * FROM fn_rename_column($1, $2, $3, $4)",
+                "SELECT * FROM fn_rename_column($1, $2, $3, $4, $5)",
                 column_id,
                 column_in.name,
                 column_in.column_type,
-                current_user["id"]
+                current_user["id"],
+                column_in.color
             )
             if not row:
                 raise HTTPException(status_code=404, detail="Column not found or failed to update")

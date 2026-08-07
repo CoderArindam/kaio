@@ -20,7 +20,7 @@ interface TaskState {
     boardId: number | null;
     taskIds: number[];
     columnIds: number[];
-    selectedAssigneeId: number | null;
+    selectedAssigneeIds: number[];
     isFetching: boolean;
   };
 
@@ -39,7 +39,7 @@ interface TaskState {
   getBoardMembersList: () => BoardMember[];
 
   // --- ACTIONS ---
-  setSelectedAssigneeId: (boardId: number, val: number | null) => void;
+  setSelectedAssigneeIds: (boardId: number, val: number[]) => void;
   initializeBoard: (boardId: number) => Promise<void>;
   loadMyTasks: (params?: any) => Promise<void>;
   fetchTaskById: (taskId: number) => Promise<Task | null>;
@@ -81,7 +81,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     boardId: null,
     taskIds: [],
     columnIds: [],
-    selectedAssigneeId: null,
+    selectedAssigneeIds: [],
     isFetching: true,
   },
 
@@ -318,28 +318,30 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   // --- ACTIONS ---
-  setSelectedAssigneeId: (boardId, val) => {
+  setSelectedAssigneeIds: (boardId, val) => {
     set((state) => ({
-      boardView: { ...state.boardView, selectedAssigneeId: val }
+      boardView: { ...state.boardView, selectedAssigneeIds: val }
     }));
-    localStorage.setItem(`kanban_selected_assignee_${boardId}`, JSON.stringify(val));
+    localStorage.setItem(`kanban_selected_assignees_${boardId}`, JSON.stringify(val));
   },
 
   initializeBoard: async (boardId) => {
     set((state) => ({ boardView: { ...state.boardView, boardId, isFetching: true } }));
     
-    const saved = localStorage.getItem(`kanban_selected_assignee_${boardId}`);
-    let initialAssigneeId: number | null = null;
+    const saved = localStorage.getItem(`kanban_selected_assignees_${boardId}`);
+    let initialAssigneeIds: number[] = [];
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        initialAssigneeId = typeof parsed === 'number' ? parsed : null;
+        if (Array.isArray(parsed)) {
+          initialAssigneeIds = parsed;
+        }
       } catch {
-        initialAssigneeId = null;
+        initialAssigneeIds = [];
       }
     } else {
       const currentUser = useAuthStore.getState().user;
-      initialAssigneeId = currentUser ? currentUser.id : null;
+      initialAssigneeIds = currentUser ? [currentUser.id] : [];
     }
 
     try {
@@ -374,7 +376,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             boardId,
             taskIds: fetchedTasks.map((t: any) => t.id),
             columnIds: fetchedColumns.map((c: any) => c.id),
-            selectedAssigneeId: initialAssigneeId,
+            selectedAssigneeIds: initialAssigneeIds,
             isFetching: false
           }
         };
@@ -478,7 +480,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const snapshotColumns = structuredClone(get().entities.columns);
 
     // Optimistic update
-    get()._updateTaskEntity(taskId, () => ({ column_id: newColumnId }));
+    get()._updateTaskEntity(taskId, () => ({ 
+      column_id: newColumnId,
+      updated_at: new Date().toISOString() 
+    }));
     
     try {
       const oldColName = prevTask.column_name || get().entities.columns[prevTask.column_id]?.name;

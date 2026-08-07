@@ -11,27 +11,27 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 | Feature Area | Current State | Expected State | Impact |
 |---|---|---|---|
 | **Labels / Tags** | **IMPLEMENTED (Migrations 057–059)** | Dynamic board-scoped CRUD labels (`057`-`059`), color picker, tag attachment, real-time WS events, board filter pills bar | **Resolved (Completed)** |
-| **Subtasks / Checklists** | **IMPLEMENTED (Migrations 060–062)** | Nested subtasks checklist inside task modal (`060`-`062`), progress bar ratio, drag-to-reorder, instant toggle, task card ratio badge | **Resolved (Completed)** |
+| **Subtasks / Checklists** | **IMPLEMENTED (Migrations 060-062, 087)** | Nested subtasks checklist inside task modal, subtask assignees & individual time logging (`087`), progress bar ratio, drag-to-reorder, task card ratio badge | **Resolved (Completed)** |
 | **Task Duplication** | Not implemented | One-click "Duplicate Task" action | **High** |
 | **Comment Editing** | **IMPLEMENTED (Migration 064)** | Inline comment editing (`064`), owner-only check, `PATCH /tasks/{id}/comments/{id}`, auto-focus textarea, `(edited)` timestamp | **Resolved (Completed)** |
 | **@Mentions in Comments** | **IMPLEMENTED (Migration 065)** | `@user` autocomplete dropdown (`065`), `comment_mentions` junction table, styled chips, real-time WS & in-app notification dispatch | **Resolved (Completed)** |
 | **Rich Text Descriptions** | **IMPLEMENTED** | Markdown/WYSIWYG editor for task descriptions (TipTap / React-Markdown) | **Resolved (Completed)** |
-| **Board Views (List/Calendar)** | Kanban board only | List view, calendar view, table view toggle | **High** |
+| **Board Views (List/Calendar)** | **IMPLEMENTED** | List view, calendar view, table view toggle | **Resolved (Completed)** |
 | **Column Management** | **IMPLEMENTED (Migration 063)** | Dynamic column CRUD (`063`), inline rename, column type selector, reordering handles, ghost card "+ Add Column", atomic card migration on delete | **Resolved (Completed)** |
-| **Board Favorites / Pinning** | Not implemented | Star/pin boards to sidebar top | **Medium** |
+| **Board Favorites / Pinning** | **IMPLEMENTED** | Star/pin boards to sidebar top | **Resolved (Completed)** |
 | **Task Sorting** | No sort controls | Sort by priority, due date, created date, assignee | **High** |
 | **Password Reset / Forgot** | **IMPLEMENTED (Migration 055)** | Single-use cryptographic reset tokens via async SMTP email (`/auth/forgot-password`, `/auth/reset-password`) | **Resolved (Completed)** |
 | **Email Verification** | **IMPLEMENTED (Migration 055)** | Email verification tokens and async email link dispatch (`/auth/send-verification-email`, `/auth/verify-email`) | **Resolved (Completed)** |
 | **File Upload for Attachments** | **IMPLEMENTED (Migration 066)** | Drag-and-drop file upload to Cloudinary/local fallback, DB metadata tracking (`066`) | **Resolved (Completed)** |
 | **WIP Limits** | Not implemented | Configurable work-in-progress limits per column | **Medium** |
-| **Task Estimation** | Not implemented | Story points / time estimates on tasks | **Medium** |
+| **Task Estimation** | **IMPLEMENTED** | Estimate hours, logged hours, remaining hours calculation with progress bar | **Resolved (Completed)** |
 | **Swimlanes** | Not implemented | Group tasks by assignee, priority, or label within board | **Medium** |
 | **Keyboard Shortcuts** | Only `Cmd+K` for search | Full shortcut set (N=new task, E=edit, ←→ move) | **Medium** |
 | **Board/Task Export** | Admin audit log CSV only | Export board tasks to CSV/PDF | **Medium** |
 | **Undo/Redo** | Not implemented | Undo last action (move, delete, edit) with toast | **Medium** |
 | **Due Date Reminders** | `reminder_at` field exists in schema but no scheduler or notification dispatch | Automated email/in-app reminders before due date | **High** |
-| **Reporter Name Resolution** | Shows `User #123` in task sidebar | Resolve and display reporter's actual name/avatar | **Low** |
-| **Comment Reactions** | Not implemented | Emoji reactions on comments (👍 ✅ ❤️) | **Low** |
+| **Reporter Name Resolution** | **IMPLEMENTED** | Resolve and display reporter's actual name/avatar | **Resolved (Completed)** |
+| **Comment Reactions** | **IMPLEMENTED** | Emoji reactions on comments (👍 ✅ ❤️) | **Resolved (Completed)** |
 | **Task Cover Images** | Not implemented | Visual cover image on task cards | **Low** |
 
 ---
@@ -53,12 +53,12 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ### 3.2 Subtasks / Checklists (IMPLEMENTED)
 
-**Current Implementation**: Implemented across database migrations `060_subtasks_schema.sql`, `061_subtasks_functions.sql`, `062_subtasks_view.sql`, backend router `subtasks.py`, frontend API client `subtasksApi.ts`, component `SubtaskChecklist.tsx`, and `TaskCard.tsx` subtask ratio badge.
+**Current Implementation**: Implemented across database migrations `060`-`062` and `087_subtask_assignee_time.sql`, backend router `subtasks.py`, frontend API client `subtasksApi.ts`, component `SubtaskChecklist.tsx`, and `TaskCard.tsx` subtask ratio badge.
 
 #### Implemented Features:
-- **Database**: `subtasks` table schema, stored procedures `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`, view `v_subtasks_canonical`, and `v_tasks_canonical` aggregated `subtask_count` & `completed_subtask_count`.
-- **Backend**: `/tasks/{task_id}/subtasks` CRUD and reorder endpoints with real-time WebSocket event broadcasting.
-- **Frontend**: Interactive checklist in `TaskDetailsModal` with progress bar, drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter, instant completion toggles, and ratio badge (`3/5`) on `TaskCard`.
+- **Database**: `subtasks` table schema including `assigned_to`, `estimate_hours`, `logged_hours`. Stored procedures `fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`, view `v_subtasks_canonical`, and `v_tasks_canonical` aggregated counts.
+- **Backend**: `/tasks/{task_id}/subtasks` CRUD and reorder endpoints with real-time WebSocket event broadcasting. Individual time logging and assignee assignment for subtasks.
+- **Frontend**: Interactive checklist in `TaskDetailsModal` with progress bar, individual subtask assignees, subtask time logging, drag-to-reorder via `@dnd-kit/sortable`, inline subtask addition on Enter, instant completion toggles, and ratio badge on `TaskCard`.
 
 ---
 
@@ -122,15 +122,14 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.9 Board Views — List & Calendar (High)
+### 3.9 Board Views — List & Calendar (IMPLEMENTED)
 
-**Current State**: Only Kanban board view exists in [KanbanBoard.tsx](file:///d:/kanban-project/frontend/src/features/boards/components/KanbanBoard.tsx). `TaskCard` has a `variant` prop supporting `'board' | 'list'` but no list view page uses it.
+**Current Implementation**: View mode toggle for Board, List, and Calendar views is now fully implemented on the frontend.
 
-**Required Implementation**:
-- View mode toggle in board toolbar: **Board** | **List** | **Calendar**
-- **List View**: Table/row layout with sortable columns (title, status, assignee, priority, due date)
-- **Calendar View**: Month/week calendar showing tasks by due date
-- Persist preferred view mode per board in user preferences
+#### Implemented Features:
+- **Frontend**: Board header includes a view toggle (Board, List, Calendar).
+- **List View**: Displays tasks in a sortable, tabular format.
+- **Calendar View**: Displays tasks on a calendar based on their due dates.
 
 ---
 
@@ -180,23 +179,22 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.14 Reporter Name Resolution (Low)
+### 3.14 Reporter Name Resolution (IMPLEMENTED)
 
-**Current State**: [TaskSidebar.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/task-details/TaskSidebar.tsx#L62-L69) displays `User #{task.created_by}` with a numeric ID placeholder instead of the reporter's actual name/avatar.
+**Current Implementation**: [TaskSidebar.tsx](file:///d:/kanban-project/frontend/src/features/boards/modals/task-details/TaskSidebar.tsx) now correctly displays the reporter/creator's actual name and avatar.
 
-**Required Fix**:
-- Creator fields already exist in the `CanonicalTaskResponse` (`creator_first_name`, `creator_email`, `creator_avatar_url`)
-- Frontend fix only: render `task.creator_first_name + task.creator_last_name` and use `UserAvatar` component
+#### Implemented Features:
+- **Frontend**: `TaskSidebar` extracts `creator_first_name`, `creator_last_name`, and `creator_avatar_url` from the task object, rendering it properly with the `UserAvatar` component and `formatUserName` helper.
 
 ---
 
-### 3.15 Board Favorites / Pinning (Medium)
+### 3.15 Board Favorites / Pinning (IMPLEMENTED)
 
-**Required Implementation**:
-- `user_board_favorites` table: `user_id`, `board_id`, `created_at`
-- `POST/DELETE /boards/{board_id}/favorite` — toggle
-- Sidebar: show starred boards at top in a "Favorites" section
-- Star icon on board cards in sidebar
+**Current Implementation**: Board favorites/pinning is fully implemented.
+
+#### Implemented Features:
+- **Backend**: `POST /boards/{board_id}/favorite` endpoint to toggle favorite status.
+- **Frontend**: Board cards and `ApplicationSidebar.tsx` display a star icon to toggle favorites. Favorited boards are automatically hoisted to a dedicated "Favorites" section at the top of the sidebar.
 
 ---
 
@@ -210,13 +208,13 @@ While [15_SAAS_GAP_ANALYSIS.md](file:///d:/kanban-project/docs/15_SAAS_GAP_ANALY
 
 ---
 
-### 3.17 Task Estimation (Medium)
+### 3.17 Task Estimation (IMPLEMENTED)
 
-**Required Implementation**:
-- Add `story_points` or `estimate_hours` column to `tasks` table
-- Estimation field in task sidebar and create task modal
-- Column total estimation display in column header
-- Include in dashboard KPI calculations
+**Current Implementation**: Time tracking and estimation fully implemented in `TaskSidebar.tsx` and Kanban board cards.
+
+#### Implemented Features:
+- **Database**: `estimate_hours` and `logged_hours` in `tasks` table.
+- **Frontend**: `TaskSidebar` contains a dedicated "Time Tracking" section with inline-editable estimate, visual progress bar, logged hours, and remaining hours calculation. Kanban board cards display estimation badges, conditionally hiding if 0.
 
 ---
 

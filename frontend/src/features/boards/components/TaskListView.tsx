@@ -26,14 +26,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ boardId }) => {
     moveTask,
     removeTask,
     assignTask,
-    setSelectedAssigneeId,
+    setSelectedAssigneeIds,
     initializeBoard,
   } = useTaskStore();
 
   const columns = getColumnsList();
   const tasks = getBoardTasksList();
   const boardMembers = getBoardMembersList();
-  const { isFetching, selectedAssigneeId } = boardView;
+  const { isFetching, selectedAssigneeIds } = boardView;
 
   const { openTaskModal, openCreateTaskModal } = useUiStore();
   const { user } = useAuthStore();
@@ -60,7 +60,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ boardId }) => {
 
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
-    if (selectedAssigneeId !== null && task.assigned_to !== selectedAssigneeId) {
+    if (selectedAssigneeIds && selectedAssigneeIds.length > 0 && !selectedAssigneeIds.includes(task.assigned_to as number)) {
       return false;
     }
 
@@ -160,8 +160,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ boardId }) => {
       <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-3">
         <AssigneeFilter
           users={boardMembers}
-          selectedAssigneeId={selectedAssigneeId}
-          onChange={(val) => setSelectedAssigneeId(boardId, val)}
+          selectedAssigneeIds={selectedAssigneeIds}
+          onChange={(val) => setSelectedAssigneeIds(boardId, val)}
         />
         <DueDateFilter
           value={selectedDueDateFilter}

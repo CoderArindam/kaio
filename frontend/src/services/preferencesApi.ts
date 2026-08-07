@@ -10,6 +10,10 @@ export interface UserPreferences {
   sidebar_theme: string;
   sidebar_collapsed: boolean;
   tour_completed: boolean;
+  task_sidebar_layout: {
+    pinned: string[];
+    unpinned: string[];
+  };
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +24,10 @@ export interface UserPreferencesUpdate {
   sidebar_theme?: string;
   sidebar_collapsed?: boolean;
   tour_completed?: boolean;
+  task_sidebar_layout?: {
+    pinned: string[];
+    unpinned: string[];
+  };
 }
 
 export const getPreferences = async (): Promise<UserPreferences> => {

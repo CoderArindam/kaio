@@ -56,7 +56,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assigneeId, users =
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`flex items-center justify-between w-full px-3 py-2 text-sm bg-brand-surface border border-brand-border rounded-lg text-brand-text transition-all ${
+        className={`flex items-center justify-between w-full px-3 py-2 text-sm bg-brand-surface border border-brand-border rounded-lg text-brand-text ${
           isOpen ? 'border-brand-primary ring-2 ring-brand-primary/20' : 'hover:border-brand-border-highlight'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
@@ -72,7 +72,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assigneeId, users =
           </span>
         </div>
 
-        <ChevronDown size={14} className={`text-brand-text-muted shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-brand-text-muted shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu - 100% Solid Opacity */}
@@ -94,7 +94,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assigneeId, users =
           {/* Unassigned Option */}
           <div
             onClick={() => handleSelect(null)}
-            className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-xs transition-colors ${
+            className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-xs ${
               !assigneeId
                 ? 'bg-brand-primary/10 text-brand-primary font-medium'
                 : 'hover:bg-brand-surface-highlight text-brand-text'
@@ -117,7 +117,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({ assigneeId, users =
                 <div
                   key={u.id}
                   onClick={() => handleSelect(u.id)}
-                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-xs transition-colors ${
+                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-xs ${
                     isSelected
                       ? 'bg-brand-primary/10 text-brand-text font-medium border border-brand-primary/30'
                       : 'hover:bg-brand-surface-highlight text-brand-text'

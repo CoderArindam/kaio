@@ -44,7 +44,7 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-3 min-h-[160px] p-2 sm:p-2.5 transition-all duration-150 ${
+      className={`flex-1 flex flex-col space-y-3 min-h-[160px] p-2 sm:p-2.5 transition-all duration-150 ${
         isOver ? "bg-brand-primary/10 ring-2 ring-brand-primary/40" : ""
       }`}
     >
@@ -121,7 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     moveTask,
     removeTask,
     assignTask,
-    setSelectedAssigneeId,
+    setSelectedAssigneeIds,
     initializeBoard,
     renameColumn,
     removeColumn,
@@ -132,7 +132,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
   const columns = getColumnsList();
   const tasks = getBoardTasksList();
   const boardMembers = getBoardMembersList();
-  const { isFetching, selectedAssigneeId } = boardView;
+  const { isFetching, selectedAssigneeIds } = boardView;
 
   const { openTaskModal, openCreateTaskModal } = useUiStore();
   const { user } = useAuthStore();
@@ -352,8 +352,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
         <div className="px-4 sm:px-8 flex flex-wrap gap-2.5 sm:gap-4 items-center pb-3 shrink-0 bg-brand-bg z-20 relative">
           <AssigneeFilter
             users={boardMembers}
-            selectedAssigneeId={selectedAssigneeId}
-            onChange={(val) => setSelectedAssigneeId(boardId, val)}
+            selectedAssigneeIds={selectedAssigneeIds}
+            onChange={(val) => setSelectedAssigneeIds(boardId, val)}
           />
           <DueDateFilter
             value={selectedDueDateFilter}
@@ -374,13 +374,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
               <p>Loading board...</p>
             </div>
           ) : (
-            <div className="flex gap-3 sm:gap-4.5 items-start pb-1">
+            <div className="flex gap-3 sm:gap-4.5 min-h-full items-stretch pb-1">
               {columns.map((column: any, colIdx: number) => {
                 let columnTasks = tasks.filter((task: any) => {
                   if (task.column_id !== column.id) return false;
                   if (
-                    selectedAssigneeId !== null &&
-                    task.assigned_to !== selectedAssigneeId
+                    selectedAssigneeIds && selectedAssigneeIds.length > 0 &&
+                    !selectedAssigneeIds.includes(task.assigned_to)
                   )
                     return false;
 
@@ -415,24 +415,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                 });
 
                 columnTasks.sort((a: any, b: any) => {
-                  const getUrgency = (t: any) => {
-                    if (column.is_completed) return 100;
-                    if (!t.due_date) return 50;
-                    const due = new Date(t.due_date);
-                    due.setHours(0, 0, 0, 0);
-                    const now = new Date();
-                    now.setHours(0, 0, 0, 0);
-                    const diffDays = Math.round(
-                      (due.getTime() - now.getTime()) / (1000 * 3600 * 24),
-                    );
-                    if (diffDays < 0) return 1; // Overdue
-                    if (diffDays === 0) return 2; // Today
-                    if (diffDays === 1) return 3; // Tomorrow
-                    return 4 + diffDays; // Future
-                  };
-                  const scoreA = getUrgency(a);
-                  const scoreB = getUrgency(b);
-                  if (scoreA !== scoreB) return scoreA - scoreB;
+                  const timeA = new Date(a.updated_at || a.created_at).getTime();
+                  const timeB = new Date(b.updated_at || b.created_at).getTime();
+                  if (timeA !== timeB) return timeA - timeB;
                   return a.id - b.id;
                 });
 
@@ -444,13 +429,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
                     <div className="sticky top-0 z-10 bg-brand-surface border-b border-brand-border/40 px-3 sm:px-3.5 py-2.5 rounded-t-2xl flex justify-between items-center shadow-xs">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div
-                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            column.column_type === 'DONE'
-                              ? 'bg-emerald-500 shadow-xs'
-                              : column.column_type === 'IN_PROGRESS'
-                              ? 'bg-amber-500 shadow-xs'
-                              : 'bg-brand-primary shadow-xs'
-                          }`}
+                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                          style={{
+                            backgroundColor: column.color || (
+                              column.column_type === 'DONE' ? '#10B981' : 
+                              column.column_type === 'IN_PROGRESS' ? '#F59E0B' : '#3B82F6'
+                            )
+                          }}
                         />
                         {editingColumnId === column.id ? (
                           <div className="flex items-center gap-1.5 flex-1 mr-2">

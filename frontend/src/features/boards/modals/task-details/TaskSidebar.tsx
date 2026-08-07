@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Plus, Edit2, Check, X } from 'lucide-react';
+import { Clock, Plus, Edit2, Check, X, GripVertical, Pin, ChevronDown, ChevronRight } from 'lucide-react';
 import { type Task, type Column } from '../../../../services/tasksApi';
 import { type User } from '../../../../services/usersApi';
 import { useTaskStore } from '../../../../store/taskStore';
 import { useAuthStore } from '../../../../store/authStore';
+import { usePreferencesStore } from '../../../../store/preferencesStore';
 import StatusSelector from '../../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../../components/shared/PrioritySelector';
@@ -13,6 +14,24 @@ import { UserAvatar } from '../../../../components/common/UserAvatar';
 import { formatUserName } from '../../../../utils/userHelpers';
 import LogTimeModal from './LogTimeModal';
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 interface TaskSidebarProps {
   task: Task;
   columns: Column[];
@@ -21,14 +40,98 @@ interface TaskSidebarProps {
   createdDate: string;
 }
 
+interface SortableSidebarFieldProps {
+  id: string;
+  field: { label: string; render: () => React.ReactNode };
+  isPinned: boolean;
+  onTogglePin: (id: string) => void;
+}
+
+const SortableSidebarField: React.FC<SortableSidebarFieldProps> = ({ id, field, isPinned, onTogglePin }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group relative">
+      <div className="flex items-center justify-between mb-2">
+         <div className="flex items-center relative w-full">
+           <div 
+             {...attributes} 
+             {...listeners} 
+             className="absolute -left-7 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-brand-text-muted hover:text-brand-text transition-opacity p-0.5"
+           >
+             <GripVertical size={14} />
+           </div>
+           <p className="text-xs font-semibold text-brand-text-muted uppercase tracking-wider">{field.label}</p>
+           <div className="flex-1" />
+           <button 
+             onClick={() => onTogglePin(id)}
+             className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded ${isPinned ? 'text-yellow-500 bg-yellow-500/10 opacity-100' : 'text-brand-text-muted hover:bg-brand-surface-low'}`}
+             title={isPinned ? 'Unpin field' : 'Pin field'}
+           >
+             <Pin size={14} />
+           </button>
+         </div>
+      </div>
+      <div>
+        {field.render()}
+      </div>
+    </div>
+  );
+};
+
+const DEFAULT_LAYOUT = {
+  pinned: [] as string[],
+  unpinned: ['assignee', 'reporter', 'priority', 'due_date', 'time_tracking', 'created_by', 'labels'] as string[]
+};
+
 const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, canEdit, createdDate }) => {
   const { updateTaskData, moveTask, assignTask } = useTaskStore();
   const { user } = useAuthStore();
+  const { preferences, updatePreferences } = usePreferencesStore();
+  
   const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
-
   const [isEditingEstimate, setIsEditingEstimate] = useState(false);
   const [estimateInput, setEstimateInput] = useState<string>(
     task.estimate_hours !== undefined && task.estimate_hours !== null ? String(task.estimate_hours) : ''
+  );
+  
+  const [pinnedFieldsOpen, setPinnedFieldsOpen] = useState(true);
+
+  const sidebarLayout = preferences?.task_sidebar_layout || DEFAULT_LAYOUT;
+  
+  // Clean up any potential mismatched state
+  const allAvailable = DEFAULT_LAYOUT.unpinned;
+  const currentPinned = sidebarLayout.pinned.filter(id => allAvailable.includes(id));
+  const currentUnpinned = sidebarLayout.unpinned.filter(id => allAvailable.includes(id));
+  
+  // Ensure fields that are newly added to DEFAULT_LAYOUT show up
+  const missing = allAvailable.filter(id => !currentPinned.includes(id) && !currentUnpinned.includes(id));
+  const finalPinned = currentPinned;
+  const finalUnpinned = [...currentUnpinned, ...missing];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   useEffect(() => {
@@ -64,74 +167,67 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
     task.reporter_id === user?.id
   );
 
-  return (
-    <>
-      <aside className="w-80 p-8 bg-brand-surface border-l border-brand-border space-y-6 shrink-0 overflow-y-auto">
-        <div>
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Status</p>
-          <StatusSelector 
-            columnId={task.column_id} 
-            columns={columns} 
-            onChange={(newColumnId: number) => moveTask(task.id, newColumnId)} 
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Assignee</p>
-          <AssigneeSelector 
-            assigneeId={task.assigned_to} 
-            users={boardMembers} 
-            onChange={(newAssignee: number | null) => assignTask(task.id, newAssignee)} 
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Reporter</p>
-          <AssigneeSelector 
-            assigneeId={task.reporter_id ?? null} 
-            users={boardMembers} 
-            onChange={(newReporter: number | null) => updateTaskData(task.id, { reporter_id: newReporter })} 
-            disabled={!canChangeReporter}
-          />
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Priority</p>
-          <PrioritySelector 
-            priority={task.priority || "Medium"} 
-            onChange={(newPriority: string) => updateTaskData(task.id, { priority: newPriority })} 
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Due Date</p>
-          <DueDatePicker 
-            dueDate={task.due_date} 
-            onChange={(newDueDate: string | null) => updateTaskData(task.id, { due_date: newDueDate })} 
-            disabled={!canEdit}
-          />
-        </div>
-
-        {/* Time Tracking Section */}
-        <div className="pt-4 border-t border-brand-border space-y-3">
+  const fieldRenderers: Record<string, { label: string; render: () => React.ReactNode }> = {
+    assignee: {
+      label: 'Assignee',
+      render: () => (
+        <AssigneeSelector 
+          assigneeId={task.assigned_to} 
+          users={boardMembers} 
+          onChange={(newAssignee: number | null) => assignTask(task.id, newAssignee)} 
+          disabled={!canEdit}
+        />
+      )
+    },
+    reporter: {
+      label: 'Reporter',
+      render: () => (
+        <AssigneeSelector 
+          assigneeId={task.reporter_id ?? null} 
+          users={boardMembers} 
+          onChange={(newReporter: number | null) => updateTaskData(task.id, { reporter_id: newReporter })} 
+          disabled={!canChangeReporter}
+        />
+      )
+    },
+    priority: {
+      label: 'Priority',
+      render: () => (
+        <PrioritySelector 
+          priority={task.priority || "Medium"} 
+          onChange={(newPriority: string) => updateTaskData(task.id, { priority: newPriority })} 
+          disabled={!canEdit}
+        />
+      )
+    },
+    due_date: {
+      label: 'Due Date',
+      render: () => (
+        <DueDatePicker 
+          dueDate={task.due_date} 
+          onChange={(newDueDate: string | null) => updateTaskData(task.id, { due_date: newDueDate })} 
+          disabled={!canEdit}
+        />
+      )
+    },
+    time_tracking: {
+      label: 'Time Tracking',
+      render: () => (
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-brand-text-muted uppercase tracking-wider flex items-center gap-1.5">
-              <Clock size={13} className="text-brand-primary" />
-              Time Tracking
+            <p className="text-[11px] font-medium text-brand-text-muted flex items-center gap-1.5">
+              <Clock size={12} className="text-brand-primary" />
+              Progress
             </p>
             <button
               onClick={() => setIsLogTimeOpen(true)}
-              className="text-xs text-brand-primary hover:text-brand-primary-hover font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+              className="text-[11px] text-brand-primary hover:text-brand-primary-hover font-semibold flex items-center gap-1 hover:underline cursor-pointer"
             >
-              <Plus size={13} />
-              Log Time
+              <Plus size={11} />
+              Log
             </button>
           </div>
 
-          {/* Estimate Input / Display */}
           <div className="bg-brand-surface-low rounded-xl border border-brand-border/60 p-3 space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-brand-text-muted font-medium">Estimated:</span>
@@ -203,7 +299,6 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
               </div>
             )}
 
-            {/* Progress Bar */}
             {estimateHours && estimateHours > 0 ? (
               <div className="space-y-1 pt-1">
                 <div className="w-full h-2 bg-brand-border/60 rounded-full overflow-hidden">
@@ -221,23 +316,168 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ task, columns, boardMembers, 
             ) : null}
           </div>
         </div>
-
-        <div className="pt-4 border-t border-brand-border">
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Created By</p>
-          <div className="flex items-center gap-2 mb-4">
+      )
+    },
+    created_by: {
+      label: 'Created By / Created',
+      render: () => (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
             <UserAvatar user={creatorUser} size="sm" />
             <span className="text-sm font-medium text-brand-text">
               {formatUserName(creatorUser, task.created_by ? `User #${task.created_by}` : 'Unknown')}
             </span>
           </div>
-          
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Created</p>
-          <p className="text-sm text-brand-text">{createdDate}</p>
+          <p className="text-xs text-brand-text-muted">{createdDate}</p>
         </div>
+      )
+    },
+    labels: {
+      label: 'Labels',
+      render: () => (
+        <LabelPicker task={task} canEdit={canEdit} />
+      )
+    }
+  };
 
-        <div className="pt-4 border-t border-brand-border">
-          <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Labels</p>
-          <LabelPicker task={task} canEdit={canEdit} />
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    if (activeId === overId) return;
+
+    const activeContainer = finalPinned.includes(activeId) ? 'pinned' : 'unpinned';
+    const overContainer = finalPinned.includes(overId) ? 'pinned' : 'unpinned';
+
+    let newPinned = [...finalPinned];
+    let newUnpinned = [...finalUnpinned];
+
+    if (activeContainer === overContainer) {
+      if (activeContainer === 'pinned') {
+        const oldIndex = newPinned.indexOf(activeId);
+        const newIndex = newPinned.indexOf(overId);
+        newPinned = arrayMove(newPinned, oldIndex, newIndex);
+      } else {
+        const oldIndex = newUnpinned.indexOf(activeId);
+        const newIndex = newUnpinned.indexOf(overId);
+        newUnpinned = arrayMove(newUnpinned, oldIndex, newIndex);
+      }
+    } else {
+      // Moving between containers
+      if (activeContainer === 'pinned') {
+        newPinned = newPinned.filter(id => id !== activeId);
+        const overIndex = newUnpinned.indexOf(overId);
+        newUnpinned.splice(overIndex, 0, activeId);
+      } else {
+        newUnpinned = newUnpinned.filter(id => id !== activeId);
+        const overIndex = newPinned.indexOf(overId);
+        newPinned.splice(overIndex, 0, activeId);
+      }
+    }
+
+    updatePreferences({
+      task_sidebar_layout: {
+        pinned: newPinned,
+        unpinned: newUnpinned
+      }
+    });
+  };
+
+  const togglePin = (id: string) => {
+    const isCurrentlyPinned = finalPinned.includes(id);
+    let newPinned = [...finalPinned];
+    let newUnpinned = [...finalUnpinned];
+
+    if (isCurrentlyPinned) {
+      newPinned = newPinned.filter(f => f !== id);
+      newUnpinned.push(id);
+    } else {
+      newUnpinned = newUnpinned.filter(f => f !== id);
+      newPinned.push(id);
+    }
+
+    updatePreferences({
+      task_sidebar_layout: {
+        pinned: newPinned,
+        unpinned: newUnpinned
+      }
+    });
+  };
+
+  return (
+    <>
+      <aside className="w-[340px] px-8 py-6 bg-brand-surface border-l border-brand-border flex-shrink-0 overflow-y-auto">
+        <div className="space-y-6 pl-4">
+          
+          {/* Status - Fixed at Top */}
+          <div>
+            <p className="text-xs font-semibold text-brand-text-muted mb-2 uppercase tracking-wider">Status</p>
+            <StatusSelector 
+              columnId={task.column_id} 
+              columns={columns} 
+              onChange={(newColumnId: number) => moveTask(task.id, newColumnId)} 
+              disabled={!canEdit}
+            />
+          </div>
+
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            {/* Pinned Fields Section */}
+            {finalPinned.length > 0 && (
+              <div className="pt-2">
+                <button 
+                  onClick={() => setPinnedFieldsOpen(!pinnedFieldsOpen)}
+                  className="flex items-center gap-1.5 text-[13px] font-semibold text-brand-text mb-4 -ml-4 p-1 hover:bg-brand-surface-low rounded transition-colors w-full"
+                >
+                  {pinnedFieldsOpen ? <ChevronDown size={16} className="text-brand-text-muted" /> : <ChevronRight size={16} className="text-brand-text-muted" />}
+                  Your pinned fields
+                </button>
+                
+                {pinnedFieldsOpen && (
+                  <div className="space-y-5">
+                    <SortableContext 
+                      items={finalPinned}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {finalPinned.map(id => (
+                        <SortableSidebarField 
+                          key={id} 
+                          id={id} 
+                          field={fieldRenderers[id]} 
+                          isPinned={true}
+                          onTogglePin={togglePin}
+                        />
+                      ))}
+                    </SortableContext>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Unpinned Fields Section */}
+            <div className="pt-5 mt-5 border-t border-brand-border border-dashed space-y-5">
+              <SortableContext 
+                items={finalUnpinned}
+                strategy={verticalListSortingStrategy}
+              >
+                {finalUnpinned.map(id => (
+                  <SortableSidebarField 
+                    key={id} 
+                    id={id} 
+                    field={fieldRenderers[id]} 
+                    isPinned={false}
+                    onTogglePin={togglePin}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          </DndContext>
         </div>
       </aside>
 

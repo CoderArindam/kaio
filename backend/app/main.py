@@ -52,12 +52,20 @@ async def lifespan(app: FastAPI):
     app.state.purge_worker = OrganizationPurgeWorker(db.pool)
     app.state.purge_worker.start()
 
+    # Start Task Reminder Worker
+    from app.services.task_reminder_worker import TaskReminderWorker
+    app.state.task_reminder_worker = TaskReminderWorker(db.pool)
+    app.state.task_reminder_worker.start()
+
     yield
 
     # Shutdown — cancel all active meeting sessions cleanly before stopping DB connection
     logger.info("Shutting down KAIO API backend server...")
     if hasattr(app.state, "purge_worker"):
         await app.state.purge_worker.stop()
+        
+    if hasattr(app.state, "task_reminder_worker"):
+        await app.state.task_reminder_worker.stop()
         
     from app.meeting.api import meeting_service
     await meeting_service.shutdown_all()

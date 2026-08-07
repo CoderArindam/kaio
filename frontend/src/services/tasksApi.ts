@@ -53,6 +53,7 @@ export interface Column {
   position: number;
   is_completed: boolean; // Deprecated
   column_type: 'TODO' | 'IN_PROGRESS' | 'DONE';
+  color?: string;
 }
 
 export interface BoardData {
