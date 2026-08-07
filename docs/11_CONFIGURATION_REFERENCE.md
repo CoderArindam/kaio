@@ -12,6 +12,8 @@ The `Settings` class uses `pydantic-settings` with `SettingsConfigDict(env_file=
 
 | Variable Key | Type | Default / Required | Description |
 |---|---|---|---|
+| `ENVIRONMENT` | `str` | `"production"` | Runtime environment label (`production`, `development`). Used in health probes and logging. |
+| `LOG_LEVEL` | `str` | `"INFO"` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
 | `DATABASE_URL` | `str` | **Required** | PostgreSQL connection string. Format: `postgresql://user:password@host:port/dbname` |
 | `JWT_SECRET` | `str` | **Required** | Secret key used for signing JWT access tokens. Must be a long random string in production. |
 | `JWT_ALGORITHM` | `str` | `"HS256"` | JWT signing algorithm. |
@@ -23,6 +25,8 @@ The `Settings` class uses `pydantic-settings` with `SettingsConfigDict(env_file=
 | `CLOUDINARY_URL` | `str \| None` | `None` | Connection string for Cloudinary attachments storage. |
 | `FRONTEND_ORIGINS` | `str` | `"http://localhost:5173,http://localhost:3000"` | Comma-separated list of allowed CORS origins. |
 | `COOKIE_SECURE` | `bool` | `False` | Controls `secure` flag on httpOnly auth cookies. Set `True` in HTTPS production. |
+| `MAX_REQUEST_SIZE_BYTES` | `int` | `52428800` | Maximum incoming request body size (50 MB). |
+| `RATE_LIMIT_PER_MINUTE` | `int` | `300` | Max requests per client IP per minute. |
 
 **Example `.env` file**:
 ```env
@@ -93,7 +97,7 @@ When running in Linux VPS environments (managed via `deploy/vps/start_meeting_bo
 
 | Variable Key | Type | Default | Description |
 |---|---|---|---|
-| `AI_PROVIDER` | `str` | `puter` | Active LLM provider. Options: `puter`, `gemini`. |
+| `AI_PROVIDER` | `str` | `openai` | Active LLM provider. Options: `openai`, `puter`, `gemini`. |
 | `AI_MODEL` | `str` | `gpt-4o-mini` | Model identifier for the active provider. |
 | `PUTER_API_KEY` | `str` | Optional | API key for Puter LLM gateway (if using `puter` provider). |
 | `GEMINI_API_KEY` | `str` | Optional | Google Gemini API key (if using `gemini` provider). |

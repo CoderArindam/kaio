@@ -52,7 +52,7 @@ backend/
 ├── requirements.txt                # Python dependencies
 ├── app/
 │   ├── main.py                     # Entry point, FastAPI app, CORS, static mounts, lifespan hooks
-│   ├── ai/                         # LLM integration (Puter, Gemini, KAI agent, clarification router, orchestrator)
+│   ├── ai/                         # LLM integration (OpenAI/Puter/Gemini providers, KAI agent, clarification router, gateway)
 │   ├── auth/                       # JWT verification, password hashing, session tracking, RBAC
 │   │   ├── dependencies.py         # get_current_user, require_proposal_review_access, require_meeting_initiation_access
 │   │   ├── jwt.py                  # create_access_token, verify_token
@@ -68,7 +68,7 @@ backend/
 │   │   ├── auth.py                 # WebSocket connection JWT query parameter authentication
 │   │   ├── manager.py              # In-memory ConnectionManager (user connections, board room subscriptions, broadcasts)
 │   │   └── router.py               # /ws endpoint handler, message routing (ping/subscribe_board/unsubscribe_board)
-│   ├── routers/                    # 27 REST API & WebSocket route handlers:
+│   ├── routers/                    # 26 REST API & WebSocket endpoint modules:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
@@ -95,7 +95,7 @@ backend/
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 24 Pydantic request/response DTO schema files (including label.py, subtask.py, column.py)
+│   ├── schemas/                    # 25 Pydantic v2 request/response DTO schema files (including label.py, subtask.py, column.py, attachments.py, envelope.py)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
@@ -111,6 +111,8 @@ backend/
 │       ├── my_work_service.py
 │       ├── notification_service.py # Dispatches real-time WS notification alerts to connected target users
 │       ├── organization_service.py
+│       ├── organization_deletion_service.py # Handles organization soft-delete lifecycle and cleanup
+│       ├── organization_purge_worker.py     # Background worker that permanently purges scheduled org deletions
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
 │       ├── storage_service.py      # Dual-mode file storage: Cloudinary integration (primary) & Local disk (fallback)

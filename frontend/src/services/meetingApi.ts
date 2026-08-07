@@ -29,12 +29,6 @@ export const joinMeeting = async (
   return response.data;
 };
 
-export const listRecentMeetingSessions = async (limit?: number): Promise<MeetingSession[]> => {
-  const response = await api.get('/meeting/sessions', {
-    params: limit ? { limit } : undefined,
-  });
-  return response.data.data;
-};
 
 export const deleteMeetingSession = async (sessionId: string): Promise<void> => {
   await api.delete(`/meeting/session/${sessionId}`);

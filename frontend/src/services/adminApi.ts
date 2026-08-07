@@ -31,10 +31,6 @@ export const adminFetchUsers = async (): Promise<AdminUser[]> => {
   return response.data;
 };
 
-export const adminCreateUser = async (data: any): Promise<AdminUser> => {
-  const response = await axiosInstance.post('/admin/users', data);
-  return response.data;
-};
 
 export const adminUpdateUserRole = async (userId: number, role: string): Promise<AdminUser> => {
   const response = await axiosInstance.patch(`/admin/users/${userId}/role`, { role });

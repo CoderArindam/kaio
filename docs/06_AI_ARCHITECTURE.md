@@ -48,7 +48,8 @@ sequenceDiagram
 ### 3.1 Subsystem Layout
 
 - **`agents/`**: Autonomous AI assistant implementations (e.g. KAI board assistant).
-- **`providers/`**: LLM gateways (Puter API, Gemini 1.5/2.0 providers).
+- **`providers/`**: LLM gateways (OpenAI, Puter API, Gemini 1.5/2.0 providers).
+- **`gateway/`**: `AIGateway` — routes requests, handles retries, telemetry, and provider switching.
 - **`orchestration/`**: `ClarificationRouter` and intent resolution pipelines.
 - **`tools/`**: Function calling tools allowing KAI to perform board, task, and meeting operations.
 - **`context/`**: Context builders providing workspace and task state to prompts.
@@ -59,7 +60,8 @@ sequenceDiagram
 
 The LLM integration is abstracted to allow runtime switching between providers configured via environment variables:
 
-- **Puter Provider**: Default low-latency LLM gateway (`AI_PROVIDER=puter`, `AI_MODEL=gpt-4o-mini`).
+- **OpenAI Provider**: Direct OpenAI API gateway (`AI_PROVIDER=openai`). Default provider.
+- **Puter Provider**: Low-latency OpenAI-compatible LLM gateway via Puter API (`AI_PROVIDER=puter`, `PUTER_API_KEY=...`). Extends OpenAI provider with a custom base URL.
 - **Gemini Provider**: Google Gemini API gateway for complex reasoning and large context windows (`AI_PROVIDER=gemini`, `GEMINI_API_KEY=...`).
 
 ### 3.3 KAI Board Assistant (`app/ai/agents/`)

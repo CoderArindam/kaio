@@ -174,10 +174,6 @@ This document provides a reference catalog of the primary React UI components wi
 - **Path**: `features/dashboard/components/KpiCardsRow.tsx`
 - **Purpose**: Top row of KPI metric cards — total tasks, tasks by status (todo/in-progress/review/done), overdue tasks, total boards, team size, pending proposals, active meetings.
 
-### 7.3 `BoardsOverviewWidget`
-
-- **Path**: `features/dashboard/components/BoardsOverviewWidget.tsx`
-- **Purpose**: Grid of board progress cards — each shows board name, task count, completion percentage progress bar, and overdue count.
 
 ### 7.4 `StrategicProjectsWidget`
 
@@ -194,10 +190,6 @@ This document provides a reference catalog of the primary React UI components wi
 - **Path**: `features/dashboard/components/RecentMeetingsWidget.tsx`
 - **Purpose**: Recent meeting sessions with status badges (`RECORDING`, `PROCESSING`, `PROPOSALS_READY`, `COMPLETED`, `FAILED`). Includes error summary tooltips and an interactive **Rerun Pipeline** button to trigger background execution recovery for failed sessions.
 
-### 7.7 `PendingProposalsWidget`
-
-- **Path**: `features/dashboard/components/PendingProposalsWidget.tsx`
-- **Purpose**: Displays count of pending AI task proposals awaiting manager review. Links to proposal queue.
 
 ### 7.8 `SmartSuggestionsWidget`
 

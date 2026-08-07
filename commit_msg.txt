@@ -1,0 +1,20 @@
+chore: comprehensive architecture cleanup and bug fixes
+
+This commit encompasses a thorough audit and cleanup across the stack, along with several UI and database migration fixes.
+
+**Backend Audit & Cleanup**:
+- Removed redundant pipeline stages (`diarization.py`, `transcription.py`) and unused `mapping_service.py`.
+- Cleaned up unused imports and refined `speaker.py`, `context.py`, `factory.py`, and `main.py`.
+
+**Frontend Architecture Cleanup**:
+- Removed unused frontend UI index and unused dashboard widgets (`BoardsOverviewWidget`, `PendingProposalsWidget`).
+- Removed deprecated `timesheetReportsApi.ts`.
+- Cleaned up unused imports in various API services and state stores (`adminApi.ts`, `meetingApi.ts`, `boardStore.ts`).
+- Fixed active tab highlighting state in Project Settings and Application Sidebar.
+
+**Database & Schema**:
+- Fixed chronological ordering of database migrations by renaming scripts (032 -> 032a/032b, 085 -> 087, 086 -> 088).
+- Added `089_cleanup_orphaned_objects.sql` to remove orphaned database objects and optimize schema.
+
+**Documentation**:
+- Updated architecture documentation (backend, frontend, DB, AI), component references, and glossary to accurately reflect the current system state.

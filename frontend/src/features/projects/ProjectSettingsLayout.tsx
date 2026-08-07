@@ -90,25 +90,24 @@ export const ProjectSettingsLayout: React.FC = () => {
           <aside className="w-full lg:w-64 flex-shrink-0">
             <nav className="space-y-1 sticky top-6">
               {SETTINGS_NAV.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={`/board/${boardId}/settings/${item.path}`}
-                  end={item.activeExact}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-brand-primary/10 text-brand-primary'
-                        : 'text-brand-text hover:bg-brand-surface-hover'
-                    }`
-                  }
-                >
-                  <item.icon size={18} className="flex-shrink-0" />
-                  {item.name}
-                  {item.path !== '' && item.path !== 'workflow' && item.path !== 'members' && item.path !== 'labels' && (
-                    <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-brand-surface-low px-1.5 py-0.5 rounded text-brand-text-muted">Soon</span>
-                  )}
-
-                </NavLink>
+                  <NavLink
+                    key={item.name}
+                    to={item.path ? `/board/${boardId}/settings/${item.path}` : `/board/${boardId}/settings`}
+                    end={item.activeExact}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'text-brand-text hover:bg-brand-surface-hover'
+                      }`
+                    }
+                  >
+                    <item.icon size={18} className="flex-shrink-0" />
+                    {item.name}
+                    {item.path !== '' && item.path !== 'workflow' && item.path !== 'members' && item.path !== 'labels' && (
+                      <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-brand-surface-low px-1.5 py-0.5 rounded text-brand-text-muted">Soon</span>
+                    )}
+                  </NavLink>
               ))}
             </nav>
           </aside>

@@ -36,7 +36,6 @@ class ArtifactRegistry:
             "normalized_transcript": "normalized_transcript.json",
             "attribution_debug_artifact": "attribution_debug.json",
             "attribution_timeline_artifact": "attribution_timeline.json",
-            # Assuming raw transcript from Whisper
             "raw_transcript": "raw_transcript_v1.json" 
         }
         

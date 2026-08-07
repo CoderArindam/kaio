@@ -36,9 +36,9 @@ from .base import MeetingArtifact
 class DiarizationProviderInfo(BaseModel):
     """Identity metadata for the diarization provider that produced an artifact."""
 
-    provider_name: str      # "pyannote", "assemblyai", "nemo", "azure"
-    provider_version: str   # "3.1.0"
-    model_name: str         # "pyannote/speaker-diarization-3.1"
+    provider_name: str      # e.g. "deepgram"
+    provider_version: str   # e.g. "3.0.0"
+    model_name: str         # e.g. "nova-3"
 
 
 class SpeakerTurn(BaseModel):

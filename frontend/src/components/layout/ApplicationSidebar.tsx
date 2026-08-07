@@ -178,7 +178,7 @@ export const ApplicationSidebar: React.FC = () => {
           <div className="space-y-1">
             <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" isExact />
             <NavItem to="/my-work" icon={CheckSquare} label="My Work" id="tour-my-work" />
-            <NavItem to="/timesheets" icon={Clock} label="Timesheets" />
+            <NavItem to="/timesheets" icon={Clock} label="Timesheets" isExact />
             {isManagerOrAdmin(user) && (
               <NavItem to="/timesheets/approvals" icon={ClipboardCheck} label="Approval Queue" />
             )}

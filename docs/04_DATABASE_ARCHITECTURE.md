@@ -206,8 +206,8 @@ erDiagram
 | `029_comment_functions.sql` | Comment Procedures | `fn_create_comment`, `fn_delete_comment` stored functions. |
 | `030_activity_logging_enhancements.sql` | Audit Trail | Enhanced activity logging, `v_activities_canonical` view. |
 | `031_notification_canonical_enhancements.sql` | Notification Views | `v_notifications_canonical` updated with entity target type and deep-link payloads. |
-| `032_revoke_invitation_function.sql` | Invitation Revocation | `revoke_invitation(p_invitation_id, p_org_id)` — deletes pending invitations. |
-| `032_seed_techinnovators.sql` | Seed Data | TechInnovators workspace demo dataset (users, boards, tasks, members). |
+| `032a_revoke_invitation_function.sql` | Invitation Revocation | `revoke_invitation(p_invitation_id, p_org_id)` — deletes pending invitations. |
+| `032b_seed_techinnovators.sql` | Seed Data | TechInnovators workspace demo dataset (users, boards, tasks, members). |
 | `033_seed_latest_meeting.sql` | Seed Data | Latest meeting session transcript & task proposals seed data. |
 | `034_security_event_functions.sql` | `security_events` | `fn_log_security_event()` stored function + `v_user_security_events_canonical` view. |
 | `035_auth_session_functions.sql` | `active_sessions` | `fn_refresh_session()`, `fn_revoke_session()`, `fn_is_session_revoked()` + `v_user_active_sessions_canonical` view. |
@@ -254,8 +254,17 @@ erDiagram
 | `076_update_org_profile_function.sql` | `fn_get_organization_profile` | Updates organization profile retrieval with new fields. |
 | `077_fix_deleting_org_users.sql` | Fix | Soft-deletes users associated with organizations pending deletion. |
 | `078_board_favorites.sql` | `user_board_favorites` | Creates board favorites junction table, `fn_toggle_board_favorite` procedure, and updates `v_boards_canonical` with `is_favorited`. |
-| `079_comment_reactions.sql` | `comment_reactions` | Creates comment reactions table, `fn_toggle_comment_reaction` procedure, and updates `v_comments_canonical` with aggregated `reactions` array. |
+| `079_comment_reactions.sql` | `comment_reactions` | Creates comment reactions table, and updates `v_comments_canonical` with aggregated `reactions` array. |
 | `080_task_estimation.sql` | Task Estimation & Hours | Adds `estimate_hours` column to `tasks`, updates `v_tasks_canonical` with `estimate_hours` and `logged_hours`, and adds `fn_log_task_time` procedure. |
+| `081_fix_assignee_notification_logic.sql` | Notifications Fix | Fixes notification generation logic for task assignment. |
+| `082_board_user_can_manage.sql` | Board Management | Updates `v_boards_canonical` with `user_can_manage` flag. |
+| `083_deduplicate_board_members.sql` | Board Members View | Updates `v_board_members_canonical` to handle duplicate records. |
+| `084_task_reporter_feature.sql` | Task Reporters | Adds `reporter_id` to tasks, `can_edit_task` logic updates, and updates `v_tasks_canonical`. |
+| `085_activity_type_reporter_changed.sql` | Activity Types | Adds `REPORTER_CHANGED` activity type and updates `v_activities_canonical`. |
+| `086_explicit_comment_reactions.sql` | Comment Reactions | Explicitly defines `fn_add_comment_reaction` and `fn_remove_comment_reaction` procedures. |
+| `087_subtask_assignee_time.sql` | Subtask Tracking | Adds assignees and time tracking to subtasks, updating related views and functions. |
+| `088_task_reporter_notifications.sql` | Task Reporter Notifications | Updates notification generation logic for task reporters. |
+| `089_cleanup_orphaned_objects.sql` | Cleanup | Drops orphaned views (`v_task_labels_canonical`) and functions (`fn_toggle_comment_reaction`, `is_org_admin`, etc.). |
 
 
 
@@ -386,8 +395,8 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 029_comment_functions.sql
 030_activity_logging_enhancements.sql
 031_notification_canonical_enhancements.sql
-032_revoke_invitation_function.sql
-032_seed_techinnovators.sql
+032a_revoke_invitation_function.sql
+032b_seed_techinnovators.sql
 033_seed_latest_meeting.sql
 034_security_event_functions.sql
 035_auth_session_functions.sql
@@ -430,6 +439,18 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 075_user_preferences_tour.sql
 076_update_org_profile_function.sql
 077_fix_deleting_org_users.sql
+078_board_favorites.sql
+079_comment_reactions.sql
+080_task_estimation.sql
+081_fix_assignee_notification_logic.sql
+082_board_user_can_manage.sql
+083_deduplicate_board_members.sql
+084_task_reporter_feature.sql
+085_activity_type_reporter_changed.sql
+086_explicit_comment_reactions.sql
+087_subtask_assignee_time.sql
+088_task_reporter_notifications.sql
+089_cleanup_orphaned_objects.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)
@@ -440,6 +461,3 @@ Migrations are SQL files in `database/migrations/` applied alphabetically by `da
 
 ### Stored Procedures for Comment Mentions (`065_comment_mentions.sql`)
 - `fn_create_comment_mentions(comment_id, mentioned_user_ids[], actor_id)`: Inserts rows in `comment_mentions`, generates `COMMENT_MENTIONED` notification events, and logs user activity.
-
-> [!NOTE]
-> File `032_revoke_invitation_function.sql` and `032_seed_techinnovators.sql` share the `032_` prefix. They are both applied; the rebuild script sorts alphabetically so `032_revoke_invitation_function.sql` runs before `032_seed_techinnovators.sql`.

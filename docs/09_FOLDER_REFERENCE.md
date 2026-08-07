@@ -31,16 +31,16 @@ This directory dictionary maps every major folder across the repository, explain
 | `backend/app/database/` | asyncpg connection pool manager and DB dependency | `connection.py` | asyncpg |
 | `backend/app/meeting/` | Full meeting pipeline subsystem | `api/router.py`, `services/meeting_service.py` | Playwright, Deepgram SDK, FFmpeg |
 | `backend/app/meeting/api/` | Meeting HTTP router endpoints | `router.py` | FastAPI |
-| `backend/app/meeting/bot/` | Playwright browser automation + JS injection | `recorder/recorder.py`, `recorder/capture_script.py` | Playwright Chromium |
+| `backend/app/meeting/bot/` | Playwright browser automation + JS injection | `recorder/recorder.py` | Playwright Chromium |
 | `backend/app/meeting/pipeline/` | Sequential post-processing stage engine + task extraction | `orchestrator.py`, `stages/`, `context.py` | Deepgram, FFmpeg, LLM |
 | `backend/app/meeting/providers/` | Speech (Deepgram) and presence providers | `speech/deepgram_provider.py`, `participant_presence/` | Deepgram SDK, asyncpg |
 | `backend/app/websockets/` | WebSocket connection subsystem | `auth.py`, `manager.py`, `router.py` | FastAPI WebSockets, PyJWT |
-| `backend/app/routers/` | **27** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `subtasks.py`, `columns.py`, `labels.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, etc. | FastAPI, Pydantic |
-| `backend/app/schemas/` | **24** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `label.py`, `subtask.py`, `column.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, etc. | Pydantic v2 |
+| `backend/app/routers/` | **26** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `subtasks.py`, `columns.py`, `labels.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, etc. | FastAPI, Pydantic |
+| `backend/app/schemas/` | **25** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `label.py`, `subtask.py`, `column.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, etc. | Pydantic v2 |
 | `backend/app/services/` | Business logic services (one per domain) | `auth_service.py`, `board_service.py`, `column_service.py`, `task_service.py`, `comment_service.py`, `dashboard_service.py`, `invitation_service.py`, `notification_service.py`, `email_service.py`, etc. | asyncpg, httpx |
 | `backend/storage/` | Local disk file storage for meeting artifacts | `meeting/recordings/`, `meeting/processed_audio/` | OS filesystem |
 | `backend/uploads/` | Uploaded task attachment files (served as static at `/uploads/`) | `.webm`, `.png`, `.pdf`, etc. | FastAPI StaticFiles |
-| `backend/archive/` | Archived/legacy scripts & CLI tools | `tools/` | — |
+
 | `backend/tests/` | Pytest automated test suites | `test_*.py` | pytest, httpx |
 
 ---
@@ -49,7 +49,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **65** SQL migration files (versions 001–065) | `001_extensions.sql` … `065_comment_mentions.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **90** SQL migration files (versions 001–089) | `001_extensions.sql` … `089_cleanup_orphaned_objects.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -78,7 +78,7 @@ python database/scripts/rebuild.py --reset
 | `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts`, `useWebSocket.ts` | React 19 |
 | `frontend/src/lib/` | Axios instance configuration with interceptors | `axios.ts` or similar | Axios v1 |
 | `frontend/src/routes/` | React Router route guard components | `ProtectedRoute.tsx`, `RequireRole.tsx` | React Router DOM v7, Zustand |
-| `frontend/src/services/` | API call functions (25 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `labelsApi.ts`, `subtasksApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, etc. | Axios v1 |
+| `frontend/src/services/` | API call functions (24 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `labelsApi.ts`, `subtasksApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, etc. | Axios v1 |
 | `frontend/src/store/` | Zustand v5 global state stores (10 stores) | `authStore.ts`, `boardStore.ts`, `taskStore.ts`, `adminStore.ts`, `notificationStore.ts`, `organizationStore.ts`, `preferencesStore.ts`, `projectSettingsStore.ts`, `activityStore.ts`, `uiStore.ts` | Zustand v5 |
 | `frontend/src/styles/` | Global CSS and Tailwind v4 customizations | `*.css` | Tailwind CSS v4 |
 | `frontend/src/utils/` | Utility helper functions | `*.ts` | — |
@@ -103,9 +103,9 @@ python database/scripts/rebuild.py --reset
 |---|---|
 | `README.md` | Documentation index and AI agent onboarding instructions |
 | `01_PROJECT_OVERVIEW.md` | Business objectives, USP, system architecture, phase roadmap |
-| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 27 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
+| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 26 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
 | `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand, Tailwind v4, feature structure, component tree, route guards, 25 API services |
-| `04_DATABASE_ARCHITECTURE.md` | 65 SQL migration files (versions 001–065), ERD, canonical views, stored functions catalog |
+| `04_DATABASE_ARCHITECTURE.md` | 90 SQL migration files (versions 001–089), ERD, canonical views, stored functions catalog |
 | `05_MEETING_PIPELINE.md` | Bot join → WebM → FFmpeg → Deepgram → Attribution → Task Extraction → Transcript Editor pipeline |
 | `06_AI_ARCHITECTURE.md` | Deepgram speech tier, Puter/Gemini LLM tier, KAI agent, extraction pipeline |
 | `07_API_REFERENCE.md` | All 24 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, search, timesheets, etc. |

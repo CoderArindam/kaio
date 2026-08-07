@@ -96,7 +96,7 @@ frontend/src/
 │   ├── dashboard/              # Manager/Superadmin dashboard
 │   │   ├── DashboardPage.tsx
 │   │   ├── DashboardView.tsx   # Full dashboard layout, orchestrates widgets & polling fallback
-│   │   └── components/         # 9 dashboard widgets
+│   │   └── components/         # 7 dashboard widgets
 │   ├── landing/                # Public marketing landing page (React 19 + Tailwind v4 live transcript visualizer)
 │   ├── meeting/                # Meeting join controls, active status bar, & TranscriptEditor
 │   │   └── TranscriptEditor.tsx # Interactive transcript text & speaker attribution editor
@@ -119,7 +119,7 @@ frontend/src/
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
 │   └── RequireRole.tsx         # RBAC role guard — redirects unauthorized roles to /dashboard
-├── services/                   # API call functions wrapping Axios (25 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, columnsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, subtasksApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetReportsApi, timesheetService, usersApi)
+├── services/                   # API call functions wrapping Axios (24 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, columnsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, subtasksApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetService, usersApi)
 ├── store/                      # Zustand global state stores
 │   ├── authStore.ts            # isAuthenticated, user, login(), logout(), initAuth()
 │   ├── boardStore.ts           # Active board metadata
@@ -209,7 +209,7 @@ export const RequireRole: React.FC<{ allowedRoles: string[] }> = ({ allowedRoles
 All HTTP communication passes through an **Axios client instance** configured in `src/lib/`:
 - **Cookie-based Auth**: No manual `Authorization` header attachment — cookies are sent automatically with every request (`withCredentials: true`).
 - **Response Interceptor**: Intercepts `401 Unauthorized` responses and triggers `authStore.logout({ forced: true })` to clear local state and show session-expired toast.
-- **25 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`.
+- **24 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetService.ts`, `usersApi.ts`.
 
 ```mermaid
 sequenceDiagram

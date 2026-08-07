@@ -44,10 +44,6 @@ export const listProposalsByMeeting = async (sessionId: string): Promise<TaskPro
   return response.data.data;
 };
 
-export const getProposal = async (id: string): Promise<TaskProposal> => {
-  const response = await api.get(`/proposals/${id}`);
-  return response.data.data;
-};
 
 export const updateProposal = async (
   id: string,

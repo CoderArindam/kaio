@@ -101,10 +101,6 @@ export const useActiveBoards = () => {
   return useMemo(() => boards.filter(b => !b.archived_at), [boards]);
 };
 
-export const useFavoritedBoards = () => {
-  const boards = useBoardStore(state => state.boards);
-  return useMemo(() => boards.filter(b => !b.archived_at && b.is_favorited), [boards]);
-};
 
 export const useArchivedBoards = () => {
   const boards = useBoardStore(state => state.boards);

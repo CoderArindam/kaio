@@ -14,10 +14,6 @@ export interface MyTask extends Task {
   is_completed: boolean;
 }
 
-export const getMyWorkSummary = async (): Promise<MyWorkSummary> => {
-  const response = await api.get('/my-work/summary');
-  return response.data.data;
-};
 
 export const getMyTasks = async (params?: {
   due?: string;

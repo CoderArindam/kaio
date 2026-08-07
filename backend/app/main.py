@@ -1,5 +1,4 @@
 import logging
-import warnings
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -7,9 +6,7 @@ from fastapi import FastAPI, Response, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-# Silence warning tracebacks
-warnings.filterwarnings("ignore", category=UserWarning, module="pyannote.audio.core.io")
-warnings.filterwarnings("ignore", message=".*torchcodec.*")
+
 
 from app.config.settings import settings
 
