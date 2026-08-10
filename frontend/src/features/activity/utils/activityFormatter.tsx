@@ -9,6 +9,7 @@ import {
   Paperclip, 
   Trash2, 
   Clock3,
+  Bell,
   type LucideIcon
 } from 'lucide-react';
 import type { CanonicalActivity as Activity } from '../../../services/activityApi';
@@ -289,6 +290,14 @@ export const formatActivity = (
           </span>
         ),
         accentColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+      };
+
+    case ACTIVITY_TYPES.TASK_REMINDER:
+      return {
+        icon: Bell,
+        title: 'Task Reminder',
+        description: activity.new_value?.title || 'This task is due soon or overdue',
+        accentColor: 'text-red-500 bg-red-500/10 border-red-500/20'
       };
 
     default:
