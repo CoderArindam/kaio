@@ -40,7 +40,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({ task, onClose, canEdit }) => {
       <div className="space-y-3 flex-1 mr-4">
         <div className="flex items-center gap-2 text-brand-text-muted text-xs">
           <Folder size={15} />
-          <span>Board #{task.board_id}</span>
+          <span>{task.board_name}</span>
           <ChevronRight size={15} />
           <span className="text-brand-primary">{task.task_reference}</span>
         </div>
