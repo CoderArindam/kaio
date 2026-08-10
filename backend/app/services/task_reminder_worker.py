@@ -71,5 +71,5 @@ class TaskReminderWorker:
                         logger.error(f"Failed to send reminder for task {row['task_id']}: {e}")
 
                 if task_ids:
-                    await conn.execute("SELECT fn_mark_reminders_sent($1)", task_ids)
+                    await conn.execute("SELECT fn_mark_reminders_sent($1::int[])", task_ids)
                     logger.info(f"Marked {len(task_ids)} task reminders as sent.")
