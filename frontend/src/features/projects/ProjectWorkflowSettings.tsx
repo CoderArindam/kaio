@@ -103,7 +103,7 @@ const CategorySelector = ({ value, color, onChange, disabled = false, className 
   }, []);
 
   const categories = [
-    { id: 'TODO', label: 'To Do', colorClass: 'bg-slate-500', bgClass: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30' },
+    { id: 'TODO', label: 'To Do', colorClass: 'bg-slate-500', bgClass: 'bg-slate-500/10 text-slate-700 border-slate-500/30' },
     { id: 'IN_PROGRESS', label: 'In Progress', colorClass: 'bg-blue-500', bgClass: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
     { id: 'DONE', label: 'Done', colorClass: 'bg-emerald-500', bgClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' }
   ];

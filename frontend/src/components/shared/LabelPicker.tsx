@@ -81,6 +81,30 @@ export const LabelPicker: React.FC<LabelPickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // WebSocket event listener
+  useEffect(() => {
+    if (!effectiveBoardId) return;
+    const handleLabelChange = (e: any) => {
+      const payload = e.detail;
+      if (payload?.board_id === effectiveBoardId) {
+        if (payload.type === 'label_created') {
+          setBoardLabels((prev) => {
+            if (prev.find((l) => l.id === payload.label.id)) return prev;
+            return [...prev, payload.label];
+          });
+        } else if (payload.type === 'label_updated') {
+          setBoardLabels((prev) =>
+            prev.map((l) => (l.id === payload.label.id ? payload.label : l))
+          );
+        } else if (payload.type === 'label_deleted') {
+          setBoardLabels((prev) => prev.filter((l) => l.id !== payload.label_id));
+        }
+      }
+    };
+    window.addEventListener('kaio:label_changed', handleLabelChange);
+    return () => window.removeEventListener('kaio:label_changed', handleLabelChange);
+  }, [effectiveBoardId]);
+
   const handleToggleAttach = async (label: Label, e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();

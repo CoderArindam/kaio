@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Paperclip, UploadCloud, Loader2, FileText, Download, Trash2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Paperclip, UploadCloud, Loader2, FileText, Download, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachment, type Attachment } from '../../../../../services/attachmentsApi';
 import { type Task } from '../../../../../services/tasksApi';
 import toast from 'react-hot-toast';
@@ -16,9 +16,11 @@ const formatFileSize = (bytes?: number | null): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const isImageFile = (fileName: string, mimeType?: string | null): boolean => {
+const isImageFile = (fileName: string, mimeType?: string | null, fileUrl?: string | null): boolean => {
   if (mimeType?.startsWith('image/')) return true;
-  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileName);
+  if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileName)) return true;
+  if (fileUrl && /\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i.test(fileUrl)) return true;
+  return false;
 };
 
 const getFileUrl = (url?: string | null): string => {
@@ -28,6 +30,14 @@ const getFileUrl = (url?: string | null): string => {
     ? import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')
     : 'http://localhost:8000';
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const getHostname = (url: string) => {
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    return '';
+  }
 };
 
 const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
@@ -63,7 +73,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
     fetchAttachments();
   }, [task.id]);
 
-  const handleFileUpload = async (files: FileList | File[]) => {
+  const handleFileUpload = useCallback(async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     const file = files[0];
 
@@ -99,7 +109,73 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
         fileInputRef.current.value = '';
       }
     }
-  };
+  }, [task.id]);
+
+  const submitLink = useCallback(async (url: string, name?: string) => {
+    setIsSubmittingUrl(true);
+    let finalName = name?.trim();
+    if (!finalName) {
+      try {
+        const urlObj = new URL(url);
+        finalName = urlObj.pathname !== '/' ? urlObj.pathname.split('/').pop() : urlObj.hostname;
+        if (!finalName) finalName = urlObj.hostname;
+      } catch (e) {
+        finalName = 'Link';
+      }
+    }
+
+    try {
+      const newAtt = await createAttachment(task.id, { file_name: finalName as string, file_url: url });
+      setAttachments((prev) => [newAtt, ...prev]);
+      setUrlName('');
+      setUrlAddress('');
+      setShowUrlForm(false);
+      
+      useActivityStore.getState().appendActivity(task.id, {
+        entity_type: 'TASK',
+        entity_id: task.id,
+        activity_type: 'ATTACHMENT_ADDED',
+        old_value: null,
+        new_value: { file_name: finalName, file_url: url },
+        metadata: {}
+      });
+
+      toast.success('URL attachment added');
+    } catch (error) {
+      console.error('Failed to add attachment URL', error);
+      toast.error('Failed to add attachment URL');
+    } finally {
+      setIsSubmittingUrl(false);
+    }
+  }, [task.id]);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Ignore paste if typing in an input or textarea
+      const isInput = e.target instanceof HTMLInputElement || 
+                      e.target instanceof HTMLTextAreaElement || 
+                      (e.target as HTMLElement).isContentEditable;
+      
+      if (isInput) return;
+
+      // 1. Handle files (images, etc)
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        e.preventDefault();
+        handleFileUpload(e.clipboardData.files);
+        return;
+      }
+
+      // 2. Handle text (URLs)
+      const pastedText = e.clipboardData?.getData('text');
+      if (pastedText && (pastedText.startsWith('http://') || pastedText.startsWith('https://'))) {
+        e.preventDefault();
+        submitLink(pastedText);
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handleFileUpload, submitLink]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -138,22 +214,9 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
     }
   };
 
-  const handleAddUrl = async () => {
-    if (!urlName || !urlAddress) return;
-    setIsSubmittingUrl(true);
-    try {
-      const newAtt = await createAttachment(task.id, { file_name: urlName, file_url: urlAddress });
-      setAttachments((prev) => [newAtt, ...prev]);
-      setUrlName('');
-      setUrlAddress('');
-      setShowUrlForm(false);
-      toast.success('URL attachment added');
-    } catch (error) {
-      console.error('Failed to add attachment URL', error);
-      toast.error('Failed to add attachment URL');
-    } finally {
-      setIsSubmittingUrl(false);
-    }
+  const handleAddUrl = () => {
+    if (!urlAddress) return;
+    submitLink(urlAddress, urlName);
   };
 
   return (
@@ -186,6 +249,9 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
         </div>
         <p className="text-xs text-brand-text-muted">
           Supports images, documents, PDFs, zip files up to 25 MB
+        </p>
+        <p className="text-xs text-brand-primary/70 mt-1">
+          Tip: You can also paste links directly anywhere in this tab
         </p>
 
         {/* Upload Progress Indicator */}
@@ -225,7 +291,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
         <div className="p-4 border border-brand-border rounded-lg bg-brand-surface-low space-y-3">
           <input
             type="text"
-            placeholder="File Name"
+            placeholder="File Name (optional)"
             value={urlName}
             onChange={(e) => setUrlName(e.target.value)}
             className="w-full bg-brand-surface border border-brand-border rounded p-2 text-sm outline-none focus:border-brand-primary"
@@ -235,11 +301,18 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
             placeholder="File URL (https://...)"
             value={urlAddress}
             onChange={(e) => setUrlAddress(e.target.value)}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData('text');
+              if (pastedText && (pastedText.startsWith('http://') || pastedText.startsWith('https://'))) {
+                e.preventDefault();
+                submitLink(pastedText, urlName);
+              }
+            }}
             className="w-full bg-brand-surface border border-brand-border rounded p-2 text-sm outline-none focus:border-brand-primary"
           />
           <button
             onClick={handleAddUrl}
-            disabled={isSubmittingUrl || !urlName || !urlAddress}
+            disabled={isSubmittingUrl || !urlAddress}
             className="bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-1.5 rounded text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition"
           >
             {isSubmittingUrl && <Loader2 size={14} className="animate-spin" />}
@@ -258,14 +331,16 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
         <div className="py-8 text-sm text-brand-text-muted flex flex-col items-center justify-center bg-brand-surface-low rounded-xl border border-dashed border-brand-border">
           <Paperclip size={28} className="mb-2 opacity-40 text-brand-text-muted" />
           <p className="font-medium">No attachments yet</p>
-          <p className="text-xs mt-1">Upload a file or add a link above</p>
+          <p className="text-xs mt-1">Upload a file, add a link, or paste directly here</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {attachments.map((att) => {
-            const isImg = isImageFile(att.file_name, att.mime_type);
+            const isImg = isImageFile(att.file_name, att.mime_type, att.file_url);
             const sizeStr = formatFileSize(att.file_size);
             const fullUrl = getFileUrl(att.file_url);
+            const isExternalLink = att.file_url?.startsWith('http://') || att.file_url?.startsWith('https://');
+            const hostname = isExternalLink ? getHostname(fullUrl) : '';
 
             return (
               <div
@@ -284,6 +359,19 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />
+                  ) : isExternalLink && hostname ? (
+                    <div className="flex flex-col items-center justify-center w-full h-full bg-brand-surface group-hover:text-brand-primary transition">
+                      <img 
+                        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=128`} 
+                        alt="Link icon"
+                        className="w-12 h-12 rounded-lg shadow-sm"
+                        onError={(e) => {
+                           (e.target as HTMLElement).style.display = 'none';
+                           (e.target as HTMLElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <LinkIcon size={32} className="hidden text-brand-text-muted group-hover:text-brand-primary" />
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-1 text-brand-text-muted group-hover:text-brand-primary transition">
                       <FileText size={32} />

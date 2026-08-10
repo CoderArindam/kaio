@@ -31,6 +31,30 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({ boardId, selectedLabel
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // WebSocket event listener
+  useEffect(() => {
+    if (!boardId) return;
+    const handleLabelChange = (e: any) => {
+      const payload = e.detail;
+      if (payload?.board_id === boardId) {
+        if (payload.type === 'label_created') {
+          setLabels((prev) => {
+            if (prev.find((l) => l.id === payload.label.id)) return prev;
+            return [...prev, payload.label];
+          });
+        } else if (payload.type === 'label_updated') {
+          setLabels((prev) =>
+            prev.map((l) => (l.id === payload.label.id ? payload.label : l))
+          );
+        } else if (payload.type === 'label_deleted') {
+          setLabels((prev) => prev.filter((l) => l.id !== payload.label_id));
+        }
+      }
+    };
+    window.addEventListener('kaio:label_changed', handleLabelChange);
+    return () => window.removeEventListener('kaio:label_changed', handleLabelChange);
+  }, [boardId]);
+
   const selectedLabel = labels.find((l) => l.id === selectedLabelId);
 
   return (

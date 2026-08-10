@@ -65,7 +65,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ columnId, columns, onCh
         switch (type) {
           case 'DONE': return 'bg-emerald-500/10 text-emerald-600 font-medium border border-emerald-500/30';
           case 'IN_PROGRESS': return 'bg-blue-500/10 text-blue-600 font-medium border border-blue-500/30';
-          case 'TODO': return 'bg-slate-500/10 text-slate-700 font-medium border border-slate-500/30 dark:text-slate-300';
+          case 'TODO': return 'bg-slate-500/10 text-slate-700 font-medium border border-slate-500/30';
           default: return 'bg-brand-primary/10 text-brand-text font-medium border border-brand-primary/30';
         }
       }
@@ -75,7 +75,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ columnId, columns, onCh
     switch (type) {
       case 'DONE': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20';
       case 'IN_PROGRESS': return 'bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20';
-      case 'TODO': return 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700';
+      case 'TODO': return 'bg-slate-500/10 text-slate-700 border-slate-500/30 hover:bg-slate-500/20';
       default: return 'bg-brand-surface border-brand-border text-brand-text hover:border-brand-border-highlight';
     }
   };
@@ -85,7 +85,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({ columnId, columns, onCh
     switch (type) {
       case 'DONE': return 'text-emerald-500';
       case 'IN_PROGRESS': return 'text-blue-500';
-      case 'TODO': return 'text-slate-500 dark:text-slate-400';
+      case 'TODO': return 'text-slate-500';
       default: return 'text-brand-text-muted';
     }
   };

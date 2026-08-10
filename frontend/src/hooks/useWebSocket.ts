@@ -165,6 +165,13 @@ export function useWebSocket(): { isConnected: boolean } {
           break;
         }
 
+        case 'label_created':
+        case 'label_updated':
+        case 'label_deleted': {
+          window.dispatchEvent(new CustomEvent('kaio:label_changed', { detail: msg }));
+          break;
+        }
+
         case 'proposal.ready': {
           toast.success('New meeting proposals are ready for review.', { duration: 5000 });
           break;

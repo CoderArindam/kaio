@@ -112,7 +112,19 @@ async def delete_label(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     try:
+        row = await conn.fetchrow("SELECT board_id FROM v_labels_canonical WHERE id = $1", label_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Label not found")
+        board_id = row["board_id"]
+
         success = await conn.fetchval("SELECT fn_delete_label($1, $2)", label_id, current_user["id"])
+        
+        if success:
+            await connection_manager.send_to_board(
+                board_id=board_id,
+                message={"type": "label_deleted", "board_id": board_id, "label_id": label_id}
+            )
+
         return DataEnvelope(data={"success": bool(success)})
     except HTTPException:
         raise
