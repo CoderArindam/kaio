@@ -451,6 +451,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         due_date: taskData.due_date,
         assigned_to: taskData.assigned_to,
         label_ids: taskData.label_ids,
+        estimate_hours: taskData.estimate_hours,
+        reporter_id: taskData.reporter_id,
       });
       
       set((state) => ({
