@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { useOrganizationStore } from "../../store/organizationStore";
 import { useUiStore } from "../../store/uiStore";
+import { useNotesStore } from "../../store/notesStore";
 import WorkspaceLoader from "../common/WorkspaceLoader";
 import { updateFavicon } from "../../utils/favicon";
 
@@ -13,6 +14,8 @@ import UserAvatarDropdown from "./UserAvatarDropdown";
 import { ActiveMeetingBar } from "../../features/meeting/components/ActiveMeetingBar";
 import { AIButton } from "../../features/ai/components/AIButton";
 import { AIPanel } from "../../features/ai/components/AIPanel";
+import { NotesButton } from "../../features/notes/components/NotesButton";
+import { QuickNotesSidebar } from "../../features/notes/components/QuickNotesSidebar";
 import CreateProjectModal from "../../features/projects/components/CreateProjectModal";
 import SearchModal from "../../features/search/SearchModal";
 import AppTour from "../common/AppTour";
@@ -23,21 +26,27 @@ export const AppLayout: React.FC = () => {
   const { profile, deletionStatus, isLoading: isProfileLoading } = useOrganizationStore();
   const { isLoading: isPreferencesLoading } = usePreferencesStore();
   const { pageTitle, openSearchModal, toggleSearchModal } = useUiStore();
+  const { toggleOpen: toggleNotes } = useNotesStore();
 
   // Mount WebSocket connection for the duration of the authenticated session
   useWebSocket();
 
   // Cmd+K / Ctrl+K keyboard shortcut for global search
+  // Ctrl+Shift+N keyboard shortcut for Quick Notes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         toggleSearchModal();
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        toggleNotes();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSearchModal]);
+  }, [toggleSearchModal, toggleNotes]);
 
   // Document Title Logic
   useEffect(() => {
@@ -102,6 +111,7 @@ export const AppLayout: React.FC = () => {
             <div id="tour-notifications">
               <NotificationBell />
             </div>
+            <NotesButton />
             <div id="tour-profile">
               <UserAvatarDropdown placement="header" />
             </div>
@@ -122,6 +132,7 @@ export const AppLayout: React.FC = () => {
       </div>
       <AIButton />
       <AIPanel />
+      <QuickNotesSidebar />
       <CreateProjectModal />
       <SearchModal />
       <AppTour />

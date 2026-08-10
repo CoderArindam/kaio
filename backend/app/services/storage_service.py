@@ -181,6 +181,42 @@ class StorageService:
                 logger.error(f"Failed to delete local attachment file {file_url}: {e}")
 
     @staticmethod
+    async def save_note_image(file: UploadFile, user_id: int, org_id: int) -> str:
+        """
+        Saves a note image (upload or screenshot) to Cloudinary or local storage.
+        Returns the public URL.
+        """
+        content = await file.read()
+        mime_type = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "image/png"
+
+        if StorageService._is_cloudinary_configured():
+            try:
+                StorageService._configure_cloudinary()
+                res = cloudinary.uploader.upload(
+                    content,
+                    folder=f"kaio/orgs/{org_id}/notes/{user_id}",
+                    resource_type="image",
+                    use_filename=True,
+                )
+                if res and "secure_url" in res:
+                    return res.get("secure_url")
+            except Exception as e:
+                logger.error(f"Cloudinary note image upload failed, falling back: {e}")
+
+        # Local storage fallback
+        note_dir = UPLOAD_DIR / str(org_id) / "notes" / str(user_id)
+        note_dir.mkdir(parents=True, exist_ok=True)
+
+        original_name = Path(file.filename or "image.png").name
+        unique_filename = f"{uuid.uuid4().hex[:12]}_{original_name}"
+        file_path = note_dir / unique_filename
+
+        with file_path.open("wb") as buffer:
+            buffer.write(content)
+
+        return f"/uploads/orgs/{org_id}/notes/{user_id}/{unique_filename}"
+
+    @staticmethod
     async def delete_organization_assets(org_id: int):
         """
         Deletes all assets (avatars, logos, attachments) scoped to a specific organization.
