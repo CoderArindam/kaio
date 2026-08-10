@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Clock, Eye, Save } from 'lucide-react';
+import { Clock, Eye, Save, CalendarDays, AlarmClock, TrendingUp, History, CalendarClock, Link2, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { isSuperAdmin } from '../../../lib/rbac';
 import {
@@ -11,6 +11,71 @@ import type { TimesheetPolicy } from '../../../services/timesheetAdminService';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Skeleton } from '../../../components/ui/Skeleton';
+
+const NumberInputWithUnit: React.FC<{
+  label: string;
+  unit: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  disabled: boolean;
+  error?: string;
+  onChange: (val: number) => void;
+}> = ({ label, unit, value, min, max, step = 1, disabled, error, onChange }) => (
+  <div>
+    <label className="block text-xs font-medium text-brand-text-muted mb-1.5">{label}</label>
+    <div className="relative flex items-center">
+      <input
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        disabled={disabled}
+        value={value}
+        onChange={(e) => onChange(step === 1 ? parseInt(e.target.value, 10) || 0 : parseFloat(e.target.value) || 0)}
+        className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 pr-14 text-sm font-semibold text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
+      />
+      <span className="absolute right-3 text-xs font-medium text-brand-text-muted pointer-events-none">{unit}</span>
+    </div>
+    {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+  </div>
+);
+
+const ToggleRow: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}> = ({ icon, label, description, checked, disabled, onToggle }) => (
+  <div className={`flex items-center justify-between gap-4 p-3 rounded-xl border transition-all ${
+    checked ? 'bg-brand-primary/5 border-brand-primary/20' : 'bg-brand-surface-low border-brand-border/50'
+  }`}>
+    <div className="flex items-start gap-3">
+      <span className={`mt-0.5 ${checked ? 'text-brand-primary' : 'text-brand-text-muted'}`}>{icon}</span>
+      <div>
+        <span className="text-sm font-medium text-brand-text">{label}</span>
+        <p className="text-xs text-brand-text-muted">{description}</p>
+      </div>
+    </div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+        checked ? 'bg-brand-primary' : 'bg-brand-surface-container'
+      } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  </div>
+);
 
 interface FormErrors {
   standard_hours_per_day?: string;
@@ -178,101 +243,51 @@ export const TimesheetPolicyForm: React.FC = () => {
 
           {/* Standard Hours/Day & Standard Hours/Week */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">
-                Standard Hours / Day
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                min="0.5"
-                max="24"
-                disabled={!canEdit}
-                value={policy.standard_hours_per_day}
-                onChange={(e) =>
-                  setPolicy({
-                    ...policy,
-                    standard_hours_per_day: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 text-sm text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              {errors.standard_hours_per_day && (
-                <p className="text-xs text-red-400 mt-1">{errors.standard_hours_per_day}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">
-                Standard Hours / Week
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="168"
-                disabled={!canEdit}
-                value={policy.standard_hours_per_week}
-                onChange={(e) =>
-                  setPolicy({
-                    ...policy,
-                    standard_hours_per_week: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 text-sm text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              {errors.standard_hours_per_week && (
-                <p className="text-xs text-red-400 mt-1">{errors.standard_hours_per_week}</p>
-              )}
-            </div>
+            <NumberInputWithUnit
+              label="Standard Hours / Day"
+              unit="hrs"
+              step={0.5}
+              min={0.5}
+              max={24}
+              disabled={!canEdit}
+              value={policy.standard_hours_per_day}
+              error={errors.standard_hours_per_day}
+              onChange={(val) => setPolicy({ ...policy, standard_hours_per_day: val })}
+            />
+            <NumberInputWithUnit
+              label="Standard Hours / Week"
+              unit="hrs"
+              min={1}
+              max={168}
+              disabled={!canEdit}
+              value={policy.standard_hours_per_week}
+              error={errors.standard_hours_per_week}
+              onChange={(val) => setPolicy({ ...policy, standard_hours_per_week: val })}
+            />
           </div>
 
           {/* Max Hours/Day & Submission Deadline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">
-                Max Hours / Day
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="24"
-                disabled={!canEdit}
-                value={policy.max_hours_per_day}
-                onChange={(e) =>
-                  setPolicy({
-                    ...policy,
-                    max_hours_per_day: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 text-sm text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              {errors.max_hours_per_day && (
-                <p className="text-xs text-red-400 mt-1">{errors.max_hours_per_day}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-brand-text-muted mb-1.5">
-                Days after week end to submit
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="30"
-                disabled={!canEdit}
-                value={policy.submission_deadline_days}
-                onChange={(e) =>
-                  setPolicy({
-                    ...policy,
-                    submission_deadline_days: parseInt(e.target.value, 10) || 0,
-                  })
-                }
-                className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 text-sm text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              {errors.submission_deadline_days && (
-                <p className="text-xs text-red-400 mt-1">{errors.submission_deadline_days}</p>
-              )}
-            </div>
+            <NumberInputWithUnit
+              label="Max Hours / Day"
+              unit="hrs"
+              min={1}
+              max={24}
+              disabled={!canEdit}
+              value={policy.max_hours_per_day}
+              error={errors.max_hours_per_day}
+              onChange={(val) => setPolicy({ ...policy, max_hours_per_day: val })}
+            />
+            <NumberInputWithUnit
+              label="Submission Deadline"
+              unit="days"
+              min={0}
+              max={30}
+              disabled={!canEdit}
+              value={policy.submission_deadline_days}
+              error={errors.submission_deadline_days}
+              onChange={(val) => setPolicy({ ...policy, submission_deadline_days: val })}
+            />
           </div>
 
           {/* Overtime Policy Radio Group */}
@@ -317,98 +332,43 @@ export const TimesheetPolicyForm: React.FC = () => {
           </div>
 
           {/* Allow Past Entry (days back) */}
-          <div>
-            <label className="block text-xs font-medium text-brand-text-muted mb-1.5">
-              Allow Past Entry (days back)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="365"
-              disabled={!canEdit}
-              value={policy.allow_past_entry_days}
-              onChange={(e) =>
-                setPolicy({
-                  ...policy,
-                  allow_past_entry_days: parseInt(e.target.value, 10) || 0,
-                })
-              }
-              className="w-full bg-brand-surface-low border border-brand-border rounded-xl px-3.5 py-2 text-sm text-brand-text focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-            {errors.allow_past_entry_days && (
-              <p className="text-xs text-red-400 mt-1">{errors.allow_past_entry_days}</p>
-            )}
-          </div>
+          <NumberInputWithUnit
+            label="Allow Past Entry (days back)"
+            unit="days"
+            min={0}
+            max={365}
+            disabled={!canEdit}
+            value={policy.allow_past_entry_days}
+            error={errors.allow_past_entry_days}
+            onChange={(val) => setPolicy({ ...policy, allow_past_entry_days: val })}
+          />
 
           {/* Toggle Switches */}
-          <div className="space-y-4 pt-2 border-t border-brand-border/40">
-            {/* Allow Future Date Entries */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-brand-text">Allow Future Date Entries</span>
-                <p className="text-xs text-brand-text-muted">Members can log hours for upcoming dates</p>
-              </div>
-              <button
-                type="button"
-                disabled={!canEdit}
-                onClick={() => setPolicy({ ...policy, allow_future_entry: !policy.allow_future_entry })}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  policy.allow_future_entry ? 'bg-brand-primary' : 'bg-brand-surface-container'
-                } ${!canEdit ? 'cursor-not-allowed opacity-60' : ''}`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    policy.allow_future_entry ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Require Task Link */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-brand-text">Require Task Link</span>
-                <p className="text-xs text-brand-text-muted">Every time entry must be linked to a Kanban task</p>
-              </div>
-              <button
-                type="button"
-                disabled={!canEdit}
-                onClick={() => setPolicy({ ...policy, require_task_link: !policy.require_task_link })}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  policy.require_task_link ? 'bg-brand-primary' : 'bg-brand-surface-container'
-                } ${!canEdit ? 'cursor-not-allowed opacity-60' : ''}`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    policy.require_task_link ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Allow Member Recall */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-brand-text">Allow Member Recall</span>
-                <p className="text-xs text-brand-text-muted">
-                  Members can recall a submitted timesheet before it is approved
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={!canEdit}
-                onClick={() => setPolicy({ ...policy, allow_member_recall: !policy.allow_member_recall })}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  policy.allow_member_recall ? 'bg-brand-primary' : 'bg-brand-surface-container'
-                } ${!canEdit ? 'cursor-not-allowed opacity-60' : ''}`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    policy.allow_member_recall ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
+          <div className="space-y-2.5 pt-2 border-t border-brand-border/40">
+            <ToggleRow
+              icon={<CalendarClock size={16} />}
+              label="Allow Future Date Entries"
+              description="Members can log hours for upcoming dates"
+              checked={policy.allow_future_entry}
+              disabled={!canEdit}
+              onToggle={() => setPolicy({ ...policy, allow_future_entry: !policy.allow_future_entry })}
+            />
+            <ToggleRow
+              icon={<Link2 size={16} />}
+              label="Require Task Link"
+              description="Every time entry must be linked to a Kanban task"
+              checked={policy.require_task_link}
+              disabled={!canEdit}
+              onToggle={() => setPolicy({ ...policy, require_task_link: !policy.require_task_link })}
+            />
+            <ToggleRow
+              icon={<RotateCcw size={16} />}
+              label="Allow Member Recall"
+              description="Members can recall a submitted timesheet before it is approved"
+              checked={policy.allow_member_recall}
+              disabled={!canEdit}
+              onToggle={() => setPolicy({ ...policy, allow_member_recall: !policy.allow_member_recall })}
+            />
           </div>
         </CardContent>
 

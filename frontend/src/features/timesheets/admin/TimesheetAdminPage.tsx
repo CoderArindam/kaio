@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Settings, Sliders, Users, BarChart3, Clock, Eye, Download, Calendar, Filter } from 'lucide-react';
+import { Settings, Sliders, Users, BarChart3, Clock, Eye, Download, Calendar, Filter, AlarmClock, TrendingUp, CalendarDays, AlertTriangle, CheckCircle2, Minus, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../../store/authStore';
 import { isSuperAdmin } from '../../../lib/rbac';
 import TimesheetPolicyForm from './TimesheetPolicyForm';
 import ApproverAssignmentManager from './ApproverAssignmentManager';
 import { Card, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
-import { exportTimesheetsCsv } from '../../../services/timesheetAdminService';
+import { exportTimesheetsCsv, getTimesheetPolicy, type TimesheetPolicy } from '../../../services/timesheetAdminService';
 import { getUsers, type User } from '../../../services/usersApi';
 
 type TabType = 'all' | 'policy' | 'approvers' | 'reports';
@@ -35,11 +35,15 @@ export const TimesheetAdminPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [overviewPolicy, setOverviewPolicy] = useState<TimesheetPolicy | null>(null);
 
   useEffect(() => {
     getUsers()
       .then((data) => setEmployees(data || []))
       .catch((err) => console.error('Failed to load users for timesheet export:', err));
+    getTimesheetPolicy()
+      .then(setOverviewPolicy)
+      .catch(() => {});
   }, []);
 
   // Route guard: Only Superadmin can access Timesheet Policy
@@ -325,9 +329,88 @@ export const TimesheetAdminPage: React.FC = () => {
           <ApproverAssignmentManager />
         </div>
       ) : (
-        /* Overview layout: Two-column on desktop, single column on mobile */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <TimesheetPolicyForm />
+        /* Overview: policy summary stats strip + full-width approver manager */
+        <div className="space-y-6">
+          {/* Policy Stats Strip */}
+          {overviewPolicy && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                {
+                  icon: <Clock size={16} className="text-brand-primary" />,
+                  label: 'Std Hours / Day',
+                  value: `${overviewPolicy.standard_hours_per_day}h`,
+                  sub: 'per day',
+                },
+                {
+                  icon: <AlarmClock size={16} className="text-violet-400" />,
+                  label: 'Std Hours / Week',
+                  value: `${overviewPolicy.standard_hours_per_week}h`,
+                  sub: 'per week',
+                },
+                {
+                  icon: <TrendingUp size={16} className="text-amber-400" />,
+                  label: 'Max Hours / Day',
+                  value: `${overviewPolicy.max_hours_per_day}h`,
+                  sub: 'daily cap',
+                },
+                {
+                  icon: <CalendarDays size={16} className="text-emerald-400" />,
+                  label: 'Week Starts',
+                  value: overviewPolicy.week_start_day.charAt(0).toUpperCase() + overviewPolicy.week_start_day.slice(1),
+                  sub: 'week start day',
+                },
+                {
+                  icon: overviewPolicy.overtime_policy === 'none'
+                    ? <Minus size={16} className="text-brand-text-muted" />
+                    : overviewPolicy.overtime_policy === 'flag_only'
+                    ? <AlertTriangle size={16} className="text-amber-400" />
+                    : <AlertTriangle size={16} className="text-red-400" />,
+                  label: 'Overtime',
+                  value: overviewPolicy.overtime_policy === 'none'
+                    ? 'Not tracked'
+                    : overviewPolicy.overtime_policy === 'flag_only'
+                    ? 'Flagged'
+                    : 'Blocked',
+                  sub: 'overtime policy',
+                },
+                {
+                  icon: <ArrowRight size={16} className="text-sky-400" />,
+                  label: 'Submit Deadline',
+                  value: `${overviewPolicy.submission_deadline_days}d`,
+                  sub: 'after week ends',
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex flex-col gap-2 p-4 rounded-xl border border-brand-border/60 bg-brand-surface-low hover:border-brand-border transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    {stat.icon}
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-brand-text tracking-tight">{stat.value}</div>
+                    <div className="text-[10px] text-brand-text-muted font-medium uppercase tracking-wide mt-0.5">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick-edit policy link banner */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-brand-primary/5 border border-brand-primary/15">
+            <div className="flex items-center gap-2 text-sm text-brand-text-muted">
+              <Settings size={14} className="text-brand-primary" />
+              <span>Need to adjust policy values?</span>
+            </div>
+            <button
+              onClick={() => setActiveTab('policy')}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline"
+            >
+              Edit Policy <ArrowRight size={12} />
+            </button>
+          </div>
+
+          {/* Full-width Approver Manager */}
           <ApproverAssignmentManager />
         </div>
       )}

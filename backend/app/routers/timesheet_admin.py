@@ -246,39 +246,12 @@ async def list_eligible_approvers(
     s_org_id = str(org_id)
     rows = await conn.fetch(
         """
-        SELECT 
-            u.id AS user_id,
-            COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS display_name,
-            u.email,
-            u.role::text AS role,
-            true AS is_approver
-        FROM v_users_canonical u
-        JOIN timesheet_approver_assignments taa ON (taa.approver_user_id::text = u.id::text OR taa.approver_user_id::text = LTRIM(RIGHT(u.id::text, 12), '0'))
-        WHERE (u.organization_id::text = $1::text OR u.organization_id::text = LTRIM(RIGHT($1::text, 12), '0'))
-          AND (taa.org_id::text = $1::text OR taa.org_id::text = LTRIM(RIGHT($1::text, 12), '0'))
-          AND taa.is_active = true
+        SELECT * FROM v_eligible_timesheet_approvers_canonical
+        WHERE (org_id::text = $1::text OR org_id::text = LTRIM(RIGHT($1::text, 12), '0'))
         ORDER BY display_name
         """,
         s_org_id,
     )
-
-    # Fallback: If no approvers configured yet, list all Managers and Superadmins so submit is not blocked
-    if not rows:
-        rows = await conn.fetch(
-            """
-            SELECT 
-                id AS user_id,
-                COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email) AS display_name,
-                email,
-                role::text AS role,
-                false AS is_approver
-            FROM v_users_canonical
-            WHERE (organization_id::text = $1::text OR organization_id::text = LTRIM(RIGHT($1::text, 12), '0'))
-              AND LOWER(role::text) IN ('superadmin', 'super_admin', 'manager')
-            ORDER BY display_name
-            """,
-            s_org_id,
-        )
 
     return [EligibleApproverResponse.model_validate(dict(row)) for row in rows]
 
@@ -296,20 +269,8 @@ async def list_all_managers_with_approver_status(
 
     rows = await conn.fetch(
         """
-        SELECT 
-            u.id AS user_id,
-            COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS display_name,
-            u.email,
-            u.role::text AS role,
-            EXISTS (
-                SELECT 1 FROM timesheet_approver_assignments taa 
-                WHERE (taa.approver_user_id::text = u.id::text OR taa.approver_user_id::text = LTRIM(RIGHT(u.id::text, 12), '0'))
-                  AND (taa.org_id::text = $1::text OR taa.org_id::text = LTRIM(RIGHT($1::text, 12), '0'))
-                  AND taa.is_active = true
-            ) AS is_approver
-        FROM v_users_canonical u
-        WHERE (u.organization_id::text = $1::text OR u.organization_id::text = LTRIM(RIGHT($1::text, 12), '0'))
-          AND LOWER(u.role::text) IN ('superadmin', 'super_admin', 'manager')
+        SELECT * FROM v_all_managers_timesheet_approver_status_canonical
+        WHERE (org_id::text = $1::text OR org_id::text = LTRIM(RIGHT($1::text, 12), '0'))
         ORDER BY display_name
         """,
         s_org_id,
