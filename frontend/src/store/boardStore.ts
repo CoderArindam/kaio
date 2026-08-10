@@ -46,6 +46,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       const newBoard = await createBoard(boardData);
       set({ boards: [...get().boards, newBoard] });
       toast.success('Project created successfully');
+      window.dispatchEvent(new Event('kaio:dashboard_refresh'));
       return newBoard;
     } catch (error: any) {
       console.error('Failed to create board:', error);
