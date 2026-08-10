@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useTaskStore } from '../../../store/taskStore';
 import { useUiStore } from '../../../store/uiStore';
 import { useAuthStore } from '../../../store/authStore';
+import { useBoardStore } from '../../../store/boardStore';
 import StatusSelector from '../../../components/shared/StatusSelector';
 import AssigneeSelector from '../../../components/shared/AssigneeSelector';
 import PrioritySelector from '../../../components/shared/PrioritySelector';
@@ -17,24 +18,28 @@ const CreateTaskModal: React.FC = () => {
   const boardMembers = getBoardMembersList();
   const columns = getColumnsList();
   const boardId = boardView.boardId;
+  const currentBoard = useBoardStore(state => state.boards.find(b => b.id === boardId));
 
   const { user } = useAuthStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('Medium');
-  const [assigneeId, setAssigneeId] = useState<number | null>(null);
+  const [assigneeId, setAssigneeId] = useState<number | null>(currentBoard?.default_assignee_id || null);
   const [reporterId, setReporterId] = useState<number | null>(user?.id || null);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [estimateHours, setEstimateHours] = useState<string>('');
   const [columnId, setColumnId] = useState<number | undefined>(undefined);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
 
-  // set initial columnId when modal opens if not set
+  // set initial columnId and assigneeId when modal opens
   React.useEffect(() => {
-    if (isCreateTaskModalOpen && columns.length > 0 && columnId === undefined) {
-      setColumnId(columns[0].id);
+    if (isCreateTaskModalOpen) {
+      if (columns.length > 0 && columnId === undefined) {
+        setColumnId(columns[0].id);
+      }
+      setAssigneeId(currentBoard?.default_assignee_id || null);
     }
-  }, [isCreateTaskModalOpen, columns, columnId]);
+  }, [isCreateTaskModalOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +63,7 @@ const CreateTaskModal: React.FC = () => {
     setDescription('');
     setPriority('Medium');
     setEstimateHours('');
-    setAssigneeId(null);
+    setAssigneeId(currentBoard?.default_assignee_id || null);
     setReporterId(user?.id || null);
     setDueDate(null);
     setSelectedLabelIds([]);

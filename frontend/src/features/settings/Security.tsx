@@ -28,7 +28,9 @@ import {
   Loader2,
   RefreshCw,
   X,
-  Lock
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { OTPInput } from '../../components/shared/OTPInput';
@@ -106,6 +108,7 @@ const TwoFactorSection = ({ user, onStatusChange }: { user: any, onStatusChange?
   const [otpError, setOtpError] = useState<string | null>(null);
   const [disablePassword, setDisablePassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDisablePassword, setShowDisablePassword] = useState(false);
 
   const { updateUserLocally } = useAuthStore();
 
@@ -289,14 +292,23 @@ const TwoFactorSection = ({ user, onStatusChange }: { user: any, onStatusChange?
                 <label className="block text-xs font-semibold text-brand-text-muted mb-1">
                   Current Password
                 </label>
-                <input
-                  type="password"
-                  value={disablePassword}
-                  onChange={(e) => setDisablePassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                />
+                <div className="relative">
+                  <input
+                    type={showDisablePassword ? "text" : "password"}
+                    value={disablePassword}
+                    onChange={(e) => setDisablePassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 pr-10 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDisablePassword(!showDisablePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-muted hover:text-brand-text transition-colors"
+                  >
+                    {showDisablePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
@@ -393,6 +405,9 @@ const PasswordSection = ({ policy, onPasswordChanged }: { policy: any, onPasswor
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const calculateStrength = () => {
     let score = 0;
@@ -456,25 +471,43 @@ const PasswordSection = ({ policy, onPasswordChanged }: { policy: any, onPasswor
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-brand-text mb-1">Current Password</label>
-            <input 
-              type="password" 
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-              required
-            />
+            <div className="relative">
+              <input 
+                type={showCurrentPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 pr-10 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-muted hover:text-brand-text transition-colors"
+              >
+                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-brand-text mb-1">New Password</label>
-              <input 
-                type="password" 
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                required
-              />
+              <div className="relative">
+                <input 
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 pr-10 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-muted hover:text-brand-text transition-colors"
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               
               {newPassword && (
                 <div className="mt-2">
@@ -498,13 +531,22 @@ const PasswordSection = ({ policy, onPasswordChanged }: { policy: any, onPasswor
             </div>
             <div>
               <label className="block text-sm font-medium text-brand-text mb-1">Confirm New Password</label>
-              <input 
-                type="password" 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                required
-              />
+              <div className="relative">
+                <input 
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-brand-surface-low border border-brand-border rounded-md px-3 py-2 pr-10 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-colors"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-muted hover:text-brand-text transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </div>
 

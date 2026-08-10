@@ -21,6 +21,11 @@ class ProjectSettingsService:
 
     @staticmethod
     async def update_settings(conn: asyncpg.Connection, board_id: int, updates: ProjectSettingsUpdate) -> ProjectSettingsResponse:
+        set_fields = updates.model_fields_set
+        
+        p_default_assignee_id = updates.default_assignee_id if 'default_assignee_id' in set_fields else -1
+        p_project_lead_id = updates.project_lead_id if 'project_lead_id' in set_fields else -1
+
         row = await conn.fetchrow(
             """
             SELECT * FROM fn_update_project_settings(
@@ -33,8 +38,8 @@ class ProjectSettingsService:
             updates.icon,
             updates.color,
             updates.cover_gradient,
-            updates.default_assignee_id if updates.default_assignee_id is not None else -1,
-            updates.project_lead_id if updates.project_lead_id is not None else -1
+            p_default_assignee_id,
+            p_project_lead_id
         )
         if not row:
             raise HTTPException(status_code=404, detail="Project not found or update failed")
