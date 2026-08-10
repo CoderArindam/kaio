@@ -1,11 +1,11 @@
 import api from '../lib/axios';
 
-export const registerOrganization = async (org_name: string, email: string, password: string, first_name: string, last_name: string) => {
+export const registerOrganization = async (org_name: string, email: string, password: string, first_name: string, last_name?: string) => {
   const response = await api.post('/auth/register', { org_name, email, password, first_name, last_name });
   return response.data;
 };
 
-export const registerOrganizationDirect = async (org_name: string, email: string, password: string, first_name: string, last_name: string) => {
+export const registerOrganizationDirect = async (org_name: string, email: string, password: string, first_name: string, last_name?: string) => {
   const response = await api.post('/auth/register/direct', { org_name, email, password, first_name, last_name });
   return response.data;
 };

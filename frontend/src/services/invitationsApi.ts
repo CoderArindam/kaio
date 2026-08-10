@@ -44,7 +44,7 @@ export const acceptInvitation = async (
   password: string,
   confirm_password: string,
   first_name: string,
-  last_name: string
+  last_name?: string
 ): Promise<{ message: string }> => {
   const response = await axiosInstance.post('/invitations/accept', {
     token,

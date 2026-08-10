@@ -56,7 +56,7 @@ export const Signup: React.FC = () => {
   };
 
   const handleDirectSubmit = async () => {
-    if (!orgName || !firstName || !lastName || !email || !password) {
+    if (!orgName || !firstName || !email || !password) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -232,7 +232,6 @@ export const Signup: React.FC = () => {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    required
                     placeholder="Doe"
                     className="w-full bg-brand-surface border border-brand-outline-variant text-brand-text text-sm rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors placeholder:text-brand-outline"
                   />

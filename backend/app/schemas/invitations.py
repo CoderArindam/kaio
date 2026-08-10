@@ -23,7 +23,7 @@ class AcceptInvitationRequest(BaseModel):
     password: str
     confirm_password: str
     first_name: str
-    last_name: str
+    last_name: Optional[str] = None
 
 
 class InvitationDetailResponse(BaseModel):

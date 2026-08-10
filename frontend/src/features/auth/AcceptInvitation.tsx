@@ -164,7 +164,6 @@ export const AcceptInvitation: React.FC = () => {
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              required
               placeholder="e.g., Doe"
               className="w-full bg-brand-surface border border-brand-outline-variant text-brand-text text-sm rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors placeholder:text-brand-outline"
             />
@@ -207,7 +206,7 @@ export const AcceptInvitation: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isSubmitting || !password || !confirmPassword || !firstName || !lastName}
+            disabled={isSubmitting || !password || !confirmPassword || !firstName}
             className="mt-4 w-full bg-brand-primary hover:bg-brand-primary-hover text-white font-medium text-sm rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 transition-colors duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting && <Loader2 size={16} className="animate-spin" />}
