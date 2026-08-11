@@ -107,7 +107,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ canvasData, onChan
     onChangeRef.current(canvas.toDataURL('image/png'));
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
     if (undoStackRef.current.length === 0) return;
@@ -115,9 +115,9 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ canvasData, onChan
     const snapshot = undoStackRef.current.pop()!;
     ctx.putImageData(snapshot, 0, 0);
     onChangeRef.current(canvas.toDataURL('image/png'));
-  };
+  }, []);
 
-  const redo = () => {
+  const redo = useCallback(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
     if (redoStackRef.current.length === 0) return;
@@ -125,7 +125,27 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ canvasData, onChan
     const snapshot = redoStackRef.current.pop()!;
     ctx.putImageData(snapshot, 0, 0);
     onChangeRef.current(canvas.toDataURL('image/png'));
-  };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   const clearCanvas = () => {
     const canvas = canvasRef.current!;

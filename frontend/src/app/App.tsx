@@ -7,7 +7,7 @@ import { useOrganizationStore } from '../store/organizationStore';
 import { AppRoutes } from './routes';
 
 export const App: React.FC = () => {
-  const { initAuth, isAuthenticated } = useAuthStore();
+  const { initAuth, isAuthenticated, user } = useAuthStore();
   const { fetchPreferences } = usePreferencesStore();
   const { fetchProfile } = useOrganizationStore();
 
@@ -16,11 +16,11 @@ export const App: React.FC = () => {
   }, [initAuth]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user?.id) {
       fetchPreferences();
       fetchProfile();
     }
-  }, [isAuthenticated, fetchPreferences, fetchProfile]);
+  }, [isAuthenticated, user?.id, fetchPreferences, fetchProfile]);
 
   return (
     <>

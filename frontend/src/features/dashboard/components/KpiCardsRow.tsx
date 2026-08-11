@@ -139,25 +139,20 @@ export const KpiCardsRow: React.FC<KpiCardsRowProps> = ({
         </div>
       </Card>
 
-      {/* KPI 2: Efficiency Rate - Clickable to /my-work */}
+      {/* KPI 2: Efficiency Rate - Informational */}
       <Card
-        hoverEffect
         padding="md"
         variant="default"
-        onClick={() => navigate('/my-work')}
-        className="relative overflow-hidden flex flex-col justify-between p-6 bg-brand-surface border-brand-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+        className="relative overflow-hidden flex flex-col justify-between p-6 bg-brand-surface border-brand-border/80 shadow-xs group"
       >
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-xs font-semibold text-brand-text-muted group-hover:text-teal-600 transition-colors">
+            <h3 className="text-xs font-semibold text-brand-text-muted">
               Efficiency Rate
             </h3>
             <div className="text-4xl font-extrabold text-brand-text tracking-tight mt-2">
               {efficiencyRate}%
             </div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-brand-surface-low flex items-center justify-center text-teal-500 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-            <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
 
@@ -189,25 +184,20 @@ export const KpiCardsRow: React.FC<KpiCardsRowProps> = ({
         </div>
       </Card>
 
-      {/* KPI 3: Active Projects - Clickable to /my-work */}
+      {/* KPI 3: Active Projects - Informational */}
       <Card
-        hoverEffect
         padding="md"
         variant="default"
-        onClick={() => navigate('/my-work')}
-        className="relative overflow-hidden flex flex-col justify-between p-6 bg-brand-surface border-brand-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+        className="relative overflow-hidden flex flex-col justify-between p-6 bg-brand-surface border-brand-border/80 shadow-xs group"
       >
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-xs font-semibold text-brand-text-muted group-hover:text-indigo-600 transition-colors">
+            <h3 className="text-xs font-semibold text-brand-text-muted">
               Active Projects
             </h3>
             <div className="text-4xl font-extrabold text-brand-text tracking-tight mt-2">
               {activeBoards}
             </div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-brand-surface-low flex items-center justify-center text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-            <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
 

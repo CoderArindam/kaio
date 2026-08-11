@@ -1,12 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Kanban, Plus, FolderPlus, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
-import { Skeleton } from '../../../components/ui/Skeleton';
-import { WidgetError } from '../../../components/ui/WidgetError';
-import type { DashboardBoardSummary } from '../../../services/dashboardApi';
-import EmptyState from '../../../components/common/EmptyState';
-import { useAuthStore } from '../../../store/authStore';
+import React, { useState, useMemo } from "react";
+
+import {
+  Kanban,
+  Plus,
+  FolderPlus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../../components/ui/Card";
+import { Skeleton } from "../../../components/ui/Skeleton";
+import { WidgetError } from "../../../components/ui/WidgetError";
+import type { DashboardBoardSummary } from "../../../services/dashboardApi";
+import EmptyState from "../../../components/common/EmptyState";
+
+import { ProjectCard } from "../../../components/common/ProjectCard";
 
 interface StrategicProjectsWidgetProps {
   userRole?: string;
@@ -18,31 +30,10 @@ interface StrategicProjectsWidgetProps {
   onOpenCreateProjectModal: () => void;
 }
 
-const AVATAR_PALETTES = [
-  'bg-blue-600 text-white',
-  'bg-purple-600 text-white',
-  'bg-amber-600 text-white',
-  'bg-emerald-600 text-white',
-  'bg-indigo-600 text-white',
-  'bg-rose-600 text-white',
-];
-
-const getRelativeTime = (dateStr?: string | Date, fallbackIdx: number = 0) => {
-  if (!dateStr) {
-    const times = ['2 days ago', '5 days ago', '1 week ago', '2 weeks ago'];
-    return times[fallbackIdx % times.length];
-  }
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diffInSeconds < 3600) return `${Math.max(1, Math.floor(diffInSeconds / 60))} mins ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-  return `${Math.floor(diffInSeconds / 604800)} weeks ago`;
-};
-
-export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = ({
-  userRole = 'MEMBER',
+export const StrategicProjectsWidget: React.FC<
+  StrategicProjectsWidgetProps
+> = ({
+  userRole = "MEMBER",
   summaryBoards,
   activeBoardsFallback,
   isFetching,
@@ -50,87 +41,73 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
   onRetry,
   onOpenCreateProjectModal,
 }) => {
-  const isSuperAdmin = userRole.toUpperCase() === 'SUPER_ADMIN';
-  const { user: currentUser } = useAuthStore();
+  const isSuperAdmin = userRole.toUpperCase() === "SUPER_ADMIN";
+  // const { user: currentUser } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 3;
 
   const displayBoards = useMemo(() => {
-    return summaryBoards.length > 0
-      ? summaryBoards.map((sb) => ({
-          id: sb.id,
-          name: sb.name,
-          project_key: sb.project_key,
-          description: sb.description,
-          task_count: sb.task_count,
-          completed_task_count: sb.completed_task_count,
-          completion_percentage: sb.completion_percentage,
-          overdue_count: sb.overdue_count,
-          member_count: sb.member_count || 1,
-          created_at: sb.created_at,
-          top_members: sb.top_members || [],
-        }))
+    const mappedBoards = summaryBoards.length > 0
+      ? summaryBoards.map((sb) => {
+          const fallback = activeBoardsFallback.find((b) => b.id === sb.id);
+          return {
+            id: sb.id,
+            name: sb.name,
+            project_key: sb.project_key,
+            description: sb.description,
+            icon: sb.icon,
+            color: sb.color,
+            cover_gradient: sb.cover_gradient,
+            task_count: sb.task_count,
+            completed_task_count: sb.completed_task_count,
+            completion_percentage: sb.completion_percentage,
+            overdue_count: sb.overdue_count,
+            member_count: sb.member_count || 1,
+            created_at: sb.created_at,
+            top_members: sb.top_members || [],
+            is_favorited: fallback ? fallback.is_favorited : false,
+          };
+        })
       : activeBoardsFallback.map((ab) => ({
           id: ab.id,
           name: ab.name,
           project_key: ab.project_key,
           description: ab.description,
+          icon: ab.icon,
+          color: ab.color,
+          cover_gradient: ab.cover_gradient,
           task_count: ab.task_count || 0,
           completed_task_count: ab.completed_task_count || 0,
-          completion_percentage: ab.task_count > 0 ? Math.round(((ab.completed_task_count || 0) / ab.task_count) * 100) : 0,
+          completion_percentage:
+            ab.task_count > 0
+              ? Math.round(
+                  ((ab.completed_task_count || 0) / ab.task_count) * 100,
+                )
+              : 0,
           overdue_count: ab.overdue_count || 0,
           member_count: ab.member_count || 1,
           created_at: ab.created_at,
           top_members: [],
+          is_favorited: ab.is_favorited,
         }));
+
+    return mappedBoards.sort((a, b) => {
+      // 1. Favorited first
+      if (a.is_favorited !== b.is_favorited) {
+        return a.is_favorited ? -1 : 1;
+      }
+      // 2. Created at descending (newest first)
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
   }, [summaryBoards, activeBoardsFallback]);
 
   const totalPages = Math.ceil(displayBoards.length / pageSize) || 1;
   const paginatedBoards = displayBoards.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
-
-  // Resolves members for a board from canonical top_members or creator fallback
-  const getBoardMembersToRender = (board: (typeof displayBoards)[0]) => {
-    const realMembers = board.top_members;
-    if (realMembers && realMembers.length > 0) {
-      return realMembers.map((m) => {
-        const fullName = [m.first_name, m.last_name].filter(Boolean).join(' ') || (m.email ? m.email.split('@')[0] : 'Member');
-        const initials = (
-          (m.first_name ? m.first_name[0] : (m.email ? m.email[0] : 'M')) +
-          (m.last_name ? m.last_name[0] : '')
-        ).toUpperCase();
-        return {
-          id: m.user_id,
-          fullName,
-          initials,
-          avatarUrl: m.avatar_url,
-        };
-      });
-    }
-
-    // Default fallback: show current logged-in creator
-    const creatorName = currentUser
-      ? [currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.email.split('@')[0]
-      : 'Creator';
-
-    const creatorInitials = currentUser
-      ? (
-          (currentUser.first_name ? currentUser.first_name[0] : currentUser.email[0]) +
-          (currentUser.last_name ? currentUser.last_name[0] : '')
-        ).toUpperCase()
-      : 'CR';
-
-    return [
-      {
-        id: currentUser?.id || 0,
-        fullName: creatorName,
-        initials: creatorInitials,
-        avatarUrl: currentUser?.avatar_url,
-      },
-    ];
-  };
 
   return (
     <Card variant="default" padding="lg" className="space-y-6 shadow-sm">
@@ -141,7 +118,8 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
             <span>Strategic Projects Overview</span>
           </CardTitle>
           <CardDescription className="text-xs text-brand-text-muted">
-            High-priority organizational initiatives, team assignments, and milestone completion
+            High-priority organizational initiatives, team assignments, and
+            milestone completion
           </CardDescription>
         </div>
 
@@ -161,7 +139,11 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           onRetry={onRetry}
         />
       ) : isFetching && displayBoards.length === 0 ? (
-        <div className="space-y-4" aria-busy="true" aria-label="Loading strategic projects">
+        <div
+          className="space-y-4"
+          aria-busy="true"
+          aria-label="Loading strategic projects"
+        >
           {[1, 2, 3].map((idx) => (
             <div
               key={idx}
@@ -181,8 +163,16 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
       ) : displayBoards.length === 0 ? (
         <EmptyState
           icon={<FolderPlus size={44} className="text-brand-primary/70" />}
-          title={isSuperAdmin ? "No strategic projects created yet" : "No projects assigned yet"}
-          description={isSuperAdmin ? "Get started by initializing your team's first Kanban project board." : "You currently don't have access to any projects. Contact your administrator to be assigned to a project."}
+          title={
+            isSuperAdmin
+              ? "No strategic projects created yet"
+              : "No projects assigned yet"
+          }
+          description={
+            isSuperAdmin
+              ? "Get started by initializing your team's first Kanban project board."
+              : "You currently don't have access to any projects. Contact your administrator to be assigned to a project."
+          }
           action={
             isSuperAdmin ? (
               <button
@@ -195,95 +185,10 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
           }
         />
       ) : (
-        <div className="space-y-4">
-          {paginatedBoards.map((board, idx) => {
-            const completionPct = Math.round(board.completion_percentage || 0);
-            const isOverdue = board.overdue_count > 0;
-            const statusText = isOverdue ? 'Needs Attention' : 'On Track';
-            const statusBg = isOverdue
-              ? 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-              : 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-
-            const relativeTime = getRelativeTime(board.created_at, idx);
-            const membersToRender = getBoardMembersToRender(board);
-
-            return (
-              <Link
-                key={board.id}
-                to={`/board/${board.id}`}
-                className="group block p-5 rounded-2xl bg-brand-surface-low/40 hover:bg-brand-surface-low border border-brand-border hover:border-brand-primary/40 transition-all duration-200 shadow-2xs hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-                  <div className="space-y-1 min-w-0">
-                    <h3 className="font-bold text-base text-brand-text group-hover:text-brand-primary transition-colors truncate flex items-center gap-2">
-                      <span>{board.name}</span>
-                      {board.project_key && (
-                        <span className="font-mono text-[10px] bg-brand-surface border border-brand-border px-1.5 py-0.5 rounded text-brand-text-muted">
-                          {board.project_key}
-                        </span>
-                      )}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-brand-text-muted">Status:</span>
-                      <span
-                        className={`font-semibold px-2 py-0.5 rounded-full text-[11px] border ${statusBg}`}
-                      >
-                        {statusText}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Real Overlapping Team Member Avatar Stack */}
-                  <div className="flex items-center -space-x-2 shrink-0 self-start sm:self-auto">
-                    {membersToRender.slice(0, 4).map((member, mIdx) => (
-                      <div
-                        key={`${board.id}-member-${member.id || mIdx}-${mIdx}`}
-                        className={`w-8 h-8 rounded-full border-2 border-brand-surface flex items-center justify-center text-[10px] font-bold shadow-xs overflow-hidden ${
-                          AVATAR_PALETTES[(mIdx + idx) % AVATAR_PALETTES.length]
-                        }`}
-
-                        title={member.fullName}
-                      >
-                        {member.avatarUrl ? (
-                          <img
-                            src={member.avatarUrl}
-                            alt={member.fullName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          member.initials
-                        )}
-                      </div>
-                    ))}
-                    {membersToRender.length > 4 && (
-                      <div className="w-8 h-8 rounded-full border-2 border-brand-surface bg-brand-surface-container text-brand-text text-[10px] font-bold flex items-center justify-center shadow-xs">
-                        +{membersToRender.length - 4}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Bar & Footer */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-brand-text-muted font-medium">Progress</span>
-                    <span className="font-bold text-brand-text">{completionPct}%</span>
-                  </div>
-
-                  <div className="h-2 w-full rounded-full bg-brand-surface-container overflow-hidden">
-                    <div
-                      style={{ width: `${completionPct}%` }}
-                      className="h-full bg-gradient-to-r from-brand-primary to-indigo-500 rounded-full transition-all duration-500"
-                    />
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <span className="text-[11px] text-brand-text-muted">{relativeTime}</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {paginatedBoards.map((board) => (
+            <ProjectCard key={board.id} board={board} />
+          ))}
         </div>
       )}
 
@@ -291,7 +196,8 @@ export const StrategicProjectsWidget: React.FC<StrategicProjectsWidgetProps> = (
       {displayBoards.length > 3 && (
         <div className="flex items-center justify-between pt-4 border-t border-brand-border/60 text-xs">
           <span className="text-brand-text-muted font-medium">
-            Page {currentPage} of {totalPages} ({displayBoards.length} total projects)
+            Page {currentPage} of {totalPages} ({displayBoards.length} total
+            projects)
           </span>
           <div className="flex items-center gap-2">
             <button

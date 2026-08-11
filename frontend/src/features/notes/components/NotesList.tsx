@@ -15,6 +15,7 @@ export const NotesList: React.FC = () => {
     openNote,
     setSearchQuery,
     togglePin,
+    deleteNote,
   } = useNotesStore();
 
   const newNoteOptions: { type: ContentType; label: string; icon: React.ReactNode; color: string }[] = [
@@ -89,6 +90,10 @@ export const NotesList: React.FC = () => {
               onTogglePin={(e) => {
                 e.stopPropagation();
                 togglePin(note.id);
+              }}
+              onDelete={(e) => {
+                e.stopPropagation();
+                deleteNote(note.id);
               }}
             />
           ))

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { loginUser, verifyLoginOtp, logoutUser, getMe } from '../services/authApi';
 import toast from 'react-hot-toast';
+import { useOrganizationStore } from './organizationStore';
+import { usePreferencesStore } from './preferencesStore';
 
 export interface User {
   id: number;
@@ -136,6 +138,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error('Logout API failed, clearing local state anyway', error);
     } finally {
       set({ isAuthenticated: false, user: null });
+      useOrganizationStore.setState({ profile: null, deletionStatus: null, isLoading: false, error: null });
+      usePreferencesStore.setState({ preferences: null, isLoading: false, error: null });
       if (!forced) {
         toast.success('Logged out successfully');
       } else {
