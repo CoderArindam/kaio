@@ -6,6 +6,7 @@ export interface NavigationSearchItem {
   url: string;
   keywords: string[];
   iconType: 'dashboard' | 'check-square' | 'clock' | 'clipboard' | 'shield' | 'users' | 'kanban' | 'user' | 'key' | 'building' | 'palette' | 'bell' | 'keyboard' | 'code' | 'credit-card';
+  roles?: string[];
 }
 
 export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
@@ -13,10 +14,10 @@ export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
   {
     id: 'nav-dashboard',
     title: 'Dashboard',
-    description: 'Workspace metrics, KPIs, active meetings, and strategic projects overview',
+    description: 'Workspace metrics, active meetings, and strategic projects overview',
     category: 'Navigation',
     url: '/dashboard',
-    keywords: ['dashboard', 'home', 'kpi', 'metrics', 'overview', 'summary', 'analytics'],
+    keywords: ['dashboard', 'home', 'metrics', 'overview', 'summary', 'analytics'],
     iconType: 'dashboard',
   },
   {
@@ -45,24 +46,27 @@ export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
     url: '/timesheets/approvals',
     keywords: ['approvals', 'review timesheets', 'approve hours', 'pending timesheets', 'manager queue'],
     iconType: 'clipboard',
+    roles: ['SUPER_ADMIN', 'MANAGER'],
   },
   {
     id: 'nav-timesheet-admin',
     title: 'Timesheet Policy & Admin',
-    description: 'Configure organization timesheet policies, row locking, and approvers',
+    description: 'Configure organization timesheet policies, approvers, and export reports',
     category: 'Admin',
     url: '/timesheets/admin',
-    keywords: ['timesheet policy', 'timesheet admin', 'locking', 'approvers', 'export csv', 'overtime'],
+    keywords: ['timesheet policy', 'timesheet admin', 'approvers', 'export csv', 'overtime'],
     iconType: 'shield',
+    roles: ['SUPER_ADMIN'],
   },
   {
     id: 'nav-admin-panel',
-    title: 'Admin Panel & Health',
-    description: 'Platform system status, health monitoring, and security audit logs',
+    title: 'Admin Overview',
+    description: 'Platform overview, user statistics, and security audit logs',
     category: 'Admin',
     url: '/admin',
-    keywords: ['admin', 'system status', 'health', 'audit log', 'security logs', 'superadmin'],
+    keywords: ['admin', 'overview', 'audit log', 'security logs', 'superadmin'],
     iconType: 'shield',
+    roles: ['SUPER_ADMIN'],
   },
   {
     id: 'nav-admin-users',
@@ -72,6 +76,7 @@ export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
     url: '/admin/users',
     keywords: ['users', 'user management', 'members', 'roles', 'assign role', 'user directory'],
     iconType: 'users',
+    roles: ['SUPER_ADMIN'],
   },
   {
     id: 'nav-admin-boards',
@@ -81,6 +86,7 @@ export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
     url: '/admin/boards',
     keywords: ['board permissions', 'board access', 'permissions', 'member access'],
     iconType: 'kanban',
+    roles: ['SUPER_ADMIN'],
   },
 
   // Settings
@@ -114,10 +120,10 @@ export const SYSTEM_NAVIGATION_ITEMS: NavigationSearchItem[] = [
   {
     id: 'set-appearance',
     title: 'Appearance & Theme Settings',
-    description: 'Toggle UI theme (dark/light), density, and layout preferences',
+    description: 'Toggle UI theme (dark/light/system), accent color, and sidebar styling',
     category: 'Settings',
     url: '/settings/appearance',
-    keywords: ['appearance', 'theme', 'dark mode', 'light mode', 'ui preferences', 'density', 'color', 'settings'],
+    keywords: ['appearance', 'theme', 'dark mode', 'light mode', 'sidebar', 'color', 'settings'],
     iconType: 'palette',
   },
   {

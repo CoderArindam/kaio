@@ -27,17 +27,8 @@ async def global_search(
     org_id = current_user["organization_id"]
 
     try:
-        sql = """
-            SELECT id, title, type, board_id, task_id, org_id
-            FROM v_global_search_canonical
-            WHERE org_id = $1
-              AND (
-                  search_vector @@ plainto_tsquery('english', $2)
-                  OR title ILIKE '%' || $2 || '%'
-              )
-            LIMIT $3
-        """
-        rows = await conn.fetch(sql, org_id, query_str, limit)
+        sql = "SELECT * FROM fn_global_search($1, $2, $3, $4)"
+        rows = await conn.fetch(sql, current_user["id"], org_id, query_str, limit)
         results = [SearchResult(**dict(r)) for r in rows]
         return DataEnvelope(data=results)
     except Exception as e:

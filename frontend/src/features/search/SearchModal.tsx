@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { useUiStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { searchApi, type SearchResultItem } from '../../services/searchApi';
 import { getUsers, type User } from '../../services/usersApi';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -44,6 +45,7 @@ export interface UnifiedSearchResult {
 
 export const SearchModal: React.FC = () => {
   const { isSearchModalOpen, closeSearchModal, openTaskModal } = useUiStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const [query, setQuery] = useState('');
@@ -61,10 +63,14 @@ export const SearchModal: React.FC = () => {
       setQuery('');
       setDbResults([]);
       setSelectedIndex(0);
-      getUsers().then(setUsersList).catch(() => setUsersList([]));
+      if (user?.role === 'SUPER_ADMIN') {
+        getUsers().then(setUsersList).catch(() => setUsersList([]));
+      } else {
+        setUsersList([]);
+      }
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [isSearchModalOpen]);
+  }, [isSearchModalOpen, user?.role]);
 
   // Fetch search results
   useEffect(() => {
@@ -101,11 +107,14 @@ export const SearchModal: React.FC = () => {
 
   // 1. Filter Settings & Pages Catalog
   const matchedNavItems: UnifiedSearchResult[] = cleanQuery
-    ? SYSTEM_NAVIGATION_ITEMS.filter((item) =>
-        item.title.toLowerCase().includes(cleanQuery) ||
+    ? SYSTEM_NAVIGATION_ITEMS.filter((item) => {
+        const hasRole = !item.roles || (user?.role && item.roles.includes(user.role));
+        if (!hasRole) return false;
+        
+        return item.title.toLowerCase().includes(cleanQuery) ||
         item.description.toLowerCase().includes(cleanQuery) ||
-        item.keywords.some((k) => k.toLowerCase().includes(cleanQuery))
-      ).map((item) => ({
+        item.keywords.some((k) => k.toLowerCase().includes(cleanQuery));
+      }).map((item) => ({
         id: item.id,
         title: item.title,
         subtitle: item.description,
