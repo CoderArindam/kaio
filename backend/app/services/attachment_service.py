@@ -90,6 +90,25 @@ class AttachmentService:
             logger.error(f'Unexpected error fetching attachments for task {task_id}: {e}')
             raise HTTPException(status_code=400, detail=f'Failed to fetch attachments: {str(e)}')
 
+    async def update_attachment_annotations(self, task_id: int, attachment_id: int, annotations: list, current_user: dict):
+        try:
+            await self._verify_task_access(task_id, current_user)
+            
+            result = await self.conn.fetchval(
+                "SELECT fn_update_attachment_annotations($1, $2)",
+                attachment_id,
+                json.dumps(annotations)
+            )
+            if not result:
+                raise HTTPException(status_code=404, detail="Attachment not found")
+                
+            return json.loads(result) if isinstance(result, str) else result
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f'Unexpected error updating annotations for attachment {attachment_id}: {e}')
+            raise HTTPException(status_code=400, detail=f'Failed to update annotations: {str(e)}')
+
     async def delete_attachment(self, attachment_id: int, current_user: dict):
         try:
             # Execute DB deletion first (fn_delete_attachment verifies record exists and returns file_url & task_id)

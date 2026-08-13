@@ -12,6 +12,7 @@ export interface Attachment {
   uploader_first_name?: string | null;
   uploader_last_name?: string | null;
   uploader_avatar_url?: string | null;
+  annotations?: any[];
 }
 
 export const getTaskAttachments = async (taskId: number): Promise<Attachment[]> => {
@@ -52,5 +53,14 @@ export const uploadAttachment = async (
 
 export const deleteAttachment = async (attachmentId: number): Promise<{ success: boolean; id: number }> => {
   const response = await api.delete(`/attachments/${attachmentId}`);
+  return response.data;
+};
+
+export const updateAttachmentAnnotations = async (
+  taskId: number,
+  attachmentId: number,
+  annotations: any[]
+): Promise<Attachment> => {
+  const response = await api.put(`/tasks/${taskId}/attachments/${attachmentId}/annotations`, { annotations });
   return response.data;
 };

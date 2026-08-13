@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Upload, Camera, Trash2, Maximize2, Download } from 'lucide-react';
-import { uploadNoteImage, uploadScreenshot } from '../../../services/notesApi';
+import { uploadNoteImage } from '../../../services/notesApi';
 import toast from 'react-hot-toast';
 import { resolveUrl, normalizeAnnotations, drawAnnotations } from './annotationUtils';
 import { AnnotationModal } from './AnnotationModal';
@@ -93,7 +93,7 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
     img.src = `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
   };
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = React.useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return toast.error('Please select an image file');
     if (file.size > 10 * 1024 * 1024) return toast.error('Image must be under 10 MB');
     setIsUploading(true);
@@ -106,33 +106,53 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
     } finally {
       setIsUploading(false);
     }
+  }, [noteId, onImageChange, onAnnotationsChange]);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleFileUpload(file);
+            break;
+          }
+        }
+      }
+    };
+    
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handleFileUpload]);
+
+  const getScreenshotShortcut = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    if (userAgent.includes('mac')) return 'Cmd + Shift + 4';
+    return 'Win + Shift + S';
   };
 
   const handleScreenshot = async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      await video.play();
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d')!.drawImage(video, 0, 0);
-      stream.getTracks().forEach((t) => t.stop());
-      const dataUrl = canvas.toDataURL('image/png');
-      setIsUploading(true);
-      const result = await uploadScreenshot(dataUrl);
-      onImageChange(result.image_url);
-      onAnnotationsChange([]);
-      // Auto-open annotation modal after screenshot
-      setTimeout(() => setIsModalOpen(true), 300);
-    } catch (err) {
-      const msg = (err as Error).message || '';
-      if (!msg.toLowerCase().includes('cancel') && !msg.toLowerCase().includes('abort')) {
-        toast.error('Screenshot failed or was cancelled');
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        const imageTypes = item.types.filter(type => type.startsWith('image/'));
+        if (imageTypes.length > 0) {
+          const blob = await item.getType(imageTypes[0]);
+          const file = new File([blob], 'clipboard-image.png', { type: blob.type });
+          await handleFileUpload(file);
+          setTimeout(() => setIsModalOpen(true), 300);
+          return;
+        }
       }
-    } finally {
-      setIsUploading(false);
+      toast(`No image found. Press ${getScreenshotShortcut()} then try again.`, { icon: '📸' });
+    } catch (err) {
+      console.error('Clipboard access error:', err);
+      toast(`Clipboard access denied. Press ${getScreenshotShortcut()} then Paste (Ctrl+V).`, { icon: '📸' });
     }
   };
 
@@ -143,7 +163,7 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
           <Upload className="w-7 h-7 text-violet-500" />
         </div>
         <p className="text-[13px] text-brand-text-muted text-center max-w-xs">
-          Upload an image or capture a screenshot to start annotating
+          Upload an image or paste a screenshot to start annotating
         </p>
         <div className="flex gap-3">
           <button
@@ -158,7 +178,7 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
             disabled={isUploading}
             className="flex items-center gap-2 px-4 py-2 bg-brand-surface border border-brand-border rounded-xl text-[13px] font-medium text-brand-text hover:bg-brand-surface-low transition-all disabled:opacity-50"
           >
-            <Camera className="w-4 h-4" /> {isUploading ? 'Processing...' : 'Screenshot'}
+            <Camera className="w-4 h-4" /> {isUploading ? 'Processing...' : 'Paste Screenshot'}
           </button>
         </div>
         <input
@@ -166,7 +186,10 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileUpload(file);
+          }}
         />
       </div>
     );
@@ -197,7 +220,7 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
           </button>
           <button
             onClick={handleScreenshot}
-            title="New screenshot"
+            title="Paste new screenshot"
             className="p-1.5 rounded-md text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-low transition-all"
           >
             <Camera className="w-3.5 h-3.5" />
@@ -222,7 +245,10 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => { e.target.files?.[0] && handleFileUpload(e.target.files[0]); }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileUpload(file);
+          }}
         />
       </div>
 

@@ -59,3 +59,18 @@ async def delete_attachment(
     """
     result = await attachment_service.delete_attachment(attachment_id, current_user)
     return result
+
+@router.put("/tasks/{task_id}/attachments/{attachment_id}/annotations")
+async def update_attachment_annotations(
+    task_id: int,
+    attachment_id: int,
+    annotations_data: dict,
+    current_user: dict = Depends(get_current_user),
+    attachment_service: AttachmentService = Depends(get_attachment_service)
+):
+    """
+    Updates the annotations metadata for a specific attachment.
+    """
+    annotations = annotations_data.get("annotations", [])
+    result = await attachment_service.update_attachment_annotations(task_id, attachment_id, annotations, current_user)
+    return result

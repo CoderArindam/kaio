@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Paperclip, UploadCloud, Loader2, FileText, Download, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
-import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachment, type Attachment } from '../../../../../services/attachmentsApi';
+import { Paperclip, UploadCloud, Loader2, FileText, Download, Trash2, ExternalLink, Link as LinkIcon, Pencil } from 'lucide-react';
+import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachment, updateAttachmentAnnotations, type Attachment } from '../../../../../services/attachmentsApi';
+import { AnnotationModal } from '../../../../notes/components/AnnotationModal';
+import { drawAnnotations, normalizeAnnotations } from '../../../../notes/components/annotationUtils';
 import { type Task } from '../../../../../services/tasksApi';
 import toast from 'react-hot-toast';
 import { useActivityStore } from '../../../../../store/activityStore';
@@ -40,6 +42,51 @@ const getHostname = (url: string) => {
   }
 };
 
+const AnnotatedThumbnail: React.FC<{ url: string; alt: string; annotations: any[] }> = ({ url, alt, annotations }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const normalized = normalizeAnnotations(annotations);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img || !url) return;
+
+    const draw = () => {
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAnnotations(ctx, normalized);
+    };
+
+    if (img.complete && img.naturalWidth > 0) {
+      draw();
+    } else {
+      img.onload = draw;
+    }
+  }, [normalized, url]);
+
+  return (
+    <>
+      <img
+        ref={imgRef}
+        src={url}
+        alt={alt}
+        crossOrigin="anonymous"
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        onError={(e) => {
+          (e.target as HTMLElement).style.display = 'none';
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none object-cover group-hover:scale-105 transition-transform duration-300"
+      />
+    </>
+  );
+};
+
 const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +96,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
   const [uploadingFileName, setUploadingFileName] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [attachmentToDelete, setAttachmentToDelete] = useState<Attachment | null>(null);
+  const [annotatingAttachment, setAnnotatingAttachment] = useState<Attachment | null>(null);
 
   // Optional legacy URL form state
   const [showUrlForm, setShowUrlForm] = useState(false);
@@ -220,6 +268,22 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
     submitLink(urlAddress, urlName);
   };
 
+  const handleSaveAnnotations = async (annotations: any[]) => {
+    if (!annotatingAttachment) return;
+    try {
+      await updateAttachmentAnnotations(task.id, annotatingAttachment.id, annotations);
+      setAttachments((prev) =>
+        prev.map((a) => (a.id === annotatingAttachment.id ? { ...a, annotations } : a))
+      );
+      toast.success('Annotations saved');
+    } catch (error) {
+      console.error('Failed to save annotations', error);
+      toast.error('Failed to save annotations');
+    } finally {
+      setAnnotatingAttachment(null);
+    }
+  };
+
   return (
     <section className="space-y-4">
       {/* Hidden native file input */}
@@ -351,15 +415,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
                 {/* Thumbnail / Icon Container */}
                 <div className="aspect-video bg-brand-surface-low flex items-center justify-center overflow-hidden relative">
                   {isImg ? (
-                    <img
-                      src={fullUrl}
-                      alt={att.file_name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        // Fallback icon if image fails to load
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+                    <AnnotatedThumbnail url={fullUrl} alt={att.file_name} annotations={att.annotations || []} />
                   ) : isExternalLink && hostname ? (
                     <div className="flex flex-col items-center justify-center w-full h-full bg-brand-surface group-hover:text-brand-primary transition">
                       <img 
@@ -381,6 +437,19 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
 
                   {/* Hover Overlay with Actions */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                    {isImg && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAnnotatingAttachment(att);
+                        }}
+                        className="p-2 rounded-full bg-white/90 text-gray-800 hover:bg-white transition hover:scale-110"
+                        title="Annotate Image"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
                     <a
                       href={fullUrl}
                       target="_blank"
@@ -462,6 +531,15 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
           </div>
         </div>
       </Modal>
+
+      {annotatingAttachment && (
+        <AnnotationModal
+          imageUrl={getFileUrl(annotatingAttachment.file_url)}
+          annotations={annotatingAttachment.annotations || []}
+          onClose={() => setAnnotatingAttachment(null)}
+          onSave={handleSaveAnnotations}
+        />
+      )}
     </section>
   );
 };

@@ -223,7 +223,7 @@ export const ApplicationSidebar: React.FC = () => {
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className={`space-y-1 ${filteredOtherBoards.length > 3 ? 'max-h-[132px] overflow-y-auto custom-scrollbar pr-1' : ''}`}>
             {filteredOtherBoards.map(renderBoardItem)}
             
             {filteredOtherBoards.length === 0 && filteredFavoriteBoards.length === 0 && !isSidebarCollapsed && (
