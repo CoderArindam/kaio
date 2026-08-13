@@ -17,7 +17,7 @@ class ActivityService:
             if not has_access:
                 raise HTTPException(status_code=403, detail="Task not found or access denied")
 
-            query = "SELECT * FROM v_activities_canonical WHERE entity_type = 'TASK' AND entity_id = $1"
+            query = "SELECT * FROM v_activities_canonical WHERE entity_type IN ('TASK', 'COMMENT') AND entity_id = $1"
             args = [task_id]
             
             if cursor is not None:

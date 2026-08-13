@@ -9,7 +9,7 @@ interface ActivityState {
   loading: Record<number, boolean>;
   error: Record<number, string | null>;
   
-  fetchActivity: (taskId: number, limit?: number) => Promise<void>;
+  fetchActivity: (taskId: number, limit?: number, reset?: boolean) => Promise<void>;
   appendActivity: (taskId: number, activity: Partial<Activity> & { entity_type: string, entity_id: number, activity_type: string }) => void;
   clearActivity: (taskId: number) => void;
 }

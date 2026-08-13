@@ -32,10 +32,6 @@ const ITEMS_PER_PAGE = 25;
 export const ApprovalQueuePage: React.FC = () => {
   const { user } = useAuthStore();
 
-  // RBAC Gate: Redirect regular members to /timesheets
-  if (user && !isManagerOrAdmin(user)) {
-    return <Navigate to="/timesheets" replace />;
-  }
 
   // Summary state
   const [summary, setSummary] = useState<ApprovalQueueSummary | null>(null);
@@ -152,6 +148,11 @@ export const ApprovalQueuePage: React.FC = () => {
         return <Badge variant="secondary">{status.toUpperCase()}</Badge>;
     }
   };
+
+  // RBAC Gate: Redirect regular members to /timesheets
+  if (user && !isManagerOrAdmin(user)) {
+    return <Navigate to="/timesheets" replace />;
+  }
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0 p-6 max-w-7xl mx-auto w-full min-w-0 space-y-6">

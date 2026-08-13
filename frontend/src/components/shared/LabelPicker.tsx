@@ -151,7 +151,10 @@ export const LabelPicker: React.FC<LabelPickerProps> = ({
         name: newLabelName.trim(),
         color: selectedColor,
       });
-      setBoardLabels((prev) => [...prev, created]);
+      setBoardLabels((prev) => {
+        if (prev.find((l) => l.id === created.id)) return prev;
+        return [...prev, created];
+      });
       setNewLabelName('');
       setIsCreating(false);
 

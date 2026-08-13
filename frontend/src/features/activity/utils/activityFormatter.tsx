@@ -10,6 +10,9 @@ import {
   Trash2, 
   Clock3,
   Bell,
+  Tag,
+  Smile,
+  Timer,
   type LucideIcon
 } from 'lucide-react';
 import type { CanonicalActivity as Activity } from '../../../services/activityApi';
@@ -22,6 +25,7 @@ export interface FormattedActivity {
   title: string;
   description: React.ReactNode;
   accentColor: string;
+  diffContent?: { old: string | null; new: string | null };
 }
 
 const getAssigneeDisplayName = (assignedToId: number | null | undefined, nameInPayload?: string | null): string | null => {
@@ -100,7 +104,11 @@ export const formatActivity = (
         icon: Edit3,
         title: 'Description updated',
         description: `${actorName} updated the task description`,
-        accentColor: 'text-brand-primary bg-brand-primary/10 border-brand-primary/20'
+        accentColor: 'text-brand-primary bg-brand-primary/10 border-brand-primary/20',
+        diffContent: {
+          old: activity.old_value?.description || null,
+          new: activity.new_value?.description || null
+        }
       };
     }
 
@@ -276,8 +284,32 @@ export const formatActivity = (
       return {
         icon: MessageCircle,
         title: 'Comment replied',
-        description: `${actorName} replied to your comment`,
+        description: `${actorName} replied to a comment`,
         accentColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+      };
+
+    case ACTIVITY_TYPES.COMMENT_REACTION_ADDED:
+      return {
+        icon: Smile,
+        title: 'Reaction added',
+        description: (
+          <span>
+            {actorName} reacted with <strong>{activity.new_value?.emoji}</strong> to a comment
+          </span>
+        ),
+        accentColor: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20'
+      };
+
+    case ACTIVITY_TYPES.COMMENT_REACTION_REMOVED:
+      return {
+        icon: Smile,
+        title: 'Reaction removed',
+        description: (
+          <span>
+            {actorName} removed <strong>{activity.new_value?.emoji}</strong> reaction from a comment
+          </span>
+        ),
+        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
       };
 
     case ACTIVITY_TYPES.ATTACHMENT_ADDED:
@@ -287,6 +319,69 @@ export const formatActivity = (
         description: (
           <span>
             {actorName} attached <strong>{activity.new_value?.file_name}</strong>
+          </span>
+        ),
+        accentColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+      };
+
+    case ACTIVITY_TYPES.ATTACHMENT_REMOVED:
+      return {
+        icon: Trash2,
+        title: 'Attachment removed',
+        description: (
+          <span>
+            {actorName} removed attachment <strong>{activity.new_value?.file_name}</strong>
+          </span>
+        ),
+        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
+      };
+
+    case ACTIVITY_TYPES.LABEL_ADDED:
+      return {
+        icon: Tag,
+        title: 'Label added',
+        description: (
+          <span>
+            {actorName} added label <strong>{activity.new_value?.label_name}</strong>
+          </span>
+        ),
+        accentColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+      };
+
+    case ACTIVITY_TYPES.LABEL_REMOVED:
+      return {
+        icon: Tag,
+        title: 'Label removed',
+        description: (
+          <span>
+            {actorName} removed label <strong>{activity.new_value?.label_name}</strong>
+          </span>
+        ),
+        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
+      };
+
+    case ACTIVITY_TYPES.ESTIMATE_CHANGED: {
+      const oldEst = activity.old_value?.estimate_hours;
+      const newEst = activity.new_value?.estimate_hours;
+      return {
+        icon: Timer,
+        title: 'Estimate changed',
+        description: (
+          <span>
+            {actorName} {oldEst && newEst ? <>changed estimate from <del className="text-brand-text-muted">{oldEst}h</del> to <strong className="text-brand-text-primary">{newEst}h</strong></> : newEst ? <>set estimate to <strong className="text-brand-text-primary">{newEst}h</strong></> : 'removed the estimate'}
+          </span>
+        ),
+        accentColor: 'text-orange-500 bg-orange-500/10 border-orange-500/20'
+      };
+    }
+
+    case ACTIVITY_TYPES.TIME_LOGGED:
+      return {
+        icon: Clock3,
+        title: 'Time logged',
+        description: (
+          <span>
+            {actorName} logged <strong className="text-brand-text-primary">{activity.new_value?.hours}h</strong>
           </span>
         ),
         accentColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20'

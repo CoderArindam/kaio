@@ -150,6 +150,9 @@ export function useWebSocket(): { isConnected: boolean } {
           if (eventBoardId && activeBoardId && eventBoardId === activeBoardId) {
             applyWsEvent(type, msg);
           }
+          if (type.startsWith('task')) {
+             window.dispatchEvent(new CustomEvent('kaio:task_updated', { detail: msg }));
+          }
           fetchNotifications();
           break;
         }

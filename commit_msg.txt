@@ -1,20 +1,21 @@
-chore: comprehensive architecture cleanup and bug fixes
+feat: comprehensive activity logging and timeline enhancements
 
-This commit encompasses a thorough audit and cleanup across the stack, along with several UI and database migration fixes.
+This update brings a significant overhaul to the activity tracking system, introducing granular logging capabilities and a more interactive, filterable activity timeline on the frontend. It also includes several UI UX improvements for attachments and labels.
 
-**Backend Audit & Cleanup**:
-- Removed redundant pipeline stages (`diarization.py`, `transcription.py`) and unused `mapping_service.py`.
-- Cleaned up unused imports and refined `speaker.py`, `context.py`, `factory.py`, and `main.py`.
+Database & Backend:
+- Added migration to expand activity logging across attachments, labels, time tracking, task estimates, and comment reactions.
+- Updated database functions and triggers to correctly log activities for all granular actions.
+- Updated the backend activity service to return both TASK and COMMENT related activities in the same feed.
+- Added new activity types to backend constants (TIME_LOGGED, ESTIMATE_CHANGED, LABEL_ADDED/REMOVED, COMMENT_REACTION_ADDED/REMOVED, etc.).
 
-**Frontend Architecture Cleanup**:
-- Removed unused frontend UI index and unused dashboard widgets (`BoardsOverviewWidget`, `PendingProposalsWidget`).
-- Removed deprecated `timesheetReportsApi.ts`.
-- Cleaned up unused imports in various API services and state stores (`adminApi.ts`, `meetingApi.ts`, `boardStore.ts`).
-- Fixed active tab highlighting state in Project Settings and Application Sidebar.
+Frontend Timeline & Activity:
+- Revamped `ActivityTimeline` with search functionality, sorting (newest/oldest), and category filters (Comments, Status, Files, Details).
+- Introduced a diff viewer within `ActivityItem` to visualize "before" and "after" states for changes like task descriptions.
+- Formatted all newly introduced activity types with appropriate icons, colors, and descriptive text.
+- Enhanced real-time updates by dispatching global WebSocket events for task and comment changes.
+- Updated `activityStore` to support resetting activity feeds during real-time refreshes.
 
-**Database & Schema**:
-- Fixed chronological ordering of database migrations by renaming scripts (032 -> 032a/032b, 085 -> 087, 086 -> 088).
-- Added `089_cleanup_orphaned_objects.sql` to remove orphaned database objects and optimize schema.
-
-**Documentation**:
-- Updated architecture documentation (backend, frontend, DB, AI), component references, and glossary to accurately reflect the current system state.
+UI/UX & Bug Fixes:
+- Replaced the native browser alert with a custom Confirmation Modal when deleting attachments in `AttachmentsTab`.
+- Fixed a bug in `LabelPicker` that caused duplicate label entries in the UI state upon creation.
+- Resolved a React hook order issue in `ApprovalQueuePage` by moving the RBAC gate below state initialization.

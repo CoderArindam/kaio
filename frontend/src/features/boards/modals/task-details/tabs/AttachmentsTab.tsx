@@ -4,7 +4,7 @@ import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachmen
 import { type Task } from '../../../../../services/tasksApi';
 import toast from 'react-hot-toast';
 import { useActivityStore } from '../../../../../store/activityStore';
-
+import Modal from '../../../../../components/common/Modal';
 interface AttachmentsTabProps {
   task: Task;
 }
@@ -48,6 +48,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFileName, setUploadingFileName] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<Attachment | null>(null);
 
   // Optional legacy URL form state
   const [showUrlForm, setShowUrlForm] = useState(false);
@@ -198,14 +199,15 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
     }
   };
 
-  const handleDelete = async (att: Attachment) => {
-    if (!window.confirm(`Are you sure you want to delete "${att.file_name}"?`)) return;
+  const confirmDelete = async () => {
+    if (!attachmentToDelete) return;
 
-    setDeletingId(att.id);
+    setDeletingId(attachmentToDelete.id);
     try {
-      await deleteAttachment(att.id);
-      setAttachments((prev) => prev.filter((a) => a.id !== att.id));
+      await deleteAttachment(attachmentToDelete.id);
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
       toast.success('Attachment deleted');
+      setAttachmentToDelete(null);
     } catch (error) {
       console.error('Failed to delete attachment', error);
       toast.error('Failed to delete attachment');
@@ -213,7 +215,6 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
       setDeletingId(null);
     }
   };
-
   const handleAddUrl = () => {
     if (!urlAddress) return;
     submitLink(urlAddress, urlName);
@@ -393,7 +394,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(att);
+                        setAttachmentToDelete(att);
                       }}
                       disabled={deletingId === att.id}
                       className="p-2 rounded-full bg-red-600/90 text-white hover:bg-red-600 transition hover:scale-110 disabled:opacity-50"
@@ -430,6 +431,37 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
           })}
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={!!attachmentToDelete}
+        onClose={() => setAttachmentToDelete(null)}
+        title="Delete Attachment"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-brand-text">
+            Are you sure you want to delete <span className="font-semibold">"{attachmentToDelete?.file_name}"</span>? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setAttachmentToDelete(null)}
+              className="px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface-low rounded-md transition"
+              disabled={deletingId !== null}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={deletingId !== null}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition flex items-center justify-center gap-2 min-w-[100px]"
+            >
+              {deletingId !== null ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 };

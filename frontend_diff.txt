@@ -1,0 +1,775 @@
+﻿diff --git a/frontend/src/components/shared/LabelPicker.tsx b/frontend/src/components/shared/LabelPicker.tsx
+index fc87f5b..def76ed 100644
+--- a/frontend/src/components/shared/LabelPicker.tsx
++++ b/frontend/src/components/shared/LabelPicker.tsx
+@@ -151,7 +151,10 @@ export const LabelPicker: React.FC<LabelPickerProps> = ({
+         name: newLabelName.trim(),
+         color: selectedColor,
+       });
+-      setBoardLabels((prev) => [...prev, created]);
++      setBoardLabels((prev) => {
++        if (prev.find((l) => l.id === created.id)) return prev;
++        return [...prev, created];
++      });
+       setNewLabelName('');
+       setIsCreating(false);
+ 
+diff --git a/frontend/src/constants/activityTypes.ts b/frontend/src/constants/activityTypes.ts
+index a922f64..a331fb9 100644
+--- a/frontend/src/constants/activityTypes.ts
++++ b/frontend/src/constants/activityTypes.ts
+@@ -9,10 +9,17 @@ export const ACTIVITY_TYPES = {
+   REPORTER_CHANGED: 'REPORTER_CHANGED',
+   COMMENT_ADDED: 'COMMENT_ADDED',
+   COMMENT_DELETED: 'COMMENT_DELETED',
++  COMMENT_UPDATED: 'COMMENT_UPDATED',
+   MENTIONED_IN_COMMENT: 'MENTIONED_IN_COMMENT',
+   COMMENT_REPLIED: 'COMMENT_REPLIED',
++  COMMENT_REACTION_ADDED: 'COMMENT_REACTION_ADDED',
++  COMMENT_REACTION_REMOVED: 'COMMENT_REACTION_REMOVED',
+   ATTACHMENT_ADDED: 'ATTACHMENT_ADDED',
+   ATTACHMENT_REMOVED: 'ATTACHMENT_REMOVED',
++  TIME_LOGGED: 'TIME_LOGGED',
++  ESTIMATE_CHANGED: 'ESTIMATE_CHANGED',
++  LABEL_ADDED: 'LABEL_ADDED',
++  LABEL_REMOVED: 'LABEL_REMOVED',
+   BOARD_CREATED: 'BOARD_CREATED',
+   BOARD_MEMBER_ADDED: 'BOARD_MEMBER_ADDED',
+   BOARD_MEMBER_REMOVED: 'BOARD_MEMBER_REMOVED',
+diff --git a/frontend/src/features/activity/components/ActivityItem.tsx b/frontend/src/features/activity/components/ActivityItem.tsx
+index c3ef207..f94afde 100644
+--- a/frontend/src/features/activity/components/ActivityItem.tsx
++++ b/frontend/src/features/activity/components/ActivityItem.tsx
+@@ -1,8 +1,9 @@
+-import React from 'react';
++import React, { useState } from 'react';
+ import type { Activity } from '../../../services/activityApi';
+ import { formatActivity } from '../utils/activityFormatter';
+ import ActivityAvatar from './ActivityAvatar';
+ import ActivityIcon from './ActivityIcon';
++import { ChevronDown, ChevronUp } from 'lucide-react';
+ 
+ interface ActivityItemProps {
+   activity: Activity;
+@@ -11,6 +12,7 @@ interface ActivityItemProps {
+ 
+ const ActivityItem: React.FC<ActivityItemProps> = ({ activity, isLast = false }) => {
+   const formatted = formatActivity(activity);
++  const [showDiff, setShowDiff] = useState(false);
+ 
+   // Formatting relative time e.g., "2 minutes ago"
+   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+@@ -41,13 +43,44 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ activity, isLast = false })
+ 
+       <div className="flex-1 pb-6 mt-[2px]">
+         <div className="flex items-baseline justify-between gap-4">
+-          <p className="text-sm text-brand-text-primary leading-tight">
++          <div className="text-sm text-brand-text-primary leading-tight">
+             {formatted.description}
+-          </p>
++            {formatted.diffContent && (
++              <button 
++                onClick={() => setShowDiff(!showDiff)}
++                className="ml-2 text-xs font-medium text-brand-primary hover:underline inline-flex items-center gap-1"
++              >
++                {showDiff ? (
++                  <>Hide changes <ChevronUp className="w-3 h-3" /></>
++                ) : (
++                  <>View changes <ChevronDown className="w-3 h-3" /></>
++                )}
++              </button>
++            )}
++          </div>
+           <span className="text-xs text-brand-text-muted whitespace-nowrap flex-shrink-0" title={new Date(activity.created_at).toLocaleString()}>
+             {getRelativeTime(activity.created_at)}
+           </span>
+         </div>
++        
++        {formatted.diffContent && showDiff && (
++          <div className="mt-3 p-3 bg-brand-surface-low rounded border border-brand-border text-xs overflow-hidden">
++            <div className="grid grid-cols-2 gap-4">
++              <div>
++                <span className="block text-brand-text-muted font-semibold mb-1 uppercase tracking-wider text-[10px]">Previous</span>
++                <div className="text-brand-text-secondary whitespace-pre-wrap break-words opacity-70 line-through bg-red-500/5 p-2 rounded">
++                  {formatted.diffContent.old || <span className="italic text-brand-text-muted">None</span>}
++                </div>
++              </div>
++              <div>
++                <span className="block text-brand-text-muted font-semibold mb-1 uppercase tracking-wider text-[10px]">New</span>
++                <div className="text-brand-text-primary whitespace-pre-wrap break-words bg-green-500/5 p-2 rounded">
++                  {formatted.diffContent.new || <span className="italic text-brand-text-muted">None</span>}
++                </div>
++              </div>
++            </div>
++          </div>
++        )}
+       </div>
+     </div>
+   );
+diff --git a/frontend/src/features/activity/components/ActivityTimeline.tsx b/frontend/src/features/activity/components/ActivityTimeline.tsx
+index a1c6e69..7042dc4 100644
+--- a/frontend/src/features/activity/components/ActivityTimeline.tsx
++++ b/frontend/src/features/activity/components/ActivityTimeline.tsx
+@@ -1,40 +1,55 @@
+-import React, { useEffect } from 'react';
+-import { useActivityStore } from '../../../store/activityStore';
+-import type { Activity } from '../../../services/activityApi';
+-import ActivityGroup from './ActivityGroup';
+-import ActivitySkeleton from './ActivitySkeleton';
+-import ActivityEmptyState from './ActivityEmptyState';
++import React, { useEffect, useState, useMemo } from "react";
++import { useActivityStore } from "../../../store/activityStore";
++import type { Activity } from "../../../services/activityApi";
++import { ACTIVITY_TYPES } from "../../../constants/activityTypes";
++import { formatActivity } from "../utils/activityFormatter";
++import ActivityGroup from "./ActivityGroup";
++import ActivitySkeleton from "./ActivitySkeleton";
++import ActivityEmptyState from "./ActivityEmptyState";
++import {
++  Search,
++  ArrowDownWideNarrow,
++  ArrowUpNarrowWide,
++  Loader2,
++} from "lucide-react";
+ 
+ interface ActivityTimelineProps {
+   taskId: number;
+ }
+ 
+ // Helper to group activities by date
+-const groupActivities = (activities: Activity[]) => {
++const groupActivities = (activities: Activity[], sortOrder: "desc" | "asc") => {
+   const groups: Record<string, Activity[]> = {};
+-  
++
+   const today = new Date();
+   today.setHours(0, 0, 0, 0);
+-  
++
+   const yesterday = new Date(today);
+   yesterday.setDate(yesterday.getDate() - 1);
+ 
+-  activities.forEach(activity => {
++  activities.forEach((activity) => {
+     const activityDate = new Date(activity.created_at);
+     const dateOnly = new Date(activityDate);
+     dateOnly.setHours(0, 0, 0, 0);
+ 
+-    let label = '';
++    let label = "";
+     if (dateOnly.getTime() === today.getTime()) {
+-      label = 'Today';
++      label = "Today";
+     } else if (dateOnly.getTime() === yesterday.getTime()) {
+-      label = 'Yesterday';
++      label = "Yesterday";
+     } else if (today.getTime() - dateOnly.getTime() < 7 * 24 * 60 * 60 * 1000) {
+-      label = 'Earlier this week';
+-    } else if (today.getTime() - dateOnly.getTime() < 30 * 24 * 60 * 60 * 1000) {
+-      label = 'Earlier this month';
++      label = "Earlier this week";
++    } else if (
++      today.getTime() - dateOnly.getTime() <
++      30 * 24 * 60 * 60 * 1000
++    ) {
++      label = "Earlier this month";
+     } else {
+-      label = activityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
++      label = activityDate.toLocaleDateString("en-US", {
++        month: "short",
++        day: "numeric",
++        year: "numeric",
++      });
+     }
+ 
+     if (!groups[label]) {
+@@ -43,14 +58,71 @@ const groupActivities = (activities: Activity[]) => {
+     groups[label].push(activity);
+   });
+ 
+-  return groups;
++  // Sort groups by date if needed, though they are usually populated in order
++  const sortedLabels = Object.keys(groups).sort((a, b) => {
++    // If it's a known string like Today, it should be at top for 'desc'
++    const getScore = (l: string) => {
++      if (l === "Today") return 0;
++      if (l === "Yesterday") return 1;
++      if (l === "Earlier this week") return 2;
++      if (l === "Earlier this month") return 3;
++      return 4; // for specific dates, we can rely on parsing or assume it's older
++    };
++
++    // For specific dates, we should parse them.
++    const isDateA = ![
++      "Today",
++      "Yesterday",
++      "Earlier this week",
++      "Earlier this month",
++    ].includes(a);
++    const isDateB = ![
++      "Today",
++      "Yesterday",
++      "Earlier this week",
++      "Earlier this month",
++    ].includes(b);
++
++    if (isDateA && isDateB) {
++      const timeA = new Date(a).getTime();
++      const timeB = new Date(b).getTime();
++      return sortOrder === "desc" ? timeB - timeA : timeA - timeB;
++    }
++
++    const scoreA = getScore(a);
++    const scoreB = getScore(b);
++    return sortOrder === "desc" ? scoreA - scoreB : scoreB - scoreA;
++  });
++
++  const sortedGroups: Record<string, Activity[]> = {};
++  sortedLabels.forEach((label) => {
++    sortedGroups[label] = groups[label];
++  });
++
++  return sortedGroups;
+ };
+ 
++type FilterCategory = "all" | "comments" | "status" | "attachments" | "details";
++
++const filterCategories = [
++  { id: "all", label: "All" },
++  { id: "comments", label: "Comments" },
++  { id: "status", label: "Status & Assg" },
++  { id: "attachments", label: "Files" },
++  { id: "details", label: "Details" },
++] as const;
++
+ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ taskId }) => {
+-  const { activitiesByTask, loading, error, fetchActivity } = useActivityStore();
++  const { activitiesByTask, loading, error, fetchActivity, hasMoreByTask } =
++    useActivityStore();
+   const activities = activitiesByTask[taskId];
+   const isLoading = loading[taskId];
+   const errorMessage = error[taskId];
++  const hasMore = hasMoreByTask[taskId];
++
++  const [searchQuery, setSearchQuery] = useState("");
++  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
++  const [activeFilter, setActiveFilter] = useState<FilterCategory>("all");
+ 
+   useEffect(() => {
+     // Only fetch if we don't have activities for this task yet
+@@ -59,6 +131,120 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ taskId }) => {
+     }
+   }, [taskId, activities, isLoading, errorMessage, fetchActivity]);
+ 
++  useEffect(() => {
++    const handleUpdate = (e: any) => {
++      const detail = e.detail;
++      // If the event corresponds to this task, refresh activity
++      if (detail && (detail.task_id === taskId || detail.id === taskId)) {
++        fetchActivity(taskId, 50, true);
++      } else if (!detail) {
++        // Fallback if no detail is provided
++        fetchActivity(taskId, 50, true);
++      }
++    };
++
++    window.addEventListener("kaio:task_updated", handleUpdate);
++    window.addEventListener("kaio:comment_updated", handleUpdate);
++
++    return () => {
++      window.removeEventListener("kaio:task_updated", handleUpdate);
++      window.removeEventListener("kaio:comment_updated", handleUpdate);
++    };
++  }, [taskId, fetchActivity]);
++
++  const handleLoadMore = () => {
++    if (!isLoading) {
++      fetchActivity(taskId, 50, false);
++    }
++  };
++
++  const filteredActivities = useMemo(() => {
++    if (!activities) return [];
++
++    let result = [...activities];
++
++    // 1. Filter by category
++    if (activeFilter !== "all") {
++      result = result.filter((activity) => {
++        const type = activity.activity_type;
++        switch (activeFilter) {
++          case "comments":
++            return ([
++              ACTIVITY_TYPES.COMMENT_ADDED,
++              ACTIVITY_TYPES.COMMENT_DELETED,
++              ACTIVITY_TYPES.COMMENT_UPDATED,
++              ACTIVITY_TYPES.MENTIONED_IN_COMMENT,
++              ACTIVITY_TYPES.COMMENT_REPLIED,
++              ACTIVITY_TYPES.COMMENT_REACTION_ADDED,
++              ACTIVITY_TYPES.COMMENT_REACTION_REMOVED,
++            ] as string[]).includes(type);
++          case "status":
++            return ([
++              ACTIVITY_TYPES.STATUS_CHANGED,
++              ACTIVITY_TYPES.ASSIGNEE_CHANGED,
++              ACTIVITY_TYPES.REPORTER_CHANGED,
++            ] as string[]).includes(type);
++          case "attachments":
++            return ([
++              ACTIVITY_TYPES.ATTACHMENT_ADDED,
++              ACTIVITY_TYPES.ATTACHMENT_REMOVED,
++            ] as string[]).includes(type);
++          case "details":
++            return ([
++              ACTIVITY_TYPES.TITLE_CHANGED,
++              ACTIVITY_TYPES.DESCRIPTION_CHANGED,
++              ACTIVITY_TYPES.PRIORITY_CHANGED,
++              ACTIVITY_TYPES.DUE_DATE_CHANGED,
++              ACTIVITY_TYPES.TIME_LOGGED,
++              ACTIVITY_TYPES.ESTIMATE_CHANGED,
++              ACTIVITY_TYPES.LABEL_ADDED,
++              ACTIVITY_TYPES.LABEL_REMOVED,
++            ] as string[]).includes(type);
++          default:
++            return true;
++        }
++      });
++    }
++
++    // 2. Search filtering
++    if (searchQuery.trim()) {
++      const lowerQuery = searchQuery.toLowerCase();
++      result = result.filter((activity) => {
++        // Simple search inside actor name or formatted description
++        const formatted = formatActivity(activity);
++
++        // Extract string from ReactNode description if possible
++        let descText = "";
++        if (typeof formatted.description === "string") {
++          descText = formatted.description;
++        } else if (React.isValidElement(formatted.description)) {
++          // Basic stringification for search
++          const extractText = (node: any): string => {
++            if (typeof node === "string") return node;
++            if (Array.isArray(node)) return node.map(extractText).join("");
++            if (node && node.props && node.props.children)
++              return extractText(node.props.children);
++            return "";
++          };
++          descText = extractText(formatted.description);
++        }
++
++        return (
++          descText.toLowerCase().includes(lowerQuery) ||
++          (activity.actor_first_name &&
++            activity.actor_first_name.toLowerCase().includes(lowerQuery))
++        );
++      });
++    }
++
++    // 3. Sorting
++    if (sortOrder === "asc") {
++      result.reverse();
++    }
++
++    return result;
++  }, [activities, activeFilter, searchQuery, sortOrder]);
++
+   if (errorMessage) {
+     return (
+       <div className="p-4 text-center text-sm text-red-500 bg-red-500/10 rounded-lg">
+@@ -77,21 +263,89 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ taskId }) => {
+     );
+   }
+ 
+-  if (!activities || activities.length === 0) {
+-    return <ActivityEmptyState />;
+-  }
+-
+-  const grouped = groupActivities(activities);
++  const grouped = groupActivities(filteredActivities, sortOrder);
+ 
+   return (
+-    <div className="pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+-      {Object.entries(grouped).map(([dateLabel, groupActivities]) => (
+-        <ActivityGroup 
+-          key={dateLabel} 
+-          dateLabel={dateLabel} 
+-          activities={groupActivities} 
+-        />
+-      ))}
++    <div className="flex flex-col h-full overflow-hidden">
++      {/* Filters and Controls */}
++      <div className="flex flex-col gap-3 pb-4 border-b border-brand-border sticky top-0 bg-brand-surface z-20">
++        <div className="flex items-center gap-2">
++          <div className="relative flex-1">
++            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted" />
++            <input
++              type="text"
++              placeholder="Search activity..."
++              value={searchQuery}
++              onChange={(e) => setSearchQuery(e.target.value)}
++              className="w-full pl-8 pr-3 py-1.5 text-sm bg-brand-surface-low border border-brand-border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-primary"
++            />
++          </div>
++          <button
++            onClick={() =>
++              setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
++            }
++            className="p-1.5 text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface-hover rounded-md transition-colors"
++            title={sortOrder === "desc" ? "Newest First" : "Oldest First"}
++          >
++            {sortOrder === "desc" ? (
++              <ArrowDownWideNarrow className="w-4 h-4" />
++            ) : (
++              <ArrowUpNarrowWide className="w-4 h-4" />
++            )}
++          </button>
++        </div>
++
++        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
++          {filterCategories.map((cat) => (
++            <button
++              key={cat.id}
++              onClick={() => setActiveFilter(cat.id as FilterCategory)}
++              className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
++                activeFilter === cat.id
++                  ? "bg-brand-primary/10 text-brand-primary font-medium border border-brand-primary/20"
++                  : "bg-brand-surface-low text-brand-text-muted border border-brand-border hover:text-brand-text-primary"
++              }`}
++            >
++              {cat.label}
++            </button>
++          ))}
++        </div>
++      </div>
++
++      <div className="pt-4 flex-1 overflow-y-auto min-h-[300px] no-scrollbar pb-10">
++        {!filteredActivities || filteredActivities.length === 0 ? (
++          <ActivityEmptyState />
++        ) : (
++          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
++            {Object.entries(grouped).map(([dateLabel, groupActivities]) => (
++              <ActivityGroup
++                key={dateLabel}
++                dateLabel={dateLabel}
++                activities={groupActivities}
++              />
++            ))}
++
++            {hasMore && (
++              <div className="pt-4 pb-8 flex justify-center">
++                <button
++                  onClick={handleLoadMore}
++                  disabled={isLoading}
++                  className="px-4 py-2 text-sm text-brand-text-secondary bg-brand-surface-low hover:bg-brand-surface-hover border border-brand-border rounded-md transition-colors flex items-center gap-2"
++                >
++                  {isLoading ? (
++                    <>
++                      <Loader2 className="w-4 h-4 animate-spin" />
++                      Loading...
++                    </>
++                  ) : (
++                    "Load More"
++                  )}
++                </button>
++              </div>
++            )}
++          </div>
++        )}
++      </div>
+     </div>
+   );
+ };
+diff --git a/frontend/src/features/activity/utils/activityFormatter.tsx b/frontend/src/features/activity/utils/activityFormatter.tsx
+index 2206709..b42dd6a 100644
+--- a/frontend/src/features/activity/utils/activityFormatter.tsx
++++ b/frontend/src/features/activity/utils/activityFormatter.tsx
+@@ -10,6 +10,9 @@ import {
+   Trash2, 
+   Clock3,
+   Bell,
++  Tag,
++  Smile,
++  Timer,
+   type LucideIcon
+ } from 'lucide-react';
+ import type { CanonicalActivity as Activity } from '../../../services/activityApi';
+@@ -22,6 +25,7 @@ export interface FormattedActivity {
+   title: string;
+   description: React.ReactNode;
+   accentColor: string;
++  diffContent?: { old: string | null; new: string | null };
+ }
+ 
+ const getAssigneeDisplayName = (assignedToId: number | null | undefined, nameInPayload?: string | null): string | null => {
+@@ -100,7 +104,11 @@ export const formatActivity = (
+         icon: Edit3,
+         title: 'Description updated',
+         description: `${actorName} updated the task description`,
+-        accentColor: 'text-brand-primary bg-brand-primary/10 border-brand-primary/20'
++        accentColor: 'text-brand-primary bg-brand-primary/10 border-brand-primary/20',
++        diffContent: {
++          old: activity.old_value?.description || null,
++          new: activity.new_value?.description || null
++        }
+       };
+     }
+ 
+@@ -276,10 +284,34 @@ export const formatActivity = (
+       return {
+         icon: MessageCircle,
+         title: 'Comment replied',
+-        description: `${actorName} replied to your comment`,
++        description: `${actorName} replied to a comment`,
+         accentColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+       };
+ 
++    case ACTIVITY_TYPES.COMMENT_REACTION_ADDED:
++      return {
++        icon: Smile,
++        title: 'Reaction added',
++        description: (
++          <span>
++            {actorName} reacted with <strong>{activity.new_value?.emoji}</strong> to a comment
++          </span>
++        ),
++        accentColor: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20'
++      };
++
++    case ACTIVITY_TYPES.COMMENT_REACTION_REMOVED:
++      return {
++        icon: Smile,
++        title: 'Reaction removed',
++        description: (
++          <span>
++            {actorName} removed <strong>{activity.new_value?.emoji}</strong> reaction from a comment
++          </span>
++        ),
++        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
++      };
++
+     case ACTIVITY_TYPES.ATTACHMENT_ADDED:
+       return {
+         icon: Paperclip,
+@@ -292,6 +324,69 @@ export const formatActivity = (
+         accentColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+       };
+ 
++    case ACTIVITY_TYPES.ATTACHMENT_REMOVED:
++      return {
++        icon: Trash2,
++        title: 'Attachment removed',
++        description: (
++          <span>
++            {actorName} removed attachment <strong>{activity.new_value?.file_name}</strong>
++          </span>
++        ),
++        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
++      };
++
++    case ACTIVITY_TYPES.LABEL_ADDED:
++      return {
++        icon: Tag,
++        title: 'Label added',
++        description: (
++          <span>
++            {actorName} added label <strong>{activity.new_value?.label_name}</strong>
++          </span>
++        ),
++        accentColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
++      };
++
++    case ACTIVITY_TYPES.LABEL_REMOVED:
++      return {
++        icon: Tag,
++        title: 'Label removed',
++        description: (
++          <span>
++            {actorName} removed label <strong>{activity.new_value?.label_name}</strong>
++          </span>
++        ),
++        accentColor: 'text-brand-text-muted bg-brand-surface-low border-brand-border'
++      };
++
++    case ACTIVITY_TYPES.ESTIMATE_CHANGED: {
++      const oldEst = activity.old_value?.estimate_hours;
++      const newEst = activity.new_value?.estimate_hours;
++      return {
++        icon: Timer,
++        title: 'Estimate changed',
++        description: (
++          <span>
++            {actorName} {oldEst && newEst ? <>changed estimate from <del className="text-brand-text-muted">{oldEst}h</del> to <strong className="text-brand-text-primary">{newEst}h</strong></> : newEst ? <>set estimate to <strong className="text-brand-text-primary">{newEst}h</strong></> : 'removed the estimate'}
++          </span>
++        ),
++        accentColor: 'text-orange-500 bg-orange-500/10 border-orange-500/20'
++      };
++    }
++
++    case ACTIVITY_TYPES.TIME_LOGGED:
++      return {
++        icon: Clock3,
++        title: 'Time logged',
++        description: (
++          <span>
++            {actorName} logged <strong className="text-brand-text-primary">{activity.new_value?.hours}h</strong>
++          </span>
++        ),
++        accentColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
++      };
++
+     case ACTIVITY_TYPES.TASK_REMINDER:
+       return {
+         icon: Bell,
+diff --git a/frontend/src/features/boards/modals/task-details/tabs/AttachmentsTab.tsx b/frontend/src/features/boards/modals/task-details/tabs/AttachmentsTab.tsx
+index 408e229..b8ed965 100644
+--- a/frontend/src/features/boards/modals/task-details/tabs/AttachmentsTab.tsx
++++ b/frontend/src/features/boards/modals/task-details/tabs/AttachmentsTab.tsx
+@@ -4,7 +4,7 @@ import { getTaskAttachments, uploadAttachment, deleteAttachment, createAttachmen
+ import { type Task } from '../../../../../services/tasksApi';
+ import toast from 'react-hot-toast';
+ import { useActivityStore } from '../../../../../store/activityStore';
+-
++import Modal from '../../../../../components/common/Modal';
+ interface AttachmentsTabProps {
+   task: Task;
+ }
+@@ -48,6 +48,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
+   const [uploadProgress, setUploadProgress] = useState(0);
+   const [uploadingFileName, setUploadingFileName] = useState('');
+   const [deletingId, setDeletingId] = useState<number | null>(null);
++  const [attachmentToDelete, setAttachmentToDelete] = useState<Attachment | null>(null);
+ 
+   // Optional legacy URL form state
+   const [showUrlForm, setShowUrlForm] = useState(false);
+@@ -198,14 +199,15 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
+     }
+   };
+ 
+-  const handleDelete = async (att: Attachment) => {
+-    if (!window.confirm(`Are you sure you want to delete "${att.file_name}"?`)) return;
++  const confirmDelete = async () => {
++    if (!attachmentToDelete) return;
+ 
+-    setDeletingId(att.id);
++    setDeletingId(attachmentToDelete.id);
+     try {
+-      await deleteAttachment(att.id);
+-      setAttachments((prev) => prev.filter((a) => a.id !== att.id));
++      await deleteAttachment(attachmentToDelete.id);
++      setAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete.id));
+       toast.success('Attachment deleted');
++      setAttachmentToDelete(null);
+     } catch (error) {
+       console.error('Failed to delete attachment', error);
+       toast.error('Failed to delete attachment');
+@@ -213,7 +215,6 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
+       setDeletingId(null);
+     }
+   };
+-
+   const handleAddUrl = () => {
+     if (!urlAddress) return;
+     submitLink(urlAddress, urlName);
+@@ -393,7 +394,7 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
+                       type="button"
+                       onClick={(e) => {
+                         e.stopPropagation();
+-                        handleDelete(att);
++                        setAttachmentToDelete(att);
+                       }}
+                       disabled={deletingId === att.id}
+                       className="p-2 rounded-full bg-red-600/90 text-white hover:bg-red-600 transition hover:scale-110 disabled:opacity-50"
+@@ -430,6 +431,37 @@ const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ task }) => {
+           })}
+         </div>
+       )}
++
++      {/* Confirmation Modal */}
++      <Modal
++        isOpen={!!attachmentToDelete}
++        onClose={() => setAttachmentToDelete(null)}
++        title="Delete Attachment"
++      >
++        <div className="space-y-4">
++          <p className="text-sm text-brand-text">
++            Are you sure you want to delete <span className="font-semibold">"{attachmentToDelete?.file_name}"</span>? This action cannot be undone.
++          </p>
++          <div className="flex justify-end gap-3 pt-2">
++            <button
++              type="button"
++              onClick={() => setAttachmentToDelete(null)}
++              className="px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface-low rounded-md transition"
++              disabled={deletingId !== null}
++            >
++              Cancel
++            </button>
++            <button
++              type="button"
++              onClick={confirmDelete}
++              disabled={deletingId !== null}
++              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition flex items-center justify-center gap-2 min-w-[100px]"
++            >
++              {deletingId !== null ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
++            </button>
++          </div>
++        </div>
++      </Modal>
+     </section>
+   );
+ };
+diff --git a/frontend/src/features/timesheets/approvals/ApprovalQueuePage.tsx b/frontend/src/features/timesheets/approvals/ApprovalQueuePage.tsx
+index 0694cc1..9b22174 100644
+--- a/frontend/src/features/timesheets/approvals/ApprovalQueuePage.tsx
++++ b/frontend/src/features/timesheets/approvals/ApprovalQueuePage.tsx
+@@ -32,10 +32,6 @@ const ITEMS_PER_PAGE = 25;
+ export const ApprovalQueuePage: React.FC = () => {
+   const { user } = useAuthStore();
+ 
+-  // RBAC Gate: Redirect regular members to /timesheets
+-  if (user && !isManagerOrAdmin(user)) {
+-    return <Navigate to="/timesheets" replace />;
+-  }
+ 
+   // Summary state
+   const [summary, setSummary] = useState<ApprovalQueueSummary | null>(null);
+@@ -153,6 +149,11 @@ export const ApprovalQueuePage: React.FC = () => {
+     }
+   };
+ 
++  // RBAC Gate: Redirect regular members to /timesheets
++  if (user && !isManagerOrAdmin(user)) {
++    return <Navigate to="/timesheets" replace />;
++  }
++
+   return (
+     <div className="flex-1 overflow-y-auto min-h-0 p-6 max-w-7xl mx-auto w-full min-w-0 space-y-6">
+       {/* Header section */}
+diff --git a/frontend/src/hooks/useWebSocket.ts b/frontend/src/hooks/useWebSocket.ts
+index 3f215bf..8d07ce1 100644
+--- a/frontend/src/hooks/useWebSocket.ts
++++ b/frontend/src/hooks/useWebSocket.ts
+@@ -150,6 +150,9 @@ export function useWebSocket(): { isConnected: boolean } {
+           if (eventBoardId && activeBoardId && eventBoardId === activeBoardId) {
+             applyWsEvent(type, msg);
+           }
++          if (type.startsWith('task')) {
++             window.dispatchEvent(new CustomEvent('kaio:task_updated', { detail: msg }));
++          }
+           fetchNotifications();
+           break;
+         }
+diff --git a/frontend/src/store/activityStore.ts b/frontend/src/store/activityStore.ts
+index 5b2cc3c..a304950 100644
+--- a/frontend/src/store/activityStore.ts
++++ b/frontend/src/store/activityStore.ts
+@@ -9,7 +9,7 @@ interface ActivityState {
+   loading: Record<number, boolean>;
+   error: Record<number, string | null>;
+   
+-  fetchActivity: (taskId: number, limit?: number) => Promise<void>;
++  fetchActivity: (taskId: number, limit?: number, reset?: boolean) => Promise<void>;
+   appendActivity: (taskId: number, activity: Partial<Activity> & { entity_type: string, entity_id: number, activity_type: string }) => void;
+   clearActivity: (taskId: number) => void;
+ }
