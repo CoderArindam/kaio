@@ -72,10 +72,15 @@ export const TimesheetAdminPage: React.FC = () => {
       .catch((err) =>
         console.error("Failed to load users for timesheet export:", err),
       );
-    getTimesheetPolicy()
-      .then(setOverviewPolicy)
-      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "all") {
+      getTimesheetPolicy()
+        .then(setOverviewPolicy)
+        .catch(() => {});
+    }
+  }, [activeTab]);
 
   // Route guard: Only Superadmin can access Timesheet Policy
   if (!user || !isSuperAdmin(user)) {
