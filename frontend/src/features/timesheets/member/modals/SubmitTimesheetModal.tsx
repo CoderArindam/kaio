@@ -3,6 +3,7 @@ import { ShieldCheck, Loader2 } from 'lucide-react';
 import { type EligibleApprover } from '../../../../services/timesheetAdminService';
 import { Button } from '../../../../components/ui/Button';
 import { Modal } from '../../../../components/common/Modal';
+import { Select } from '../../../../components/ui/Select';
 
 interface SubmitTimesheetModalProps {
   isOpen: boolean;
@@ -49,21 +50,16 @@ export const SubmitTimesheetModal: React.FC<SubmitTimesheetModalProps> = ({
         </div>
 
         <div>
-          <select
+          <Select
             value={selectedApproverId}
-            onChange={(e) => onApproverChange(e.target.value)}
-            className="w-full bg-brand-bg border border-brand-border rounded-lg p-2.5 text-xs text-brand-text focus:outline-none focus:border-brand-primary font-medium"
-          >
-            {eligibleApprovers.length === 0 ? (
-              <option value="">No approvers configured in organization</option>
-            ) : (
-              eligibleApprovers.map((app) => (
-                <option key={app.user_id} value={app.user_id}>
-                  👤 {app.display_name} ({app.role}) — {app.email}
-                </option>
-              ))
-            )}
-          </select>
+            onChange={(val) => onApproverChange(val)}
+            options={eligibleApprovers.length === 0 ? [] : eligibleApprovers.map((app) => ({
+              value: app.user_id,
+              label: `👤 ${app.display_name} (${app.role}) — ${app.email}`
+            }))}
+            placeholder={eligibleApprovers.length === 0 ? "No approvers configured in organization" : "Select an approver..."}
+            disabled={eligibleApprovers.length === 0}
+          />
           <p className="text-[11px] text-brand-text-muted mt-1">
             Select a manager designated by your organization's Superadmin to review your timesheet.
           </p>

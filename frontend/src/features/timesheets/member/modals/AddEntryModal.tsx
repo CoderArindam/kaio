@@ -4,6 +4,7 @@ import { ENTRY_TYPE_OPTIONS } from '../../shared/types';
 import { Button } from '../../../../components/ui/Button';
 import { Modal } from '../../../../components/common/Modal';
 import { TaskSearchSelector } from '../../shared/TaskSearchSelector';
+import { Select } from '../../../../components/ui/Select';
 
 interface AddEntryModalProps {
   boardName: string;
@@ -34,15 +35,14 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
         <label className="block text-xs font-medium text-brand-text-muted mb-1">
           Entry Category / Type
         </label>
-        <select
+        <Select
           value={selectedEntryType}
-          onChange={(e) => onEntryTypeChange(e.target.value)}
-          className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-        >
-          {ENTRY_TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+          onChange={(val) => onEntryTypeChange(val)}
+          options={ENTRY_TYPE_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: opt.label,
+          }))}
+        />
       </div>
 
       {selectedEntryType === 'task' && (

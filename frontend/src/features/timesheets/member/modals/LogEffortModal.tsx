@@ -6,6 +6,7 @@ import { toDateStr } from '../../shared/utils';
 import { Button } from '../../../../components/ui/Button';
 import { Modal } from '../../../../components/common/Modal';
 import { TaskSearchSelector } from '../../shared/TaskSearchSelector';
+import { Select } from '../../../../components/ui/Select';
 
 interface LogEffortModalProps {
   isOpen: boolean;
@@ -57,18 +58,17 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
         <label className="block text-xs font-semibold text-brand-text mb-1">
           Project Board * (Your Assigned Boards)
         </label>
-        <select
+        <Select
           value={boardId}
-          onChange={(e) => onBoardChange(e.target.value)}
-          className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-        >
-          <option value="general">-- General &amp; Time-off --</option>
-          {accessibleBoards.map((b) => (
-            <option key={b.id} value={String(b.id)}>
-              {b.name} ({b.project_key})
-            </option>
-          ))}
-        </select>
+          onChange={(val) => onBoardChange(val)}
+          options={[
+            { value: 'general', label: '-- General & Time-off --' },
+            ...accessibleBoards.map((b) => ({
+              value: String(b.id),
+              label: `${b.name} (${b.project_key})`,
+            })),
+          ]}
+        />
       </div>
 
       {/* Category / Type */}
@@ -76,15 +76,14 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
         <label className="block text-xs font-semibold text-brand-text mb-1">
           Work Category / Type *
         </label>
-        <select
+        <Select
           value={entryType}
-          onChange={(e) => onEntryTypeChange(e.target.value)}
-          className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-        >
-          {ENTRY_TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+          onChange={(val) => onEntryTypeChange(val)}
+          options={ENTRY_TYPE_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: opt.label,
+          }))}
+        />
       </div>
 
       {/* Task Selector */}
@@ -111,17 +110,15 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-brand-text mb-1">Log Date *</label>
-          <select
+          <Select
             value={date}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-          >
-            {weekDates.map((d) => {
+            onChange={(val) => onDateChange(val)}
+            options={weekDates.map((d) => {
               const dStr = toDateStr(d);
               const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              return <option key={dStr} value={dStr}>{label}</option>;
+              return { value: dStr, label };
             })}
-          </select>
+          />
         </div>
 
         <div>
@@ -133,7 +130,7 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
             max="24"
             value={hours}
             onChange={(e) => onHoursChange(e.target.value)}
-            className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-primary font-mono"
+            className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary font-mono transition-colors shadow-sm"
           />
         </div>
       </div>
@@ -148,7 +145,7 @@ export const LogEffortModal: React.FC<LogEffortModalProps> = ({
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="What work was accomplished during these hours?"
-          className="w-full bg-brand-surface border border-brand-border rounded-lg p-2 text-xs text-brand-text focus:outline-none focus:border-brand-primary resize-none"
+          className="w-full bg-brand-surface border border-brand-border rounded-lg p-3 text-sm text-brand-text focus:outline-none focus:border-brand-primary resize-none transition-colors shadow-sm"
         />
       </div>
 

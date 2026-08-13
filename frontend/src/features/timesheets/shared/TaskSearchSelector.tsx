@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Loader2, Check, X, Tag, UserCheck } from "lucide-react";
+import { Search, Loader2, Check, X, Tag, UserCheck, ChevronDown } from "lucide-react";
 import { searchTasks, type Task } from "../../../services/tasksApi";
 
 interface TaskSearchSelectorProps {
@@ -17,7 +17,7 @@ export const TaskSearchSelector: React.FC<TaskSearchSelectorProps> = ({
   onChange,
   boardId,
   assignedToMe = true,
-  placeholder = "Search assigned tasks by title, ID (#PAY-12), or board...",
+  placeholder = "Select a task...",
   disabled = false,
   className = "",
 }) => {
@@ -125,61 +125,49 @@ export const TaskSearchSelector: React.FC<TaskSearchSelectorProps> = ({
 
   return (
     <div className={`relative w-full ${className}`} ref={containerRef}>
-      {/* Search Input Control */}
-      <div
+      {/* Trigger Button */}
+      <button
+        type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border bg-brand-surface text-brand-text text-sm transition-all cursor-pointer ${
+        disabled={disabled}
+        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border bg-brand-surface text-brand-text text-sm transition-all shadow-sm ${
           isOpen
             ? "border-brand-primary ring-2 ring-brand-primary/20"
             : "border-brand-border hover:border-brand-border-highlight"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       >
-        <Search size={16} className="text-brand-text-muted shrink-0" />
-
-        {selectedTask ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="px-1.5 py-0.5 text-xs font-semibold font-mono bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded">
-              #{selectedTask.task_reference || selectedTask.id}
+        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+          {selectedTask ? (
+            <div className="flex items-center gap-2 w-full">
+              <span className="px-1.5 py-0.5 text-xs font-semibold font-mono bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded shrink-0">
+                #{selectedTask.task_reference || selectedTask.id}
+              </span>
+              <span className="truncate font-medium text-brand-text">
+                {selectedTask.title}
+              </span>
+              <span className="text-xs text-brand-text-muted truncate hidden sm:inline shrink-0">
+                ({selectedTask.board_name})
+              </span>
+            </div>
+          ) : (
+            <span className="text-brand-text-muted truncate">
+              {placeholder}
             </span>
-            <span className="truncate font-medium text-brand-text">
-              {selectedTask.title}
-            </span>
-            <span className="text-xs text-brand-text-muted truncate hidden sm:inline">
-              ({selectedTask.board_name})
-            </span>
-          </div>
-        ) : (
-          <input
-            type="text"
-            className="w-full bg-transparent border-none outline-none text-sm text-brand-text placeholder:text-brand-text-muted cursor-text"
-            placeholder={placeholder}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsOpen(true);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            disabled={disabled}
-          />
-        )}
-
-        {loading && (
-          <Loader2
-            size={16}
-            className="animate-spin text-brand-primary shrink-0"
-          />
-        )}
-
-        {selectedTask && !disabled && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="p-1 text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-highlight rounded transition-colors"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          {selectedTask && !disabled && (
+            <div
+              onClick={handleClear}
+              className="p-1 text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-highlight rounded transition-colors"
+            >
+              <X size={14} />
+            </div>
+          )}
+          <ChevronDown size={16} className={`text-brand-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
 
       {/* Helper text badge */}
       {assignedToMe && (
@@ -191,20 +179,22 @@ export const TaskSearchSelector: React.FC<TaskSearchSelectorProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface text-brand-text shadow-2xl p-1.5 flex flex-col gap-1 opacity-100">
-          {/* Inner Search Box when task is selected */}
-          {selectedTask && (
-            <div className="p-1.5 border-b border-brand-border/60">
-              <input
-                type="text"
-                className="w-full px-2.5 py-1.5 bg-brand-surface border border-brand-border rounded text-xs text-brand-text placeholder:text-brand-text-muted outline-none focus:border-brand-primary"
-                placeholder="Search assigned tasks..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                autoFocus
-              />
-            </div>
-          )}
+        <div className="absolute z-50 left-0 right-0 mt-2 max-h-80 overflow-hidden rounded-xl border border-brand-border bg-brand-surface text-brand-text shadow-2xl flex flex-col opacity-100 animate-in fade-in zoom-in-95 duration-100">
+          {/* Inner Search Box */}
+          <div className="p-2 border-b border-brand-border bg-brand-surface-highlight/30 sticky top-0 z-10 flex items-center gap-2">
+            <Search size={14} className="text-brand-text-muted ml-1" />
+            <input
+              type="text"
+              className="w-full bg-transparent border-none text-sm text-brand-text placeholder:text-brand-text-muted outline-none py-1"
+              placeholder="Search tasks by title, ID, or board..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+            />
+            {loading && <Loader2 size={14} className="animate-spin text-brand-primary mr-1" />}
+          </div>
+          
+          <div className="overflow-y-auto p-1.5 flex flex-col gap-1">
 
           {tasks.length === 0 ? (
             <div className="p-4 text-center text-xs text-brand-text-muted">
@@ -289,6 +279,7 @@ export const TaskSearchSelector: React.FC<TaskSearchSelectorProps> = ({
               {loading ? "Loading..." : "Load more tasks"}
             </button>
           )}
+          </div>
         </div>
       )}
     </div>
