@@ -207,7 +207,7 @@ export const ProjectMembersSettings: React.FC = () => {
         </div>
       ) : (
         /* Members List */
-        <div className="bg-brand-surface border border-brand-border/60 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-brand-surface border border-brand-border/60 rounded-xl shadow-sm">
           <div className="divide-y divide-brand-border/40">
             {filteredMembers.map((member) => {
               const isOwner = board?.owner_id === member.id;
@@ -221,7 +221,7 @@ export const ProjectMembersSettings: React.FC = () => {
               return (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-4 hover:bg-brand-surface-hover/50 transition-colors group"
+                  className="flex items-center justify-between p-4 hover:bg-brand-surface-hover/50 transition-colors group first:rounded-t-xl last:rounded-b-xl"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     {/* Avatar */}

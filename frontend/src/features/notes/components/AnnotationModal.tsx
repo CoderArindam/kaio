@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, RotateCcw, Undo, Redo } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, Undo, Redo, Pencil, Move, Trash2, Check } from 'lucide-react';
 import { type Annotation } from './ImageAnnotator';
 import { normalizeAnnotations, drawAnnotations, ANNOTATION_COLORS } from './annotationUtils';
 
@@ -45,6 +45,9 @@ export const AnnotationModal: React.FC<AnnotationModalProps> = ({
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
   const [zoom, setZoom] = useState(1);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [draggingPinId, setDraggingPinId] = useState<string | null>(null);
+  const [editingPinId, setEditingPinId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -104,17 +107,18 @@ export const AnnotationModal: React.FC<AnnotationModalProps> = ({
     if (activeTool === 'freehand') setCurrentPoints([pos]);
 
     if (activeTool === 'pin') {
-      const label = window.prompt('Optional label for this pin (press Enter to skip):') ?? undefined;
+      const newId = crypto.randomUUID();
       const newAnn: Annotation = {
-        id: crypto.randomUUID(),
+        id: newId,
         type: 'pin',
         x: pos.x,
         y: pos.y,
         color: activeColor,
-        label: label?.trim() || undefined,
       };
       setAnnotations((prev) => [...prev, newAnn]);
       setIsDrawing(false);
+      setEditingPinId(newId);
+      setEditLabel("");
     }
   };
 
@@ -185,6 +189,55 @@ export const AnnotationModal: React.FC<AnnotationModalProps> = ({
   const handleSave = () => {
     onSave(annotations);
     onClose();
+  };
+
+  const handlePinDragStart = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingPinId(id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setAnnotations(annotations);
+  };
+
+  const handlePinDragMove = (e: React.PointerEvent) => {
+    if (draggingPinId) {
+      e.stopPropagation();
+      const pos = getPos(e);
+      setHistory((prev) => {
+        const newHistory = [...prev];
+        const lastIdx = newHistory.length - 1;
+        newHistory[lastIdx] = newHistory[lastIdx].map((a) =>
+          a.id === draggingPinId ? { ...a, x: pos.x, y: pos.y } : a
+        );
+        return newHistory;
+      });
+    }
+  };
+
+  const handlePinDragEnd = (e: React.PointerEvent) => {
+    if (draggingPinId) {
+      e.stopPropagation();
+      setDraggingPinId(null);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePinEdit = (id: string, currentLabel?: string) => {
+    setEditingPinId(id);
+    setEditLabel(currentLabel ?? '');
+  };
+
+  const savePinLabel = () => {
+    if (editingPinId) {
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === editingPinId ? { ...a, label: editLabel.trim() || undefined } : a))
+      );
+    }
+    setEditingPinId(null);
+  };
+
+  const handlePinDelete = (id: string) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
   };
 
   const toolCursor =
@@ -342,24 +395,72 @@ export const AnnotationModal: React.FC<AnnotationModalProps> = ({
               onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerUp}
             />
-            {/* Clickable delete handles for pin annotations */}
+            {/* Clickable interactive handles for pin annotations */}
             {annotations.map((ann) =>
               ann.type === 'pin' ? (
-                <button
+                <div
                   key={ann.id}
                   onMouseEnter={() => setHoveredId(ann.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => setAnnotations((prev) => prev.filter((a) => a.id !== ann.id))}
-                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
                   style={{ left: ann.x, top: ann.y, width: 32, height: 32 }}
-                  title="Click to remove pin"
                 >
-                  {hoveredId === ann.id && (
-                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-500 text-white rounded px-1.5 py-0.5 text-[9px] whitespace-nowrap flex items-center gap-1">
-                      <X className="w-2.5 h-2.5" /> Remove
-                    </span>
+                  {(hoveredId === ann.id || draggingPinId === ann.id || editingPinId === ann.id) && (
+                    <div className="absolute -top-12 flex items-center gap-1 bg-brand-surface border border-brand-border shadow-lg rounded-lg p-1 animate-in fade-in zoom-in duration-200 cursor-default before:absolute before:-bottom-6 before:left-0 before:right-0 before:h-6 before:bg-transparent">
+                      {editingPinId === ann.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            value={editLabel}
+                            onChange={(e) => setEditLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') savePinLabel();
+                              if (e.key === 'Escape') setEditingPinId(null);
+                            }}
+                            className="w-32 px-2 py-1 text-[12px] bg-brand-surface-low border border-brand-border rounded outline-none focus:border-amber-500 text-brand-text"
+                            placeholder="Label..."
+                          />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); savePinLabel(); }}
+                            className="p-1.5 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                            title="Save"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onPointerDown={(e) => handlePinDragStart(e, ann.id)}
+                            onPointerMove={handlePinDragMove}
+                            onPointerUp={handlePinDragEnd}
+                            onPointerCancel={handlePinDragEnd}
+                            className="p-1.5 rounded-md text-brand-text-muted hover:text-brand-text hover:bg-brand-surface-low transition-colors cursor-move"
+                            title="Move pin"
+                          >
+                            <Move className="w-3.5 h-3.5 pointer-events-none" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePinEdit(ann.id, ann.label); }}
+                            className="p-1.5 rounded-md text-brand-text-muted hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
+                            title="Edit label"
+                          >
+                            <Pencil className="w-3.5 h-3.5 pointer-events-none" />
+                          </button>
+                          <div className="w-px h-4 bg-brand-border mx-0.5" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePinDelete(ann.id); }}
+                            className="p-1.5 rounded-md text-brand-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                            title="Delete pin"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 pointer-events-none" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   )}
-                </button>
+                </div>
               ) : null
             )}
           </div>
