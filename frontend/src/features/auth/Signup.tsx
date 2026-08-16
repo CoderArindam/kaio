@@ -75,6 +75,7 @@ export const Signup: React.FC = () => {
       const response = await registerOrganizationDirect(orgName, email, password, firstName, lastName);
       useAuthStore.setState({
         isAuthenticated: true,
+        isInitializing: false,
         user: {
           id: response.user?.id,
           email: response.user?.email ?? email,
@@ -105,6 +106,7 @@ export const Signup: React.FC = () => {
 
       useAuthStore.setState({
         isAuthenticated: true,
+        isInitializing: false,
         user: {
           id: result.user?.id,
           email: result.user?.email ?? email,
@@ -135,6 +137,7 @@ export const Signup: React.FC = () => {
       const response = await skipRegistrationOtp(registrationToken);
       useAuthStore.setState({
         isAuthenticated: true,
+        isInitializing: false,
         user: {
           id: response.user?.id,
           email: response.user?.email ?? email,
