@@ -4,9 +4,10 @@ from openai import AsyncOpenAI
 
 class PuterProvider(OpenAIProvider):
     """Puter implementation of the AIProvider interface, using OpenAI compatibility."""
+    provider_name: str = "Puter"
     
-    def __init__(self, api_key: str, model: str):
-        # We bypass OpenAIProvider's __init__ because we need to inject the base_url
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str = "https://api.puter.com/puterai/openai/v1/"):
+        self.provider_name = "Puter"
         self.api_key = api_key
         self.model = model
         
@@ -15,5 +16,5 @@ class PuterProvider(OpenAIProvider):
             
         self.client = AsyncOpenAI(
             api_key=self.api_key,
-            base_url="https://api.puter.com/puterai/openai/v1/"
+            base_url=base_url
         )

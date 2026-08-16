@@ -119,6 +119,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 path in self.EXEMPT_PATHS
                 or path.startswith("/health")
                 or path.startswith("/api/v1/invitations/verify/")
+                or path.startswith("/api/v1/meeting/presence/")  # Extension uses Bearer token, not cookies
             )
             if not is_exempt:
                 header_val = request.headers.get("x-requested-with")

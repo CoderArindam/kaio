@@ -6,11 +6,12 @@ import json
 
 class OpenAIProvider(AIProvider):
     """OpenAI implementation of the AIProvider interface."""
+    provider_name: str = "OpenAI"
     
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
         if not self.api_key:
-            raise AuthenticationError("OpenAI API key is missing.")
+            raise AuthenticationError(f"{self.provider_name} API key is missing.")
         self.client = AsyncOpenAI(api_key=self.api_key)
 
     async def generate(
@@ -25,14 +26,14 @@ class OpenAIProvider(AIProvider):
         Generate a response using OpenAI API.
         """
         if not self.api_key:
-            raise AuthenticationError("OpenAI API key is missing.")
+            raise AuthenticationError(f"{self.provider_name} API key is missing.")
 
         kwargs = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "timeout": 15.0
+            "timeout": 55.0
         }
         
         if response_format:
@@ -77,7 +78,7 @@ class OpenAIProvider(AIProvider):
                 }
             }
         except Exception as e:
-            raise ProviderError(f"OpenAI API Error: {str(e)}")
+            raise ProviderError(f"{self.provider_name} API Error: {str(e)}")
 
     async def stream(
         self,
@@ -93,7 +94,7 @@ class OpenAIProvider(AIProvider):
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": True,
-            "timeout": 15.0
+            "timeout": 55.0
         }
         
         try:
@@ -104,7 +105,7 @@ class OpenAIProvider(AIProvider):
                     if delta.content:
                         yield {"content": delta.content}
         except Exception as e:
-            raise ProviderError(f"OpenAI Stream Error: {str(e)}")
+            raise ProviderError(f"{self.provider_name} Stream Error: {str(e)}")
 
     def embeddings(self, text: str) -> List[float]:
         """Mock embeddings."""

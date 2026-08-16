@@ -7,6 +7,7 @@ from app.ai.exceptions import AIError, ProviderError, ParsingError, PermissionEr
 from app.ai.providers.base import AIProvider
 from app.ai.providers.openai import OpenAIProvider
 from app.ai.providers.puter import PuterProvider
+from app.ai.providers.openrouter import OpenRouterProvider
 from app.ai.telemetry.context import Span, TraceContext
 from app.ai.telemetry.bus import telemetry_bus
 from app.ai.telemetry.events import EventType
@@ -32,6 +33,12 @@ class AIGateway:
             return GeminiProvider(api_key=api_key, model=self.model_name)
         elif self.provider_name.lower() == "puter":
             return PuterProvider(api_key=api_key, model=self.model_name)
+        elif self.provider_name.lower() == "openrouter":
+            return OpenRouterProvider(
+                api_key=api_key,
+                model=self.model_name,
+                base_url=ai_settings.OPENROUTER_BASE_URL,
+            )
         else:
             return PuterProvider(api_key=api_key, model=self.model_name)
 
@@ -47,7 +54,9 @@ class AIGateway:
         elif provider == "azure":
             return ai_settings.AZURE_OPENAI_KEY
         elif provider == "puter":
-            return ai_settings.PUTER_API_KEY
+            return ai_settings.PUTER_API_KEY or ai_settings.OPENAI_API_KEY
+        elif provider == "openrouter":
+            return ai_settings.OPENROUTER_API_KEY
         return None
 
     def _check_feature_flags(self, org_ai_enabled: bool = True, user_has_permission: bool = True):

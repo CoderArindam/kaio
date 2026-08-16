@@ -36,7 +36,7 @@ class PresenceCollectionStage(PipelineStage):
 
     @property
     def continue_on_failure(self) -> bool:
-        return False
+        return True
 
     async def execute(self, context: PipelineContext) -> StageStatus:
         from app.meeting.providers.participant_presence.json_provider import JsonPresenceProvider
