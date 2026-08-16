@@ -400,3 +400,23 @@ Meeting UI components expose joining controls, active session status indicators,
 | `PlansPage` | `features/billing/PlansPage.tsx` | Onboarding plan selection route, shown when a new organization is created. |
 | `PlanCard` | `features/billing/components/PlanCard.tsx` | Card displaying subscription plan details (Free vs Pro). |
 | `UpgradeModal` | `features/billing/components/UpgradeModal.tsx` | Modal prompt to upgrade subscription plan when hitting limits. |
+
+---
+
+## 19. Notes Feature (`src/features/notes/`)
+
+Personal Quick Notes workspace accessible from the sidebar. All notes are user-scoped.
+
+| Component | Path | Description |
+| --- | --- | --- |
+| `NotesList` | `features/notes/components/NotesList.tsx` | Notes grid with pinned section at top, search bar, and empty state. |
+| `NoteCard` | `features/notes/components/NoteCard.tsx` | Individual note card with content type badge, pin indicator, preview snippet, and action menu. |
+| `NoteEditor` | `features/notes/components/NoteEditor.tsx` | Modal for creating/editing a note. Switches sub-editor by `content_type`. Handles version conflict `409` with refresh prompt. |
+| `RichTextEditor` | `features/notes/components/RichTextEditor.tsx` | TipTap WYSIWYG editor for text notes with formatting toolbar. |
+| `DrawingCanvas` | `features/notes/components/DrawingCanvas.tsx` | Freehand SVG canvas for sketch notes. Supports pencil, eraser, undo, clear, color/stroke selection. Serializes to `canvas_data`. |
+| `ImageAnnotator` | `features/notes/components/ImageAnnotator.tsx` | Image upload with live annotation overlay. Opens `AnnotationModal` for tool selection. Serializes to `annotations` JSONB array. |
+| `AnnotationModal` | `features/notes/components/AnnotationModal.tsx` | Full-screen annotation tool palette (Arrow, Rectangle, Freehand, Text Stamp). |
+| `NotesButton` | `features/notes/components/NotesButton.tsx` | Compact sidebar icon button opening the `QuickNotesSidebar` overlay. |
+| `QuickNotesSidebar` | `features/notes/components/QuickNotesSidebar.tsx` | Slide-in sidebar overlay rendering `NotesList` for quick access. |
+| `annotationUtils.ts` | `features/notes/components/annotationUtils.ts` | Geometry and rendering helpers for annotation overlays (hit testing, coordinate normalization, SVG path generation). |
+

@@ -268,6 +268,16 @@ erDiagram
 | `088_task_reporter_notifications.sql` | Task Reporter Notifications | Updates notification generation logic for task reporters. |
 | `089_cleanup_orphaned_objects.sql` | Cleanup | Drops orphaned views (`v_task_labels_canonical`) and functions (`fn_toggle_comment_reaction`, `is_org_admin`, etc.). |
 | `090_due_date_reminders.sql` | Due Date Reminders | Adds `reminder_sent_at` column to tasks, `trg_auto_set_reminder_at` trigger, and `fn_get_due_reminders` / `fn_mark_reminders_sent` functions with SKIP LOCKED concurrency control. |
+| `091_seed_more_techinnovators_data.sql` | Seed Data | Extended TechInnovators demo seed dataset with more tasks and meetings. |
+| `092_activity_type_task_reminder.sql` | Activity Types | Adds `TASK_REMINDER` activity type for due date reminder notifications. |
+| `092_task_sidebar_layout.sql` | Task Sidebar | Adds task sidebar layout preference and expanded/collapsed task detail mode. |
+| `093_column_custom_color.sql` | Column Colors | Adds `color` column to `board_columns`, enabling custom hex color per Kanban column. Updates `v_boards_canonical` with column color in columns array. |
+| `094_quick_notes.sql` | `notes` | Creates `notes` table (user-scoped, org-scoped, `content_type` enum: `text`/`canvas`/`image`, `title`, `rich_content` JSONB, `canvas_data`, `image_url`, `annotations` JSONB, `is_pinned`, `version` counter), and stored functions: `fn_create_note`, `fn_update_note` (with `VERSION_CONFLICT` guard), `fn_delete_note`, `fn_toggle_pin_note`, `fn_get_user_notes`, `fn_search_notes`. |
+| `095_comprehensive_activity_logging.sql` | Activity Logging | Comprehensive activity log enhancements covering additional activity event types and v_activities_canonical view updates. |
+| `096_boards_canonical_restore_favorite.sql` | Views Fix | Restores `is_favorited` flag in `v_boards_canonical` after view rebuild. |
+| `097_timesheet_approver_views.sql` | Timesheet Views | Adds or refines `v_timesheet_approver_assignments_canonical` view for manager approval UI. |
+| `098_enterprise_global_search.sql` | Global Search | Enhances `v_global_search_canonical` with extended indexing (notes, improved ranking) for enterprise-grade full-text search. |
+| `099_attachment_annotations.sql` | Attachment Annotations | Adds `annotation_data` JSONB column to `task_attachments` table, enabling persistent annotation overlays (arrows, boxes, text stamps) on attachment images. |
 
 
 
@@ -359,6 +369,18 @@ erDiagram
 | `fn_claim_organization_purge_job(...)` | `072_*.sql` | Claims deletion job for background worker processing. |
 | `fn_purge_organization_batch(...)` | `072_*.sql` | Purges records iteratively to prevent transaction timeout. |
 | `fn_finalize_organization_purge(...)` | `072_*.sql` | Finalizes the organization deletion and purges remaining data. |
+| `fn_toggle_board_favorite(user_id, board_id)` | `078_board_favorites.sql` | Toggles board favorited state for user; returns boolean `is_favorited`. |
+| `fn_add_comment_reaction(comment_id, user_id, emoji)` | `086_explicit_comment_reactions.sql` | Adds an emoji reaction to a comment (upsert on conflict). |
+| `fn_remove_comment_reaction(comment_id, user_id, emoji)` | `086_explicit_comment_reactions.sql` | Removes an emoji reaction from a comment. |
+| `fn_log_task_time(task_id, user_id, entry_date, hours, description)` | `080_task_estimation.sql` | Logs work hours directly against a task and auto-creates a draft timesheet for the week if needed. |
+| `fn_get_due_reminders(cutoff_time)` | `090_due_date_reminders.sql` | Returns tasks with due dates before cutoff whose `reminder_sent_at` is null. Uses `SKIP LOCKED` for safe concurrent worker access. |
+| `fn_mark_reminders_sent(task_ids[])` | `090_due_date_reminders.sql` | Stamps `reminder_sent_at = NOW()` on all given task IDs atomically. |
+| `fn_create_note(user_id, org_id, title, content_type, rich_content, canvas_data, image_url, annotations)` | `094_quick_notes.sql` | Creates a personal note record. |
+| `fn_update_note(note_id, user_id, org_id, title, rich_content, canvas_data, image_url, annotations, is_pinned, expected_version)` | `094_quick_notes.sql` | Updates a note with optimistic version conflict check (`VERSION_CONFLICT` on mismatch). |
+| `fn_delete_note(note_id, user_id, org_id)` | `094_quick_notes.sql` | Soft-deletes a personal note. |
+| `fn_toggle_pin_note(note_id, user_id, org_id)` | `094_quick_notes.sql` | Toggles `is_pinned` on a note. |
+| `fn_get_user_notes(user_id, org_id)` | `094_quick_notes.sql` | Returns all active notes for a user (pinned first). |
+| `fn_search_notes(user_id, org_id, query)` | `094_quick_notes.sql` | Full-text searches note titles and content for a user. |
 
 ---
 
@@ -367,94 +389,17 @@ erDiagram
 Migrations are SQL files in `database/migrations/` applied alphabetically by `database/scripts/rebuild.py`:
 
 ```
-001_extensions.sql
-002_enums.sql
-003_schema_core.sql
-004_indexes.sql
-005_functions_authz.sql
-006_functions_mutations.sql
-007_triggers.sql
-008_views.sql
-009_seed_data.sql
-010_admin_functions.sql
-011_invitation_functions.sql
-012_authz_refinements.sql
-013_fix_task_authz.sql
-014_notification_enhancements.sql
-015_account_security.sql
-016_user_preferences.sql
-017_appearance_updates.sql
-018_organization_profile.sql
-019_project_settings.sql
-020_update_user_profile.sql
-021_task_proposals_schema.sql
-022_task_proposals_view.sql
-023_task_proposals_functions.sql
-024_task_proposals_hardening.sql
-025_task_proposals_nullable_board.sql
-026_meeting_sessions_org_scope.sql
-027_task_proposals_priority_due_date.sql
-028_users_email_unique.sql
-029_comment_functions.sql
-030_activity_logging_enhancements.sql
-031_notification_canonical_enhancements.sql
-032a_revoke_invitation_function.sql
-032b_seed_techinnovators.sql
-033_seed_latest_meeting.sql
-034_security_event_functions.sql
-035_auth_session_functions.sql
-036_dashboard_views.sql
-037_timesheet_enums.sql
-038_timesheet_policy_schema.sql
-039_timesheet_core_schema.sql
-040_timesheet_indexes.sql
-041_timesheet_functions.sql
-042_timesheet_triggers.sql
-043_timesheet_views.sql
-044_timesheet_reports_views.sql
-045_simplify_timesheet_approvers.sql
-046_enforce_task_assignment_timesheets.sql
-047_fix_rejected_timesheet_status.sql
-048_timesheet_row_locking.sql
-049_meeting_session_fail_status.sql
-050_meeting_session_rerun.sql
-054_task_deletion_notifications_cleanup.sql
-055_password_reset_email_verification.sql
-056_dashboard_performance_optimization.sql
-057_labels_schema.sql
-058_labels_functions.sql
-059_labels_view.sql
-060_subtasks_schema.sql
-061_subtasks_functions.sql
-062_subtasks_view.sql
-063_column_management_functions.sql
-064_comment_editing.sql
-065_comment_mentions.sql
-066_attachment_file_metadata.sql
-067_update_label_function.sql
-068_otp_verification.sql
-069_fix_otp_type_mismatch.sql
-070_skip_registration_otp.sql
-071_account_hard_delete.sql
-072_organization_deletion.sql
-073_manager_rbac_refinements.sql
-074_organization_plans.sql
-075_user_preferences_tour.sql
-076_update_org_profile_function.sql
-077_fix_deleting_org_users.sql
-078_board_favorites.sql
-079_comment_reactions.sql
-080_task_estimation.sql
-081_fix_assignee_notification_logic.sql
-082_board_user_can_manage.sql
-083_deduplicate_board_members.sql
-084_task_reporter_feature.sql
-085_activity_type_reporter_changed.sql
-086_explicit_comment_reactions.sql
-087_subtask_assignee_time.sql
-088_task_reporter_notifications.sql
-089_cleanup_orphaned_objects.sql
-090_due_date_reminders.sql
+001_extensions.sql … 090_due_date_reminders.sql
+091_seed_more_techinnovators_data.sql
+092_activity_type_task_reminder.sql
+092_task_sidebar_layout.sql
+093_column_custom_color.sql
+094_quick_notes.sql
+095_comprehensive_activity_logging.sql
+096_boards_canonical_restore_favorite.sql
+097_timesheet_approver_views.sql
+098_enterprise_global_search.sql
+099_attachment_annotations.sql
 ```
 
 ### Stored Procedures for Column Management (`063_column_management_functions.sql`)

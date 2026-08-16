@@ -5,7 +5,7 @@
 KAIO incorporates AI models across two core operational tiers:
 
 1. **Speech Intelligence Tier**: Cloud-based atomic Speech-to-Text (STT) and speaker diarization via Deepgram Nova-3 API.
-2. **Task & Insight Extraction Tier**: Large Language Model (LLM) providers (Puter API, Gemini 1.5/2.0) that extract task proposals, action items, and key decisions from attributed transcripts.
+2. **Task & Insight Extraction Tier**: Large Language Model (LLM) providers (OpenRouter, OpenAI, Puter API, Gemini 1.5/2.0) that extract task proposals, action items, and key decisions from attributed transcripts.
 3. **KAI Board Assistant**: Interactive AI agent (`app/ai/agents/`) exposing chat and tool-calling capabilities for board/task operations via `POST /api/v1/ai/chat`.
 
 ```
@@ -60,7 +60,8 @@ sequenceDiagram
 
 The LLM integration is abstracted to allow runtime switching between providers configured via environment variables:
 
-- **OpenAI Provider**: Direct OpenAI API gateway (`AI_PROVIDER=openai`). Default provider.
+- **OpenRouter Provider**: Default provider. OpenAI-compatible API with access to many free and paid models (`AI_PROVIDER=openrouter`, `OPENROUTER_API_KEY=...`, default model `openai/gpt-oss-20b:free`). Extends `OpenAIProvider` with custom base URL `https://openrouter.ai/api/v1` and `HTTP-Referer` + `X-Title` headers.
+- **OpenAI Provider**: Direct OpenAI API gateway (`AI_PROVIDER=openai`, `OPENAI_API_KEY=...`). Base provider that OpenRouter and Puter extend.
 - **Puter Provider**: Low-latency OpenAI-compatible LLM gateway via Puter API (`AI_PROVIDER=puter`, `PUTER_API_KEY=...`). Extends OpenAI provider with a custom base URL.
 - **Gemini Provider**: Google Gemini API gateway for complex reasoning and large context windows (`AI_PROVIDER=gemini`, `GEMINI_API_KEY=...`).
 

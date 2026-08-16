@@ -421,3 +421,19 @@ All column mutation endpoints are gated by **Manager or Superadmin** authorizati
 | `/columns/{column_id}` | `PATCH` | Cookie (Manager+) | Updates column name or column_type using `fn_rename_column(column_id, name, column_type, user_id)`. Broadcasts `column_updated` WS event. |
 | `/columns/{column_id}` | `DELETE` | Cookie (Manager+) | Soft-deletes column using `fn_delete_column(column_id, target_column_id, user_id)` after migrating all existing tasks to `target_column_id`. Broadcasts `column_deleted` WS event. Body: `{target_column_id: int}`. |
 
+
+## 27. Notes Router (`/api/v1/notes`)
+
+Personal notes are user-scoped and do not require board membership. All endpoints require cookie auth.
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/notes` | `GET` | Cookie | Lists all personal notes for the current user (pinned first, `fn_get_user_notes`). |
+| `/notes` | `POST` | Cookie | Creates a new note (`fn_create_note`). Body: `{title, content_type: "text"\|"canvas"\|"image", rich_content?, canvas_data?, image_url?, annotations?}`. |
+| `/notes/{note_id}` | `PATCH` | Cookie | Updates a note (`fn_update_note`). Supports optimistic locking via `expected_version`. Returns `409` on `VERSION_CONFLICT`. |
+| `/notes/{note_id}` | `DELETE` | Cookie | Soft-deletes a note (`fn_delete_note`). Also removes any associated image from storage. Returns `204`. |
+| `/notes/search` | `GET` | Cookie | Full-text searches notes by title and content (`fn_search_notes`). Param: `q` (min 1 char). |
+| `/notes/{note_id}/pin` | `POST` | Cookie | Toggles `is_pinned` on a note (`fn_toggle_pin_note`). |
+| `/notes/{note_id}/image-upload` | `POST` | Cookie | Accepts `multipart/form-data` image (max 10 MB). Uploads via `StorageService` and returns `{image_url}`. |
+| `/notes/screenshot` | `POST` | Cookie | Accepts base64-encoded PNG screenshot in `{data_url}`. Strips data URL header, converts to bytes, uploads via `StorageService`, returns `{image_url}`. |
+

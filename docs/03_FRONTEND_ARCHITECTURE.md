@@ -23,7 +23,7 @@ The KAIO frontend is a high-performance single-page application (SPA) built usin
 - **Framework**: React 19 with TypeScript
 - **Build Tool**: Vite v8
 - **Styling**: Tailwind CSS v4 (via `@tailwindcss/vite` Vite plugin)
-- **State Management**: Zustand v5 (10 stores — no Redux, no React Context for global state)
+- **State Management**: Zustand v5 (11 stores — no Redux, no React Context for global state)
 - **Routing**: React Router DOM v7
 - **HTTP Client**: Axios v1 (with httpOnly cookie auth — no manual token attachment)
 - **Drag & Drop**: @dnd-kit/core + @dnd-kit/sortable
@@ -68,7 +68,7 @@ frontend/src/
 │       ├── Skeleton.tsx        # Loading skeleton placeholder
 │       └── WidgetError.tsx     # Error state display for dashboard widgets
 ├── constants/                  # Application constants, route paths, config
-├── features/                   # 15 Feature-scoped modules (page + components + hooks)
+├── features/                   # 17 Feature-scoped modules (page + components + hooks)
 │   ├── activity/               # Activity log components
 │   ├── admin/                  # Superadmin panel (user management, board permissions, system status & audit export)
 │   │   ├── AdminDashboard.tsx  # System health status monitoring, audit log exporter, security logs
@@ -77,7 +77,7 @@ frontend/src/
 │   │   └── UsersManagement.tsx
 │   ├── ai/                     # KAI AI agent UI (chat, tools, store)
 │   ├── auth/                   # Login, Signup, ForgotPassword, ResetPassword, VerifyEmail, AcceptInvitation
-│   ├── billing/                # Subscription plans and onboarding selection
+│   ├── billing/                # Subscription plan selection & onboarding flow
 │   ├── boards/                 # Kanban board feature (Board, List, Calendar views)
 │   │   ├── BoardPage.tsx       # Board page wrapper with view-mode toggle (Board | List | Calendar)
 │   │   ├── components/
@@ -101,6 +101,18 @@ frontend/src/
 │   ├── meeting/                # Meeting join controls, active status bar, & TranscriptEditor
 │   │   └── TranscriptEditor.tsx # Interactive transcript text & speaker attribution editor
 │   ├── my-work/                # Personal task aggregation view
+│   ├── notes/                  # Quick Notes workspace
+│   │   └── components/
+│   │       ├── NotesList.tsx        # Pinned & regular notes grid with search bar
+│   │       ├── NoteCard.tsx         # Individual note card preview (type badge, pin indicator)
+│   │       ├── NoteEditor.tsx       # Note creation/editing modal with type-specific editor
+│   │       ├── RichTextEditor.tsx   # TipTap-powered rich text editor for text notes
+│   │       ├── DrawingCanvas.tsx    # Freehand SVG canvas for drawing notes
+│   │       ├── ImageAnnotator.tsx   # Image upload + annotation overlay editor
+│   │       ├── AnnotationModal.tsx  # Annotation tool palette (arrow, box, text, freehand)
+│   │       ├── NotesButton.tsx      # Sidebar shortcut button for Quick Notes
+│   │       ├── QuickNotesSidebar.tsx # Slide-in notes panel
+│   │       └── annotationUtils.ts   # Annotation geometry & rendering helpers
 │   ├── notifications/          # Notification bell, panel, and item components
 │   ├── projects/               # Project settings layout & pages (Labels, Members, Workflow)
 │   │   ├── ProjectSettingsLayout.tsx
@@ -119,13 +131,19 @@ frontend/src/
 ├── routes/                     # Router configurations & route guards
 │   ├── ProtectedRoute.tsx      # Redirects unauthenticated users to /login
 │   └── RequireRole.tsx         # RBAC role guard — redirects unauthorized roles to /dashboard
-├── services/                   # API call functions wrapping Axios (24 service files: activityApi, adminApi, attachmentsApi, authApi, boardsApi, columnsApi, commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi, subtasksApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService, timesheetService, usersApi)
+├── services/                   # API call functions wrapping Axios (27 service files, one per domain)
+│   │  # activityApi, adminApi, attachmentsApi, authApi, billingApi, boardsApi, columnsApi,
+│   │  # commentsApi, dashboardApi, invitationsApi, labelsApi, meetingApi, myWorkApi, notesApi,
+│   │  # notificationsApi, organizationApi, preferencesApi, projectSettingsApi, searchApi,
+│   │  # subtasksApi, taskProposals, tasksApi, timesheetAdminService, timesheetApprovalService,
+│   │  # timesheetService, usersApi, workspaceApi
 ├── store/                      # Zustand global state stores
 │   ├── authStore.ts            # isAuthenticated, user, login(), logout(), initAuth()
 │   ├── boardStore.ts           # Active board metadata
 │   ├── taskStore.ts            # Task CRUD, drag-and-drop state, bulk task selection & move, label tagging
 │   ├── adminStore.ts           # Admin user/board management state
 │   ├── notificationStore.ts    # Notifications list, unread count
+│   ├── notesStore.ts           # Quick notes list, CRUD actions, pin toggle, search state
 │   ├── organizationStore.ts    # Active organization profile
 │   ├── preferencesStore.ts     # User UI preferences
 │   ├── projectSettingsStore.ts # Board project settings state
@@ -167,7 +185,8 @@ graph TD
 2. **`taskStore`**: Task CRUD operations, column state, drag-and-drop position updates, bulk task selection and column migration.
 3. **`notificationStore`**: Notification list, unread badge count, mark-read operations.
 4. **`adminStore`**: Superadmin user list, board list, role update operations.
-5. **`uiStore`**: Global UI flags — open modal IDs, `isSearchModalOpen`, sidebar collapsed state, `wsConnected` connection indicator state.
+5. **`notesStore`**: Notes list, CRUD actions, pin toggle, and full-text search state for the Quick Notes sidebar.
+6. **`uiStore`**: Global UI flags — open modal IDs, `isSearchModalOpen`, sidebar collapsed state, `wsConnected` connection indicator state.
 
 ---
 
@@ -209,7 +228,7 @@ export const RequireRole: React.FC<{ allowedRoles: string[] }> = ({ allowedRoles
 All HTTP communication passes through an **Axios client instance** configured in `src/lib/`:
 - **Cookie-based Auth**: No manual `Authorization` header attachment — cookies are sent automatically with every request (`withCredentials: true`).
 - **Response Interceptor**: Intercepts `401 Unauthorized` responses and triggers `authStore.logout({ forced: true })` to clear local state and show session-expired toast.
-- **24 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetService.ts`, `usersApi.ts`.
+- **25 service files**: `activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notesApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetService.ts`, `usersApi.ts`.
 
 ```mermaid
 sequenceDiagram

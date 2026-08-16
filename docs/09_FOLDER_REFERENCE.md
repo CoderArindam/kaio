@@ -35,9 +35,9 @@ This directory dictionary maps every major folder across the repository, explain
 | `backend/app/meeting/pipeline/` | Sequential post-processing stage engine + task extraction | `orchestrator.py`, `stages/`, `context.py` | Deepgram, FFmpeg, LLM |
 | `backend/app/meeting/providers/` | Speech (Deepgram) and presence providers | `speech/deepgram_provider.py`, `participant_presence/` | Deepgram SDK, asyncpg |
 | `backend/app/websockets/` | WebSocket connection subsystem | `auth.py`, `manager.py`, `router.py` | FastAPI WebSockets, PyJWT |
-| `backend/app/routers/` | **26** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `subtasks.py`, `columns.py`, `labels.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, etc. | FastAPI, Pydantic |
-| `backend/app/schemas/` | **25** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `label.py`, `subtask.py`, `column.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, etc. | Pydantic v2 |
-| `backend/app/services/` | Business logic services (one per domain) | `auth_service.py`, `board_service.py`, `column_service.py`, `task_service.py`, `comment_service.py`, `dashboard_service.py`, `invitation_service.py`, `notification_service.py`, `email_service.py`, etc. | asyncpg, httpx |
+| `backend/app/routers/` | **28** REST API & WebSocket endpoint handler modules | `auth.py`, `boards.py`, `tasks.py`, `comments.py`, `subtasks.py`, `columns.py`, `labels.py`, `notes.py`, `notifications.py`, `invitations.py`, `dashboard.py`, `admin.py`, `search.py`, `task_proposals.py`, `timesheets.py`, etc. | FastAPI, Pydantic |
+| `backend/app/schemas/` | **27** Pydantic v2 request/response DTO schemas | `auth.py`, `board.py`, `task.py`, `label.py`, `subtask.py`, `column.py`, `notes.py`, `search.py`, `task_proposal.py`, `dashboard.py`, `invitations.py`, `timesheets.py`, etc. | Pydantic v2 |
+| `backend/app/services/` | Business logic services (one per domain) | `auth_service.py`, `board_service.py`, `column_service.py`, `task_service.py`, `comment_service.py`, `dashboard_service.py`, `invitation_service.py`, `notification_service.py`, `email_service.py`, `notes_service.py`, `task_reminder_worker.py`, `organization_purge_worker.py`, etc. | asyncpg, httpx |
 | `backend/storage/` | Local disk file storage for meeting artifacts | `meeting/recordings/`, `meeting/processed_audio/` | OS filesystem |
 | `backend/uploads/` | Uploaded task attachment files (served as static at `/uploads/`) | `.webm`, `.png`, `.pdf`, etc. | FastAPI StaticFiles |
 
@@ -49,7 +49,7 @@ This directory dictionary maps every major folder across the repository, explain
 
 | Path | Purpose | Key Files | Dependencies |
 |---|---|---|---|
-| `database/migrations/` | **90** SQL migration files (versions 001–089) | `001_extensions.sql` … `089_cleanup_orphaned_objects.sql` | PostgreSQL 15+ |
+| `database/migrations/` | **99** SQL migration files (versions 001–099) | `001_extensions.sql` … `099_attachment_annotations.sql` | PostgreSQL 15+ |
 | `database/scripts/` | Database rebuild & maintenance scripts | `rebuild.py` | asyncpg, python-dotenv |
 
 **Rebuild command**:
@@ -74,12 +74,12 @@ python database/scripts/rebuild.py --reset
 | `frontend/src/components/shared/` | Reusable domain-specific selector inputs | `AssigneeSelector.tsx`, `DueDatePicker.tsx`, `LabelPicker.tsx`, `PrioritySelector.tsx`, `StatusSelector.tsx` | React 19 |
 | `frontend/src/components/ui/` | Low-level primitive UI components | `Button.tsx`, `Card.tsx`, `Skeleton.tsx`, `WidgetError.tsx` | Tailwind CSS v4 |
 | `frontend/src/constants/` | Application constants, route path definitions | `routes.ts`, `config.ts` | — |
-| `frontend/src/features/` | Feature-scoped page modules (15 features) | `auth/`, `boards/`, `dashboard/`, `landing/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
+| `frontend/src/features/` | Feature-scoped page modules (17 features) | `auth/`, `boards/`, `dashboard/`, `landing/`, `admin/`, `settings/`, `my-work/`, `meeting/`, `notes/`, `notifications/`, `proposals/`, `projects/`, `activity/`, `ai/`, `billing/`, `search/`, `timesheets/` | React 19, Zustand, Axios |
 | `frontend/src/hooks/` | Custom React hooks | `useDebounce.ts`, `usePageTitle.ts`, `useWebSocket.ts` | React 19 |
 | `frontend/src/lib/` | Axios instance configuration with interceptors | `axios.ts` or similar | Axios v1 |
 | `frontend/src/routes/` | React Router route guard components | `ProtectedRoute.tsx`, `RequireRole.tsx` | React Router DOM v7, Zustand |
-| `frontend/src/services/` | API call functions (24 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `labelsApi.ts`, `subtasksApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, etc. | Axios v1 |
-| `frontend/src/store/` | Zustand v5 global state stores (10 stores) | `authStore.ts`, `boardStore.ts`, `taskStore.ts`, `adminStore.ts`, `notificationStore.ts`, `organizationStore.ts`, `preferencesStore.ts`, `projectSettingsStore.ts`, `activityStore.ts`, `uiStore.ts` | Zustand v5 |
+| `frontend/src/services/` | API call functions (25 service files, one per domain) | `authApi.ts`, `boardsApi.ts`, `tasksApi.ts`, `labelsApi.ts`, `subtasksApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `notesApi.ts`, `searchApi.ts`, `dashboardApi.ts`, `timesheetService.ts`, etc. | Axios v1 |
+| `frontend/src/store/` | Zustand v5 global state stores (11 stores) | `authStore.ts`, `boardStore.ts`, `taskStore.ts`, `adminStore.ts`, `notificationStore.ts`, `notesStore.ts`, `organizationStore.ts`, `preferencesStore.ts`, `projectSettingsStore.ts`, `activityStore.ts`, `uiStore.ts` | Zustand v5 |
 | `frontend/src/styles/` | Global CSS and Tailwind v4 customizations | `*.css` | Tailwind CSS v4 |
 | `frontend/src/utils/` | Utility helper functions | `*.ts` | — |
 
@@ -103,12 +103,12 @@ python database/scripts/rebuild.py --reset
 |---|---|
 | `README.md` | Documentation index and AI agent onboarding instructions |
 | `01_PROJECT_OVERVIEW.md` | Business objectives, USP, system architecture, phase roadmap |
-| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 26 routers, services, auth (httpOnly cookies), RBAC layers, DB rule |
-| `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand, Tailwind v4, feature structure, component tree, route guards, 25 API services |
-| `04_DATABASE_ARCHITECTURE.md` | 90 SQL migration files (versions 001–089), ERD, canonical views, stored functions catalog |
+| `02_BACKEND_ARCHITECTURE.md` | FastAPI, 28 routers, services, middleware stack (5 layers), auth (httpOnly cookies), RBAC layers, DB rule |
+| `03_FRONTEND_ARCHITECTURE.md` | React 19, Zustand (11 stores), Tailwind v4, feature structure (17 features), component tree, route guards, 25 API services |
+| `04_DATABASE_ARCHITECTURE.md` | 99 SQL migration files (versions 001–099), ERD, canonical views, stored functions catalog |
 | `05_MEETING_PIPELINE.md` | Bot join → WebM → FFmpeg → Deepgram → Attribution → Task Extraction → Transcript Editor pipeline |
 | `06_AI_ARCHITECTURE.md` | Deepgram speech tier, Puter/Gemini LLM tier, KAI agent, extraction pipeline |
-| `07_API_REFERENCE.md` | All 24 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, search, timesheets, etc. |
+| `07_API_REFERENCE.md` | All 27 REST API sections — auth, boards, tasks, comments, invitations, admin, dashboard, notes, search, timesheets, etc. |
 | `08_COMPONENT_REFERENCE.md` | Frontend component catalog — paths, props, purpose |
 | `09_FOLDER_REFERENCE.md` | This document — full directory dictionary |
 | `10_CODE_EXECUTION_FLOW.md` | Sequence diagrams for key flows (15 Mermaid sequence diagrams) |

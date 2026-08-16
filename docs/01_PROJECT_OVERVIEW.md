@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Vision
 
-**KAIO** (Kanban AI Orchestration) is an enterprise-grade, AI-native meeting intelligence and task orchestration platform. It automatically converts live video meetings into structured, actionable task boards with real-time speaker attribution, transcript resolution, and automated task extraction.
+**KAIO** (Kanban AI Orchestration) is an enterprise-grade, AI-native meeting intelligence and task orchestration platform. It automatically converts live video meetings into structured, actionable task boards with real-time speaker attribution, transcript resolution, and automated task extraction. Includes a rich Quick Notes subsystem with drawing canvas, image upload, and annotation overlay support.
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
@@ -24,7 +24,7 @@ Unlike traditional meeting recording tools that generate static videos or raw tr
 5. **Strict Database Architecture**: PostgreSQL database powered entirely by canonical views (`v_*_canonical`) and stored procedures, guaranteeing zero raw SQL query leaks in backend code.
 6. **Manager/Superadmin Dashboard**: Aggregated org-wide KPI metrics, per-board progress summaries, and recent activity feed gated behind RBAC.
 7. **Invitation Lifecycle Management**: Full workspace invitation system — send, list, verify, accept, and revoke pending invitations.
-8. **Enterprise Timesheet Management**: Comprehensive weekly effort logging against boards/tasks, customizable organization policies, manager approval queues, row-level locking, audit trails, and reporting views.
+8. **Enterprise Timesheet Management**: Comprehensive weekly effort logging against boards/tasks, direct task time-logging (`fn_log_task_time`), customizable organization policies, manager approval queues, row-level locking, audit trails, and reporting views.
 9. **Resilient Meeting Pipeline & Admin Operations**: Session rerun pipeline for recovered execution, system health status monitoring, and CSV audit log exports.
 10. **Global Search, Bulk Operations & Transcript Intelligence**: Cmd+K workspace-wide search across tasks, boards, and meetings, multi-select task card bulk operations, and post-meeting interactive transcript editing.
 11. **Real-Time WebSocket Updates & Task Deep Linking**: Low-latency WebSocket event channel broadcasting live task movements and unread notification alerts with sidebar status monitoring, combined with bidirectional task modal URL deep linking.
@@ -32,7 +32,8 @@ Unlike traditional meeting recording tools that generate static videos or raw tr
 13. **Account Security, Password Reset & Email Verification**: Secure password reset flow via cryptographic single-use tokens, email verification workflow (`055`), background email task sender (Brevo / SMTP), and security audit log integration. Including a secure **Danger Zone** for account hard deletion.
 14. **Public Marketing Landing Page**: Bespoke React 19 + Tailwind v4 marketing landing page showcasing live transcript-to-task pipeline visuals and interactive platform highlights.
 15. **Rich Text & Multi-View Boards**: TipTap Markdown editor integration for rich text descriptions and comments. Dynamic visualization via Kanban, List, and Calendar view modes.
-16. **Cloudinary Asset Management**: Native Cloudinary integration for scalable task attachment storage with metadata tracking.
+16. **Cloudinary Asset Management**: Native Cloudinary integration for scalable task attachment storage with metadata tracking, image annotations, and screenshot-to-storage upload.
+18. **Quick Notes Subsystem**: Personal note-taking workspace with rich text editor (TipTap), freehand drawing canvas, image upload with annotation overlays (arrows, boxes, text stamps), pin/unpin, full-text search, and optimistic conflict detection via version counters.
 17. **Project & Workflow Settings**: Dedicated administrative layouts for precise board label, member, and workflow lifecycle management.
 
 ---
@@ -111,7 +112,7 @@ graph TD
 ### 4.1 Backend Engine (`backend/app`)
 - Built with **Python 3.12+** and **FastAPI**.
 - Uses `asyncpg` connection pooling for non-blocking database operations.
-- **27 REST API & WebSocket routers** covering auth (including password reset & email verification), boards, tasks, labels, comments, subtasks, attachments, notifications, activity, board members, admin, invitations, my-work, preferences, organization, AI, task proposals, dashboard, users, timesheets, timesheet approvals, timesheet admin, search, columns, websockets (`/ws`), and the meeting subsystem.
+- **28 REST API & WebSocket routers** covering auth (including password reset & email verification), boards, tasks, labels, comments, subtasks, attachments, notifications, activity, board members, admin, invitations, my-work, preferences, organization, AI, task proposals, dashboard, users, timesheets, timesheet approvals, timesheet admin, search, columns, notes, websockets (`/ws`), and the meeting subsystem.
 - In-memory WebSocket manager (`ConnectionManager`) supporting topic/board subscriptions and targeted user notification broadcasting.
 - Enforces a strict architectural constraint: **NO raw SQL in backend Python services**. All reads use `v_*_canonical` views, and writes call PostgreSQL stored functions.
 - Authentication uses **httpOnly cookie-based JWT** — `access_token` (15 min) and `refresh_token` (7 days) set as server-side cookies; no tokens are exposed in response bodies.
@@ -123,15 +124,15 @@ graph TD
 - Includes manual transcript editor and speaker attribution override support.
 
 ### 4.3 Database Engine (`database/`)
-- Pure PostgreSQL schema managed via **65 SQL migration files** (`001_*.sql` → `065_comment_mentions.sql`).
-- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, row locking, meeting failure/rerun handling, global search indexing, bulk task move, atomic task deletion with notification cleanup (`fn_delete_task`), target reference formatting with task titles, labels management (`fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`), subtasks checklist management (`fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`), column management (`fn_add_column`, `fn_rename_column`, `fn_delete_column`, `fn_reorder_columns`), comment editing & mentions (`fn_update_comment`, `fn_create_comment_mentions`), password reset & email verification, and canonical views (`v_labels_canonical`, `v_subtasks_canonical`, `v_comment_mentions_canonical`).
+- Pure PostgreSQL schema managed via **99 SQL migration files** (`001_*.sql` → `099_attachment_annotations.sql`).
+- Custom functions for authorization, mutations, triggers, security events, user session management, task proposal approval queues, dashboard KPI views, invitation lifecycle, timesheet grid & approvals, row locking, meeting failure/rerun handling, global search indexing, bulk task move, atomic task deletion with notification cleanup (`fn_delete_task`), target reference formatting with task titles, labels management (`fn_create_label`, `fn_delete_label`, `fn_attach_label`, `fn_detach_label`, `fn_update_label`), subtasks checklist management (`fn_create_subtask`, `fn_toggle_subtask`, `fn_delete_subtask`, `fn_reorder_subtasks`), column management with custom colors (`fn_add_column`, `fn_rename_column`, `fn_delete_column`, `fn_reorder_columns`), comment editing & mentions (`fn_update_comment`, `fn_create_comment_mentions`), comment reactions (`fn_add_comment_reaction`, `fn_remove_comment_reaction`), task reporter tracking (`reporter_id`, `REPORTER_CHANGED` activity), task time estimation & logging (`estimate_hours`, `fn_log_task_time`), due date reminders (`fn_get_due_reminders`, `fn_mark_reminders_sent`), quick notes CRUD (`fn_create_note`, `fn_update_note`, `fn_delete_note`, `fn_toggle_pin_note`, `fn_search_notes`), attachment annotations (`annotation_data` JSONB), password reset & email verification, and canonical views (`v_labels_canonical`, `v_subtasks_canonical`, `v_comment_mentions_canonical`).
 - Rebuild script: `database/scripts/rebuild.py` — supports incremental apply (`python rebuild.py`) or full reset (`python rebuild.py --reset`).
 
 ### 4.4 Frontend SPA (`frontend/`)
 - Built with **React 19**, **TypeScript**, **Vite**, and **Tailwind CSS v4**.
-- State managed via **Zustand** stores (10 stores + WebSocket `wsConnected` state: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `uiStore`).
-- **15 Feature Modules** (`activity`, `admin`, `ai`, `auth`, `boards`, `dashboard`, `landing`, `meeting`, `my-work`, `notifications`, `projects`, `proposals`, `search`, `settings`, `timesheets`).
-- **25 API Service files** (`activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetReportsApi.ts`, `timesheetService.ts`, `usersApi.ts`).
+- State managed via **Zustand** stores (11 stores: `authStore`, `boardStore`, `taskStore`, `adminStore`, `notificationStore`, `organizationStore`, `preferencesStore`, `projectSettingsStore`, `activityStore`, `notesStore`, `uiStore`).
+- **17 Feature Modules** (`activity`, `admin`, `ai`, `auth`, `billing`, `boards`, `dashboard`, `landing`, `meeting`, `my-work`, `notes`, `notifications`, `projects`, `proposals`, `search`, `settings`, `timesheets`).
+- **25 API Service files** (`activityApi.ts`, `adminApi.ts`, `attachmentsApi.ts`, `authApi.ts`, `boardsApi.ts`, `columnsApi.ts`, `commentsApi.ts`, `dashboardApi.ts`, `invitationsApi.ts`, `labelsApi.ts`, `meetingApi.ts`, `myWorkApi.ts`, `notesApi.ts`, `notificationsApi.ts`, `organizationApi.ts`, `preferencesApi.ts`, `projectSettingsApi.ts`, `searchApi.ts`, `subtasksApi.ts`, `taskProposals.ts`, `tasksApi.ts`, `timesheetAdminService.ts`, `timesheetApprovalService.ts`, `timesheetService.ts`, `usersApi.ts`).
 - Custom `useWebSocket` hook maintaining connection heartbeat, auto-reconnect, sidebar connection status dot, and board-level event subscriptions.
 - Drag-and-drop powered by **@dnd-kit** (core + sortable) with optimistic rollbacks.
 - Route guards: `ProtectedRoute` (auth check) and `RequireRole` (RBAC role check).
@@ -166,8 +167,9 @@ gantt
     Phase 4.96 (Task Labels, Password Reset & Landing Page):done, p896, 2026-08-01, 2026-08-01
     Phase 4.97 (Subtasks, Column Mgmt, Comment Editing & @Mentions):done, p897, 2026-08-02, 2026-08-03
     Phase 4.98 (Project Settings, Multi-View, Cloudinary, Account Deletion):done, p898, 2026-08-03, 2026-08-04
+    Phase 4.99 (Notes, Reporter, Reactions & Annotations):done, p899, 2026-08-05, 2026-08-16
     section Upcoming
-    Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-08-04, 2026-11-01
+    Phase 5.0 (Knowledge Graph & Insights)   :active,  p9, 2026-08-16, 2026-11-01
 ```
 
 | Phase | Name | Description | Status |
@@ -186,4 +188,5 @@ gantt
 | **4.96** | Task Labels, Security & Landing Page | Board-scoped customizable task labels/tags, password reset & email verification, and landing page redesign | **Completed** |
 | **4.97** | Subtasks, Column Mgmt & Comment Features | Task subtask checklists (drag-to-reorder, progress bar), dynamic Kanban column management (add/rename/delete/reorder), inline comment editing with `(edited)` label, and @mention autocomplete with `MENTIONED_IN_COMMENT` notifications | **Completed** |
 | **4.98** | Project Settings & Core Enhancements | TipTap markdown editor, Cloudinary file attachments, Board Multi-views (Calendar & List), Account Hard Deletion (Danger Zone), Project Settings modules, and Brevo email integration. | **Completed** |
+| **4.99** | Notes, Reporter, Reactions & Annotations | Quick Notes with rich text/canvas/image+annotations, task reporter field, comment reactions, column custom colors, subtask assignees, task time estimation & direct log-time, due date reminder notifications, enterprise global search enhancements, and attachment annotation overlays. | **Completed** |
 | **5.0** | Knowledge Graph & Insights | Cross-board relationships, smart meeting analytics & insights | **In Progress** |

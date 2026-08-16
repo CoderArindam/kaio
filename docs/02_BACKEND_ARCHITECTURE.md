@@ -68,56 +68,58 @@ backend/
 │   │   ├── auth.py                 # WebSocket connection JWT query parameter authentication
 │   │   ├── manager.py              # In-memory ConnectionManager (user connections, board room subscriptions, broadcasts)
 │   │   └── router.py               # /ws endpoint handler, message routing (ping/subscribe_board/unsubscribe_board)
-│   ├── routers/                    # 26 REST API & WebSocket endpoint modules:
+│   ├── routers/                    # 28 REST API & WebSocket endpoint modules:
 │   │   ├── activity.py             # GET /activity — audit log history
 │   │   ├── admin.py                # /admin — user/board CRUD, system health status, audit log export (Superadmin-gated)
 │   │   ├── ai.py                   # /ai — KAI AI agent endpoints
-│   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads (Cloudinary/Local) & downloads
+│   │   ├── attachments.py          # /tasks/{id}/attachments — file uploads (Cloudinary/Local) & downloads with annotation data
 │   │   ├── auth.py                 # /auth — login, register org, me, refresh, logout, password reset, email verification, sessions, security events, account hard deletion (danger zone)
 │   │   ├── board_members.py        # /boards/{id}/members — membership queries & project settings
 │   │   ├── boards.py               # /boards — CRUD, archiving
-│   │   ├── columns.py              # /boards/{id}/columns, /columns/{id} — dynamic column management (add, rename, delete with card migration, reorder)
-│   │   ├── comments.py             # /tasks/{id}/comments — create, update (inline edit), list, delete
+│   │   ├── columns.py              # /boards/{id}/columns, /columns/{id} — dynamic column management (add, rename, delete with card migration, reorder, custom color)
+│   │   ├── comments.py             # /tasks/{id}/comments — create, update (inline edit), list, delete, emoji reactions
 │   │   ├── dashboard.py            # /dashboard/summary — Manager/Superadmin KPI dashboard
 │   │   ├── invitations.py          # /invitations — invite, list, verify, accept, revoke
 │   │   ├── labels.py               # /boards/{id}/labels, /labels/{id}, /tasks/{id}/labels — board label management & task tagging (WS broadcast)
 │   │   ├── my_work.py              # /my-work — user task aggregation & summary
+│   │   ├── notes.py                # /notes — personal quick notes CRUD, pin, search, image upload, screenshot upload
 │   │   ├── notifications.py        # /notifications — list, mark read, mark all read
 │   │   ├── organization.py         # /organization — org profile & settings
 │   │   ├── preferences.py          # /preferences — user UI & notification preferences
 │   │   ├── search.py               # /search — workspace-wide full-text search across tasks, boards, and meetings
 │   │   ├── subtasks.py             # /tasks/{id}/subtasks — subtask checklist CRUD, toggle completion, reorder
 │   │   ├── task_proposals.py       # /proposals — AI proposal review, approve, reject
-│   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move, bulk-delete (broadcasts WS events on mutations)
+│   │   ├── tasks.py                # /tasks — CRUD, move, reorder, bulk-move, bulk-delete, log-time (broadcasts WS events on mutations)
 │   │   ├── timesheets.py           # /timesheets — draft grid, entry upsert/delete, submit, recall
 │   │   ├── timesheet_approvals.py  # /timesheets/approvals — manager approval queue, approve, reject
 │   │   ├── timesheet_admin.py      # /timesheets/policy, /timesheets/approvers, row locking, export
 │   │   ├── timesheet_errors.py     # Centralized stored procedure error code mapper (including TASK_ASSIGNMENT_CHANGED)
 │   │   ├── users.py                # /users — user directory & profile queries
 │   │   └── (meeting router)        # /meeting — mounted from app/meeting/api/router.py (join, leave, status, transcript, rerun)
-│   ├── schemas/                    # 25 Pydantic v2 request/response DTO schema files (including label.py, subtask.py, column.py, attachments.py, envelope.py)
+│   ├── schemas/                    # 27 Pydantic v2 request/response DTO schema files (including label.py, subtask.py, column.py, attachments.py, notes.py, envelope.py)
 │   └── services/                   # Business logic services:
 │       ├── activity_service.py
 │       ├── admin_service.py
 │       ├── attachment_service.py
 │       ├── auth_service.py         # Registration, login, password reset token creation & verification, email verification tokens
 │       ├── board_service.py
-│       ├── column_service.py       # Column management: add, rename, delete (with task migration), reorder
-│       ├── comment_service.py      # Comment create, update (inline edit via fn_update_comment), delete, @mention dispatch
+│       ├── column_service.py       # Column management: add, rename, delete (with task migration), reorder, custom color
+│       ├── comment_service.py      # Comment create, update (inline edit via fn_update_comment), delete, @mention dispatch, emoji reactions
 │       ├── dashboard_service.py    # Reads v_dashboard_kpis_canonical, v_dashboard_board_summaries_canonical
 │       ├── email_service.py        # Async background email dispatch wrapper (Brevo API + SMTP fallback)
 │       ├── email_templates.py      # HTML email templates for invitations, password reset & email verification
 │       ├── invitation_service.py   # Full invitation lifecycle (invite → email → verify token → accept → revoke)
 │       ├── my_work_service.py
+│       ├── notes_service.py        # Quick notes CRUD (fn_create_note, fn_update_note, fn_delete_note, fn_toggle_pin_note, fn_search_notes), image upload via StorageService, optimistic version conflict detection
 │       ├── notification_service.py # Dispatches real-time WS notification alerts to connected target users
 │       ├── organization_service.py
 │       ├── organization_deletion_service.py # Handles organization soft-delete lifecycle and cleanup
 │       ├── organization_purge_worker.py     # Background worker that permanently purges scheduled org deletions
 │       ├── preferences_service.py
 │       ├── project_settings.py     # Board project settings (icon, color, key, etc.)
-│       ├── storage_service.py      # Dual-mode file storage: Cloudinary integration (primary) & Local disk (fallback)
+│       ├── storage_service.py      # Dual-mode file storage: Cloudinary integration (primary) & Local disk (fallback); includes save_note_image helper
 │       ├── task_reminder_worker.py # Background worker that dispatches in-app notifications for due tasks
-│       ├── task_service.py         # Handles CRUD, reordering, bulk task move, and bulk task deletion via fn_bulk_move_tasks & fn_bulk_delete_tasks
+│       ├── task_service.py         # Handles CRUD, reordering, bulk task move, bulk task deletion, and direct time logging via fn_log_task_time
 │       └── user_service.py
 
 └── tests/                          # Pytest automated test suites
@@ -129,8 +131,16 @@ backend/
 
 ### 4.1 FastAPI Application Lifespan (`app/main.py`)
 Manages startup and shutdown hooks using `asynccontextmanager`:
-- **Startup**: Initializes `asyncpg` connection pool via `db.connect()`. Mounts `uploads/` directory as static files at `/uploads`.
-- **Shutdown**: Safely cancels active meeting runtimes via `meeting_service.shutdown_all()`, then closes DB connections via `db.disconnect()`.
+- **Startup**: Initializes `asyncpg` connection pool via `db.connect()`. Mounts `uploads/` directory as static files at `/uploads`. Starts `OrganizationPurgeWorker` and `TaskReminderWorker` background workers.
+- **Shutdown**: Safely cancels active meeting runtimes via `meeting_service.shutdown_all()`, stops both background workers, then closes DB connections via `db.disconnect()`.
+
+### 4.1.1 Production Middleware Stack (`app/middleware.py`)
+Five middleware layers applied in order:
+- **`ProductionLoggingMiddleware`**: Structured access logging with unique `X-Request-ID` per request.
+- **`SecurityHeadersMiddleware`**: Injects `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, and HSTS on HTTPS.
+- **`RequestSizeLimitMiddleware`**: Enforces max payload size (default 50 MB via `MAX_REQUEST_SIZE_BYTES`).
+- **`RateLimitMiddleware`**: In-memory sliding window rate limiter per client IP (default 300 req/min via `RATE_LIMIT_PER_MINUTE`).
+- **`CSRFMiddleware`**: Validates `X-Requested-With: XMLHttpRequest` header on all state-mutating requests (`POST`/`PUT`/`PATCH`/`DELETE`). Public auth and extension presence endpoints are exempt.
 
 ### 4.2 Database Connection Manager (`app/database/connection.py`)
 - Maintains a global `Database` instance holding an `asyncpg.Pool`.
@@ -224,6 +234,8 @@ sequenceDiagram
 | `InvitationService` | `app/services/invitation_service.py` | Service | Full invitation lifecycle: invite → email → verify token → accept → revoke |
 | `TaskProposalsRouter` | `app/routers/task_proposals.py` | API Router | Manages AI proposal queues, edits, approvals (`fn_approve_task_proposal`), and rejections |
 | `AuthService` | `app/services/auth_service.py` | Service | Login, registration, token refresh, session management, security events |
-| `CommentService` | `app/services/comment_service.py` | Service | Comment create, inline edit (`fn_update_comment`), delete, and @mention dispatch (`fn_create_comment_mentions`) |
-| `ColumnService` | `app/services/column_service.py` | Service | Dynamic column management: add, rename, delete with task migration (`fn_delete_column`), and reorder |
+| `CommentService` | `app/services/comment_service.py` | Service | Comment create, inline edit (`fn_update_comment`), delete, @mention dispatch (`fn_create_comment_mentions`), and emoji reaction toggle (`fn_add_comment_reaction` / `fn_remove_comment_reaction`) |
+| `ColumnService` | `app/services/column_service.py` | Service | Dynamic column management: add, rename, delete with task migration (`fn_delete_column`), reorder, and custom color update |
+| `NoteService` | `app/services/notes_service.py` | Service | Personal quick notes CRUD via stored functions, image upload to StorageService, screenshot base64 upload, optimistic version conflict detection (`VERSION_CONFLICT`) |
 | `TaskReminderWorker` | `app/services/task_reminder_worker.py` | Background Worker | Polling worker running in app lifespan that dispatches in-app notifications for due tasks using `fn_get_due_reminders`. |
+| `OrganizationPurgeWorker` | `app/services/organization_purge_worker.py` | Background Worker | Background worker that permanently purges organizations scheduled for deletion using `fn_claim_organization_purge_job` / `fn_purge_organization_batch` / `fn_finalize_organization_purge`. |

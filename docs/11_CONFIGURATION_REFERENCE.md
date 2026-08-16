@@ -93,14 +93,23 @@ When running in Linux VPS environments (managed via `deploy/vps/start_meeting_bo
 
 ---
 
-## 5. AI / LLM Configuration (`backend/app/ai/config/`)
+## 5. AI / LLM Configuration (`backend/app/ai/config/settings.py`)
 
 | Variable Key | Type | Default | Description |
 |---|---|---|---|
-| `AI_PROVIDER` | `str` | `openai` | Active LLM provider. Options: `openai`, `puter`, `gemini`. |
-| `AI_MODEL` | `str` | `gpt-4o-mini` | Model identifier for the active provider. |
+| `AI_ENABLED` | `bool` | `True` | Enables or disables the AI subsystem. |
+| `AI_PROVIDER` | `str` | `openrouter` | Active LLM provider. Options: `openrouter`, `openai`, `puter`, `gemini`. |
+| `AI_MODEL` | `str` | `openai/gpt-oss-20b:free` | Model identifier for the active provider. |
+| `AI_TIMEOUT` | `int` | `60` | LLM request timeout in seconds. |
+| `AI_MAX_RETRIES` | `int` | `3` | Max retry attempts on provider failure. |
+| `AI_TEMPERATURE` | `float` | `0.0` | LLM sampling temperature. |
+| `AI_MAX_TOKENS` | `int` | `2000` | Max output tokens per LLM response. |
+| `OPENROUTER_API_KEY` | `str` | Optional | API key for OpenRouter (required when `AI_PROVIDER=openrouter`). |
+| `OPENROUTER_BASE_URL` | `str` | `https://openrouter.ai/api/v1` | OpenRouter API base URL. |
+| `OPENAI_API_KEY` | `str` | Optional | OpenAI API key (if using `openai` provider). |
 | `PUTER_API_KEY` | `str` | Optional | API key for Puter LLM gateway (if using `puter` provider). |
 | `GEMINI_API_KEY` | `str` | Optional | Google Gemini API key (if using `gemini` provider). |
+| `ANTHROPIC_API_KEY` | `str` | Optional | Anthropic API key (reserved for future provider). |
 
 ---
 
@@ -146,7 +155,7 @@ npm run dev
 
 ### Database (initial setup)
 ```powershell
-# Apply all 72 SQL migration files (no data loss)
+# Apply all 99 SQL migration files (no data loss)
 python database/scripts/rebuild.py
 
 # Full reset + seed (destroys data)
