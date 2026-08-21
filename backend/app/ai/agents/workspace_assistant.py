@@ -12,6 +12,13 @@ from app.ai.tools.domain_tools import (
 )
 from app.ai.tools.profile_tools import UpdateProfileTool, GetMyProfileTool
 from app.ai.tools.appearance_tools import UpdateAppearanceTool, GetMyAppearanceTool
+from app.ai.tools.analytics_tools import (
+    GetBoardHealthSummaryTool,
+    GetMyOverdueAndUpcomingTasksTool,
+    SearchWorkspaceTool,
+    GetPendingProposalsSummaryTool,
+    GetTimesheetStatusTool,
+)
 
 class WorkspaceAssistantAgent(BaseAgent):
     """Main assistant agent for handling user workspace queries."""
@@ -40,7 +47,14 @@ class WorkspaceAssistantAgent(BaseAgent):
         # Appearance
         UpdateAppearanceTool,
         GetMyAppearanceTool,
+        # Analytics & reporting (Phase 2)
+        GetBoardHealthSummaryTool,
+        GetMyOverdueAndUpcomingTasksTool,
+        SearchWorkspaceTool,
+        GetPendingProposalsSummaryTool,
+        GetTimesheetStatusTool,
     ]
+
 
     def build_messages(self, user_input: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         import datetime

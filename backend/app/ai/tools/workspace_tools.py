@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from app.ai.tools.base import BaseTool
 from app.ai.tools.fuzzy import resolve_board, resolve_user
@@ -16,6 +16,8 @@ class ListBoardsTool(BaseTool):
     output_schema = Any
     category = "workspace"
     action = "list_projects"
+    # RBAC: intentionally open to all authenticated roles.
+    # Org isolation is enforced by board_service.get_user_boards() via current_user.
     
     async def execute(self, params: ListBoardsInput, current_user: dict, services: Dict[str, Any]) -> Any:
         board_service = services.get("board_service")
@@ -44,11 +46,13 @@ class ListTasksTool(BaseTool):
     output_schema = Any
     category = "workspace"
     action = "list_tasks"
+    # RBAC: intentionally open to all authenticated roles.
+    # Org isolation is enforced by task_service.get_board_tasks() via current_user.
     
     async def execute(self, params: ListTasksInput, current_user: dict, services: Dict[str, Any]) -> Any:
         board_service = services.get("board_service")
         task_service = services.get("task_service")
-        
+
         # Resolve assignee
         assigned_to = None
         if params.assignee_name:
@@ -61,66 +65,101 @@ class ListTasksTool(BaseTool):
                 if match:
                     assigned_to = match.get("id")
                 else:
-                    raise ValueError(f"Could not resolve assignee '{params.assignee_name}' to a valid user in this workspace.")
-        
+                    # Gracefully surface the resolution failure rather than raising
+                    return {
+                        "tasks": [],
+                        "_meta": {
+                            "warning": f"Could not find a workspace member matching '{params.assignee_name}'. "
+                                       "Check the exact name or try a partial name."
+                        }
+                    }
+
         # Resolve board
         board_id = params.board_id
+        board_name_hint = None
         if not board_id and params.board_name:
             boards = await board_service.get_user_boards(include_archived=False, current_user=current_user)
             match = resolve_board(params.board_name, boards)
             if match:
                 board_id = match.id
+                board_name_hint = match.name
             else:
                 available = ", ".join(b.name for b in boards[:10])
                 raise ValueError(f"Could not find board '{params.board_name}'. Available: {available}")
-        
+
+        # Build task list
         all_tasks = []
-        
+
         if board_id:
-            # Single board
-            board_data = await task_service.get_board_tasks(board_id=board_id, assigned_to=assigned_to, current_user=current_user)
+            # Single board — DB-level assignee + access check
+            board_data = await task_service.get_board_tasks(
+                board_id=board_id, assigned_to=assigned_to, current_user=current_user
+            )
+            # Resolve board name if we don't have it yet
+            if not board_name_hint:
+                try:
+                    boards = await board_service.get_user_boards(include_archived=False, current_user=current_user)
+                    b = next((b for b in boards if b.id == board_id), None)
+                    board_name_hint = b.name if b else None
+                except Exception:
+                    pass
+            for t in board_data.tasks:
+                t._board_name = board_name_hint
             all_tasks = board_data.tasks
         else:
-            # Cross-board listing
+            # Cross-board — assignee filter applied per-board at DB level
             boards = await board_service.get_user_boards(include_archived=False, current_user=current_user)
             for b in boards:
                 try:
-                    board_data = await task_service.get_board_tasks(board_id=b.id, assigned_to=assigned_to, current_user=current_user)
+                    board_data = await task_service.get_board_tasks(
+                        board_id=b.id, assigned_to=assigned_to, current_user=current_user
+                    )
                     for t in board_data.tasks:
-                        t._board_name = b.name  # Tag with board name for display
+                        t._board_name = b.name
                     all_tasks.extend(board_data.tasks)
                 except Exception:
                     continue
-        
-        # Filter by status
+
+        # Post-DB filters (status, priority, overdue)
         if params.status:
             from app.ai.tools.fuzzy import normalize
             status_norm = normalize(params.status)
             all_tasks = [t for t in all_tasks if status_norm in normalize(t.column_name or "")]
-            
-        # Filter by priority
+
         if params.priority:
             from app.ai.tools.fuzzy import normalize
             prio_norm = normalize(params.priority)
             all_tasks = [t for t in all_tasks if t.priority and prio_norm in normalize(t.priority)]
-            
-        # Filter by overdue
+
         if params.overdue:
-            from datetime import datetime
-            now = datetime.utcnow()
-            all_tasks = [t for t in all_tasks if not t.is_completed and t.due_date and t.due_date.replace(tzinfo=None) < now]
-        
-        return {"tasks": [{
-            "id": t.id,
-            "title": t.title,
-            "column_name": t.column_name,
-            "board_name": getattr(t, '_board_name', None),
-            "priority": getattr(t, 'priority', None),
-            "assignee_id": t.assigned_to,
-            "assignee_name": f"{t.assignee_first_name or ''} {t.assignee_last_name or ''}".strip() if t.assigned_to else None,
-            "due_date": t.due_date.isoformat() if t.due_date else None,
-            "is_completed": t.is_completed
-        } for t in all_tasks]}
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            def _is_overdue(t) -> bool:
+                if t.is_completed:
+                    return False
+                if not t.due_date:
+                    return False
+                due = t.due_date if t.due_date.tzinfo else t.due_date.replace(tzinfo=timezone.utc)
+                return due < now
+            all_tasks = [t for t in all_tasks if _is_overdue(t)]
+
+        return {"tasks": [
+            {
+                "id": t.id,
+                "title": t.title,
+                "column_name": t.column_name,
+                "board_name": getattr(t, "_board_name", None),
+                "priority": getattr(t, "priority", None),
+                "assignee_id": t.assigned_to,
+                "assignee_name": (
+                    f"{t.assignee_first_name or ''} {t.assignee_last_name or ''}".strip()
+                    if t.assigned_to else None
+                ),
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "is_completed": t.is_completed,
+            }
+            for t in all_tasks
+        ]}
 
 
 # --- Get Workspace Users Tool ---
@@ -135,6 +174,8 @@ class GetWorkspaceUsersTool(BaseTool):
     output_schema = Any
     category = "workspace"
     action = "get_users"
+    # RBAC: intentionally open to all authenticated roles.
+    # Results are scoped to current_user's org by user_service.get_all_users().
     
     async def execute(self, params: GetWorkspaceUsersInput, current_user: dict, services: Dict[str, Any]) -> Any:
         user_service = services.get("user_service")
@@ -145,7 +186,7 @@ class GetWorkspaceUsersTool(BaseTool):
 # --- Get Task Tool ---
 class GetTaskInput(BaseModel):
     model_config = {"populate_by_name": True}
-    task_id: Optional[int] = Field(None, description="The ID of the task to retrieve (if known)")
+    task_id: Optional[Union[int, str]] = Field(None, description="The ID of the task to retrieve (if known)")
     task_name: Optional[str] = Field(None, alias="title", description="The name of the task to retrieve")
     board_name: Optional[str] = Field(None, description="The name of the board containing the task")
 
@@ -157,6 +198,8 @@ class GetTaskTool(BaseTool):
     output_schema = Any
     category = "workspace"
     action = "get_task_details"
+    # RBAC: intentionally open to all authenticated roles.
+    # Access control is enforced at the service layer via fn_check_board_access.
 
     async def execute(self, params: GetTaskInput, current_user: dict, services: Dict[str, Any]) -> Any:
         from app.ai.tools.domain_tools import resolve_task_id
@@ -181,6 +224,8 @@ class GetBoardSummaryTool(BaseTool):
     output_schema = Any
     category = "workspace"
     action = "get_board_summary"
+    # RBAC: intentionally open to all authenticated roles.
+    # Org isolation is enforced by task_service and board_service via current_user.
 
     async def execute(self, params: GetBoardSummaryInput, current_user: dict, services: Dict[str, Any]) -> Any:
         board_service = services.get("board_service")

@@ -56,12 +56,21 @@ export function useAIChat() {
     addMessage(assistantMessage);
 
     try {
+      const match = window.location.pathname.match(/\/board[s]?\/(\d+)/);
+      const activeBoardId = match ? parseInt(match[1], 10) : undefined;
+      const resolvedUIContext: UIContext = {
+        current_page: window.location.pathname,
+        ...(activeBoardId ? { board_id: activeBoardId } : {}),
+        ...uiContext,
+      };
+
       const payload = {
         conversation_id: conversationId,
         messages: currentMessages,
-        ui_context: uiContext,
+        ui_context: resolvedUIContext,
         confirmed_plan: confirmedPlan
       };
+
 
       const response = await api.post('/ai/chat', payload, {
         responseType: 'stream',

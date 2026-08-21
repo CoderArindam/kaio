@@ -56,19 +56,27 @@ class BaseTool(ABC):
                 )
 
         if self.is_write_action:
-            # Future: Execute pre-flight check for write actions
-            pass
-
-        # [Safety Hook] Audit logging point here
+            # Pre-flight audit: record mutation intent BEFORE execute() is called.
+            # Ensures a trace exists even when execute() raises mid-DB-call.
+            tracker.record_preflight_write(
+                tool_name=self.name,
+                user_id=current_user.get("id"),
+                org_id=current_user.get("organization_id"),
+                arguments=params.model_dump() if hasattr(params, "model_dump") else {},
+            )
         
         start_time = time.time()
         try:
             result = await self.execute(params, current_user, services)
-            
+
             tracker.record_tool_execution(
                 tool_name=self.name,
                 latency=time.time() - start_time,
-                success=True
+                success=True,
+                user_id=current_user.get("id"),
+                org_id=current_user.get("organization_id"),
+                arguments=params.model_dump() if hasattr(params, "model_dump") else {},
+                result=result,
             )
             return result
         except Exception as e:
@@ -76,6 +84,9 @@ class BaseTool(ABC):
                 tool_name=self.name,
                 latency=time.time() - start_time,
                 success=False,
-                error=str(e)
+                error=str(e),
+                user_id=current_user.get("id"),
+                org_id=current_user.get("organization_id"),
+                arguments=params.model_dump() if hasattr(params, "model_dump") else {},
             )
             raise

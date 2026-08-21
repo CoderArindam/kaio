@@ -212,3 +212,80 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error fetching dashboard summary: {e}")
             raise HTTPException(status_code=400, detail="An unexpected error occurred while generating dashboard summary")
+
+    async def get_board_health_summary(
+        self, board_id: int, current_user: dict
+    ) -> dict:
+        """
+        Return a health snapshot for a single board.
+
+        Board-level access is enforced by querying v_dashboard_board_summaries_canonical
+        with both org_id and can_view_board(user_id, board_id) — the same pattern
+        used in get_dashboard_summary().  If the user cannot see the board the view
+        returns no rows and we raise ValueError.
+
+        Args:
+            board_id:     The integer ID of the board to inspect.
+            current_user: Authenticated user dict — org_id and user_id taken from here.
+
+        Returns:
+            dict with board metadata, task counts by status, progress %, overdue count,
+            member count, and top members.
+
+        Raises:
+            ValueError: board not found or user has no access.
+        """
+        org_id = current_user["organization_id"]
+        user_id = current_user["id"]
+
+        # Board summary row — access gate is baked into the WHERE clause
+        board_row = await self.conn.fetchrow(
+            """
+            SELECT *
+            FROM v_dashboard_board_summaries_canonical
+            WHERE organization_id = $1
+              AND board_id = $2
+              AND can_view_board($3, board_id)
+            """,
+            org_id,
+            board_id,
+            user_id,
+        )
+
+        if not board_row:
+            raise ValueError(
+                f"Board {board_id} not found or you do not have access to it."
+            )
+
+        raw = dict(board_row)
+        raw_members = raw.pop("top_members", None) or []
+        if isinstance(raw_members, str):
+            raw_members = json.loads(raw_members)
+        top_members = [
+            {
+                "user_id": m.get("user_id"),
+                "display_name": f"{m.get('first_name', '')} {m.get('last_name', '')}".strip(),
+                "permission": m.get("permission"),
+            }
+            for m in (raw_members or [])
+        ]
+
+        # Overdue rate as a derived metric
+        task_count = raw.get("task_count") or 0
+        overdue_count = raw.get("overdue_count") or 0
+        overdue_rate = (
+            round(overdue_count / task_count * 100, 1) if task_count > 0 else 0.0
+        )
+
+        return {
+            "board_id": raw.get("board_id") or board_id,
+            "name": raw.get("name"),
+            "total_tasks": task_count,
+            "completed_tasks": raw.get("completed_task_count") or 0,
+            "progress_percent": raw.get("completion_percentage") or 0.0,
+            "overdue_tasks": overdue_count,
+            "overdue_rate_percent": overdue_rate,
+            "member_count": raw.get("member_count") or 0,
+            "top_members": top_members,
+        }
+

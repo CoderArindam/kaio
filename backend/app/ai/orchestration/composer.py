@@ -72,21 +72,170 @@ template_registry.register("list_projects", _render_projects)
 template_registry.register("list_boards", _render_projects)
 
 
+def _priority_emoji(priority: str | None) -> str:
+    return {"HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢"}.get(
+        (priority or "").upper(), "⚪"
+    )
+
+
+def _due_label(due_date_str: str | None, is_completed: bool) -> str:
+    if not due_date_str or is_completed:
+        return ""
+    try:
+        from datetime import datetime, timezone
+        due = datetime.fromisoformat(due_date_str.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        delta = (due.date() - now.date()).days
+        if delta < 0:
+            return f"⚠️ Overdue by {abs(delta)}d"
+        if delta == 0:
+            return "📅 Due today"
+        if delta <= 3:
+            return f"📅 Due in {delta}d"
+        return ""
+    except Exception:
+        return ""
+
+
 def _render_tasks(output):
     if not output or not isinstance(output, dict):
         return None
+    # Surface resolution warnings (e.g. unknown assignee name)
+    meta_warning = output.get("_meta", {}).get("warning")
     tasks = output.get("tasks", [])
     if not tasks:
+        if meta_warning:
+            return f"⚠️ {meta_warning}"
         return "No tasks found matching your criteria."
     count = len(tasks)
-    return render_list(
-        f"Found **{count}** task{'s' if count != 1 else ''}:",
-        tasks,
-        display_field="title",
-        secondary_field="column_name"
-    )
+    lines = [f"Found **{count}** task{'s' if count != 1 else ''}:\n"]
+    for t in tasks:
+        title = t.get("title", "Untitled")
+        prio = _priority_emoji(t.get("priority"))
+        status = t.get("column_name") or "—"
+        assignee = t.get("assignee_name") or "Unassigned"
+        board = t.get("board_name") or ""
+        due_label = _due_label(t.get("due_date"), bool(t.get("is_completed")))
+        board_part = f" · **{board}**" if board else ""
+        due_part = f" · {due_label}" if due_label else ""
+        lines.append(f"- {prio} **{title}**{board_part} · {status} · {assignee}{due_part}")
+    return "\n".join(lines)
 
 template_registry.register("list_tasks", _render_tasks)
+
+
+# --- Analytics & Reporting Templates (Phase 2) ---
+
+def _render_board_health(output):
+    if not output or not isinstance(output, dict):
+        return None
+    name = output.get("name", "Board")
+    total = output.get("total_tasks", 0)
+    completed = output.get("completed_tasks", 0)
+    progress = output.get("progress_percent", 0.0)
+    overdue = output.get("overdue_tasks", 0)
+    overdue_rate = output.get("overdue_rate_percent", 0.0)
+    members = output.get("member_count", 0)
+    top = output.get("top_members", [])
+
+    lines = [f"### 📊 {name} — Health Summary\n"]
+    lines.append(f"| Metric | Value |")
+    lines.append(f"|---|---|")
+    lines.append(f"| Total Tasks | **{total}** |")
+    lines.append(f"| Completed | **{completed}** ({progress:.0f}%) |")
+    if overdue > 0:
+        lines.append(f"| ⚠️ Overdue | **{overdue}** ({overdue_rate:.0f}% of total) |")
+    lines.append(f"| Members | **{members}** |")
+    if top:
+        members_str = ", ".join(m.get("display_name", "?") for m in top[:4])
+        lines.append(f"| Top Members | {members_str} |")
+    return "\n".join(lines)
+
+template_registry.register("get_board_health_summary", _render_board_health)
+
+
+def _render_my_tasks(output):
+    return _render_tasks(output)
+
+template_registry.register("get_my_overdue_and_upcoming_tasks", _render_my_tasks)
+
+
+def _render_search(output):
+    if not output or not isinstance(output, dict):
+        return None
+    results = output.get("results", [])
+    query = output.get("query", "")
+    if not results:
+        return f"No results found for **\"{query}\"**."
+    lines = [f"Found **{len(results)}** result{'s' if len(results) != 1 else ''}' for **\"{query}\"**:\n"]
+    for r in results:
+        rtype = str(r.get("type", "item")).capitalize()
+        title = r.get("title", "Untitled")
+        lines.append(f"- [{rtype}] **{title}**")
+    return "\n".join(lines)
+
+template_registry.register("search_workspace", _render_search)
+
+
+def _render_proposals(output):
+    if not output or not isinstance(output, dict):
+        return None
+    counts = output.get("counts", {})
+    pending = counts.get("pending", 0)
+    approved = counts.get("approved", 0)
+    rejected = counts.get("rejected", 0)
+    proposals = output.get("pending_proposals", [])
+
+    lines = [
+        "### 📋 Task Proposal Summary\n",
+        f"| Status | Count |",
+        f"|---|---|",
+        f"| 🟡 Pending | **{pending}** |",
+        f"| ✅ Approved | **{approved}** |",
+        f"| ❌ Rejected | **{rejected}** |",
+    ]
+    if proposals:
+        lines.append(f"\n**Pending proposals:**\n")
+        for p in proposals[:10]:
+            board = p.get("board_name") or "Unassigned"
+            score = p.get("confidence_score")
+            score_str = f" (confidence: {score:.0%})" if score is not None else ""
+            lines.append(f"- **{p['title']}** · {board}{score_str}")
+    return "\n".join(lines)
+
+template_registry.register("get_pending_proposals_summary", _render_proposals)
+
+
+def _render_timesheet(output):
+    if not output or not isinstance(output, dict):
+        return None
+    scope = output.get("scope", "own")
+    if scope == "org":
+        summaries = output.get("weekly_summaries", [])
+        if not summaries:
+            return "No org-wide timesheet data available."
+        lines = ["### 📊 Org Timesheet Summary\n", "| Week | Hours Logged | Compliance |", "|---|---|---|"]
+        for s in summaries[:4]:
+            week = (s.get("week_start_date") or "")[:10]
+            hrs = f"{s.get('total_hours_logged', 0):.1f}h"
+            compliance = f"{s.get('compliance_rate', 0) * 100:.0f}%"
+            lines.append(f"| {week} | {hrs} | {compliance} |")
+        return "\n".join(lines)
+    else:
+        timesheets = output.get("timesheets", [])
+        if not timesheets:
+            return "You have no timesheet records for the last 4 weeks."
+        lines = ["### 🗓️ My Timesheets\n", "| Week | Status | Hours |", "|---|---|---|"]
+        for ts in timesheets[:4]:
+            week = (ts.get("week_start_date") or "")[:10]
+            status = ts.get("status", "—")
+            hrs = f"{ts.get('total_hours', 0):.1f}h"
+            lines.append(f"| {week} | {status} | {hrs} |")
+        return "\n".join(lines)
+
+template_registry.register("get_timesheet_status", _render_timesheet)
+
+
 
 
 def _render_users(output):
@@ -108,13 +257,40 @@ template_registry.register("get_users", _render_users)
 def _render_task_details(output):
     if not output or not isinstance(output, dict):
         return None
-    return render_entity(
-        "Task Details",
-        output.get("task", {}),
-        fields=["title", "column_name", "priority", "assignee_id", "due_date", "description"]
-    )
+    task = output.get("task", {})
+    if not task:
+        return "Task details not found."
+    
+    title = task.get("title", "Untitled Task")
+    status = task.get("column_name") or "—"
+    board = task.get("board_name") or ""
+    priority = task.get("priority") or "—"
+    prio_emoji = _priority_emoji(priority)
+    
+    first = task.get("assignee_first_name") or ""
+    last = task.get("assignee_last_name") or ""
+    assignee = f"{first} {last}".strip() or "Unassigned"
+    
+    due = task.get("due_date")
+    due_badge = _due_label(due, bool(task.get("is_completed"))) if due else ""
+    due_str = f"{due[:10]} ({due_badge})" if due and due_badge else (due[:10] if due else "None")
+    desc = task.get("description") or "No description provided."
+    
+    lines = [
+        f"### 📌 {title}\n",
+        f"| Field | Details |",
+        f"|---|---|",
+        f"| **Status** | {status} |",
+        f"| **Board** | {board if board else '—'} |",
+        f"| **Priority** | {prio_emoji} {priority} |",
+        f"| **Assignee** | {assignee} |",
+        f"| **Due Date** | {due_str} |",
+        f"\n**Description:**\n> {desc}"
+    ]
+    return "\n".join(lines)
 
 template_registry.register("get_task_details", _render_task_details)
+
 
 
 def _render_board_summary(output):

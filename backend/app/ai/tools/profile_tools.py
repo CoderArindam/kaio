@@ -17,6 +17,8 @@ class UpdateProfileTool(BaseTool):
     category = "profile"
     risk_level = RiskLevel.SAFE
     is_write_action = True
+    # RBAC: intentionally open to all authenticated roles.
+    # Self-scoped: execute() always writes to current_user's own record via update_me().
     input_schema = UpdateProfileParams
 
     async def execute(self, params: UpdateProfileParams, current_user: dict, services: Dict[str, Any]) -> Any:
@@ -53,6 +55,8 @@ class GetMyProfileTool(BaseTool):
     category = "profile"
     risk_level = RiskLevel.SAFE
     is_write_action = False
+    # RBAC: intentionally open to all authenticated roles.
+    # Self-scoped: execute() only reads from the in-memory current_user dict; no DB query.
     input_schema = GetMyProfileParams
 
     async def execute(self, params: GetMyProfileParams, current_user: dict, services: Dict[str, Any]) -> Any:

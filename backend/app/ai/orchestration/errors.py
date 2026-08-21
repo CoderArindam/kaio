@@ -24,10 +24,22 @@ class ErrorMessageFactory:
         """
         Derives a safe user-facing error message from an exception.
         """
+        err_str = str(error)
+        if "rate limit" in err_str.lower() or "429" in err_str or "quota" in err_str.lower():
+            return (
+                "The AI service free-tier request limit has been reached (OpenRouter 50 requests/day cap). "
+                "Please wait for the daily reset, add credits on OpenRouter, or configure a Gemini/OpenAI API key in backend/.env."
+            )
+
         if isinstance(error, AIError):
-            if getattr(error, "message", None):
-                return error.message
+            if error.category == FailureCategory.PARSING_ERROR:
+                return cls._templates[FailureCategory.PARSING_ERROR]
+            msg = getattr(error, "message", "")
+            # Only return message if it doesn't leak raw JSON/stack trace blobs or technical parser details
+            if msg and "{" not in msg and "traceback" not in msg.lower() and "json" not in msg.lower() and "expecting value" not in msg.lower():
+                return msg
             return cls._templates.get(error.category, cls._templates[FailureCategory.PERMANENT_FAILURE])
         
         # Fallback for unexpected generic exceptions
         return cls._templates[FailureCategory.INFRASTRUCTURE_ERROR]
+

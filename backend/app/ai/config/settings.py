@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AISettings(BaseSettings):
     AI_ENABLED: bool = True
     AI_PROVIDER: str = "openrouter"
-    AI_MODEL: str = "openai/gpt-oss-20b:free"
+    AI_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     AI_TIMEOUT: int = 60
     AI_MAX_RETRIES: int = 3
     AI_TEMPERATURE: float = 0.0

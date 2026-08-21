@@ -4,7 +4,7 @@ from app.ai.schemas.planning import ExecutionPlan, ExecutionContext
 from app.ai.tools.base import BaseTool
 from app.ai.gateway.ai_gateway import AIGateway
 from app.ai.prompts.registry import PromptRegistry
-from app.ai.exceptions import AIError
+from app.ai.exceptions import AIError, PlannerError
 
 class Planner:
     """
@@ -74,9 +74,9 @@ class Planner:
                     span.metadata["steps_generated"] = len(plan.steps)
                     return plan
                 else:
-                    raise ValueError("Expected ExecutionPlan, got string.")
+                    raise PlannerError("Expected ExecutionPlan from AI Gateway.")
                     
             except Exception as e:
                 if isinstance(e, AIError):
                     raise
-                raise ValueError(f"Failed to parse execution plan: {str(e)}")
+                raise PlannerError(f"Failed to generate execution plan: {str(e)}")

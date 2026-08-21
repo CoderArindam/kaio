@@ -13,6 +13,7 @@ from app.ai.telemetry.bus import telemetry_bus
 from app.ai.telemetry.events import EventType
 import time
 import json
+import re
 
 logger = logging.getLogger("ai.gateway")
 
@@ -87,10 +88,12 @@ class AIGateway:
             span.metadata["workflow_id"] = workflow_id
             
             async def do_call():
+                response_format = {"type": "json_object"} if response_schema is not None else None
                 response = await self.provider.generate(
                     messages=messages,
                     temperature=ai_settings.AI_TEMPERATURE,
                     max_tokens=ai_settings.AI_MAX_TOKENS,
+                    response_format=response_format,
                     tools=tools
                 )
                 
@@ -104,39 +107,8 @@ class AIGateway:
                 TraceContext.increment_metric("total_llm_calls")
                 TraceContext.increment_metric("total_tokens", usage.get("total_tokens", 0))
                 
-                if response_schema and content:
-                    try:
-                        try:
-                            parsed_json = json.loads(content)
-                            validated_output = response_schema.model_validate(parsed_json)
-                        except json.JSONDecodeError:
-                            clean_content = content.strip()
-                            if clean_content.startswith("```json"):
-                                clean_content = clean_content[7:]
-                            elif clean_content.startswith("```"):
-                                clean_content = clean_content[3:]
-                            if clean_content.endswith("```"):
-                                clean_content = clean_content[:-3]
-                            
-                            try:
-                                parsed_json = json.loads(clean_content.strip())
-                            except json.JSONDecodeError:
-                                # Advanced repair: extract everything between first { and last }
-                                start = clean_content.find('{')
-                                end = clean_content.rfind('}')
-                                if start != -1 and end != -1 and end > start:
-                                    repaired = clean_content[start:end+1]
-                                    parsed_json = json.loads(repaired)
-                                else:
-                                    raise
-                                    
-                            validated_output = response_schema.model_validate(parsed_json)
-                            
-                        return validated_output
-                    except ValidationError as ve:
-                        raise ParsingError(f"Failed to parse LLM output: Schema validation failed. {str(ve)}", content=content)
-                    except Exception as pe:
-                        raise ParsingError(f"Failed to parse LLM output: Response is not valid JSON. {str(pe)}", content=content)
+                if response_schema:
+                    return self._extract_and_parse_json(content, response_schema)
                         
                 return response
                 
@@ -154,6 +126,54 @@ class AIGateway:
                 parent_span_id=span.parent_span_id,
                 on_parsing_error=on_parsing_error
             )
+
+    @staticmethod
+    def _extract_and_parse_json(content: Optional[str], response_schema: Type[BaseModel]) -> BaseModel:
+        """Robustly extracts, repairs, and parses JSON output matching response_schema."""
+        if not content or not content.strip():
+            raise ParsingError("LLM returned an empty response.", content=content or "")
+
+        clean_content = content.strip()
+
+        # 1. Remove thinking tokens (<think>...</think>) if present
+        clean_content = re.sub(r"<think>[\s\S]*?</think>", "", clean_content).strip()
+
+        # 2. Try direct JSON parse
+        try:
+            parsed_json = json.loads(clean_content)
+            return response_schema.model_validate(parsed_json)
+        except Exception:
+            pass
+
+        # 3. Extract from markdown code fence
+        fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_content)
+        if fence_match:
+            clean_content = fence_match.group(1).strip()
+
+        # 4. Extract between outermost brackets
+        start_brace = clean_content.find("{")
+        start_bracket = clean_content.find("[")
+        valid_starts = [pos for pos in [start_brace, start_bracket] if pos != -1]
+
+        if valid_starts:
+            start_idx = min(valid_starts)
+            end_idx = clean_content.rfind("}") if start_idx == start_brace else clean_content.rfind("]")
+            if end_idx > start_idx:
+                clean_content = clean_content[start_idx : end_idx + 1]
+
+        # 5. Parse and validate with trailing comma repair
+        try:
+            try:
+                parsed_json = json.loads(clean_content)
+            except json.JSONDecodeError:
+                repaired = re.sub(r",\s*([}\]])", r"\1", clean_content)
+                parsed_json = json.loads(repaired)
+
+            return response_schema.model_validate(parsed_json)
+        except ValidationError as ve:
+            raise ParsingError(f"Failed to parse LLM output: Schema validation failed. {str(ve)}", content=content)
+        except Exception as pe:
+            raise ParsingError(f"Failed to parse LLM output: Response is not valid JSON. {str(pe)}", content=content)
 
     async def stream_prompt(
         self,

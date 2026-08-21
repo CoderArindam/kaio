@@ -25,6 +25,9 @@ from app.ai.orchestration.clarification_router import ClarificationRouter
 from app.ai.orchestration.errors import ErrorMessageFactory
 from app.ai.orchestration.state_machine import ExecutionStateMachine
 from app.ai.orchestration.idempotency import idempotency_store
+from app.ai.orchestration.plan_confirmation_store import (
+    plan_confirmation_store, hash_plan_from_dict,
+)
 from app.ai.orchestration.timeouts import timeout_policy
 from app.ai.exceptions import (
     ExecutionTimeoutError, FailureCategory, MissingInformationError,
@@ -43,6 +46,11 @@ from app.services.user_service import UserService
 from app.services.comment_service import CommentService
 from app.services.preferences_service import PreferencesService
 from app.services.notification_service import NotificationService
+from app.services.dashboard_service import DashboardService
+from app.services.my_work_service import MyWorkService
+from app.services.search_service import SearchService
+from app.services.proposal_read_service import ProposalReadService
+from app.services.timesheet_read_service import TimesheetReadService
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +71,22 @@ class AIService:
 
         board_id = None
         if ui_context:
-            if hasattr(ui_context, "board_id"):
+            if hasattr(ui_context, "board_id") and ui_context.board_id:
                 board_id = ui_context.board_id
-            elif isinstance(ui_context, dict):
+            elif isinstance(ui_context, dict) and ui_context.get("board_id"):
                 board_id = ui_context.get("board_id")
+
+            # Fallback: extract from current_page url (e.g. /board/3 or /boards/3)
+            if not board_id:
+                current_page = getattr(ui_context, "current_page", None) if not isinstance(ui_context, dict) else ui_context.get("current_page")
+                if current_page and isinstance(current_page, str):
+                    import re
+                    match = re.search(r"/board[s]?/(\d+)", current_page)
+                    if match:
+                        try:
+                            board_id = int(match.group(1))
+                        except Exception:
+                            pass
 
         db_context = await context_builder.build(current_user=current_user, board_id=board_id)
 
@@ -246,6 +266,7 @@ class AIService:
 
     def _build_services(self, recent_entities: dict) -> dict:
         return {
+            # Existing domain services
             "board_service": BoardService(self.conn),
             "task_service": TaskService(self.conn),
             "user_service": UserService(self.conn),
@@ -253,6 +274,12 @@ class AIService:
             "preferences_service": PreferencesService(self.conn),
             "notification_service": NotificationService(self.conn),
             "recent_entities": recent_entities,
+            # Analytics & reporting services (Phase 2)
+            "dashboard_service": DashboardService(self.conn),
+            "my_work_service": MyWorkService(self.conn),
+            "search_service": SearchService(self.conn),
+            "proposal_read_service": ProposalReadService(self.conn),
+            "timesheet_read_service": TimesheetReadService(self.conn),
         }
 
     async def _run_execution(
@@ -375,8 +402,37 @@ class AIService:
             user_input, planner_input = self._build_planner_input(request.messages)
             pending_plan_data, missing_fields, recent_entities = self._extract_history_state(request.messages)
 
+            # Auto-seed recent_entities with active board if currently viewing a board
+            active_board_id = workspace_ctx_dict.get("current_board_id")
+            active_board_name = workspace_ctx_dict.get("active_board_name")
+            if active_board_id and str(active_board_id) != "None" and "board" not in recent_entities:
+                try:
+                    recent_entities["board"] = {
+                        "entity_id": int(active_board_id),
+                        "name": active_board_name or f"Board #{active_board_id}"
+                    }
+                except Exception:
+                    pass
+
+
             # --- Confirmed plan (user clicked confirm) ---
             if request.confirmed_plan:
+                submitted_hash = hash_plan_from_dict(request.confirmed_plan)
+                stored_hash = plan_confirmation_store.consume(request.conversation_id)
+                if stored_hash is None:
+                    yield sse_error(
+                        "This confirmation has expired or was not found. "
+                        "Please retry your original request."
+                    )
+                    tracer.end()
+                    return
+                if submitted_hash != stored_hash:
+                    yield sse_error(
+                        "This confirmation no longer matches the original request — "
+                        "please try again."
+                    )
+                    tracer.end()
+                    return
                 plan = ExecutionPlan(**request.confirmed_plan)
                 skip_confirmation = True
                 intent = IntentType.WORKSPACE_ACTION
@@ -405,7 +461,12 @@ class AIService:
             skip_confirmation = False
 
             if request.confirmed_plan:
-                plan = ExecutionPlan(**request.confirmed_plan)
+                # Hash already validated in the block above; plan reference was set there.
+                # This branch is only reached when the early-return paths above were skipped
+                # (i.e. the block above set plan and skip_confirmation).  Guard against a
+                # logic error where plan was somehow not set.
+                if plan is None:
+                    plan = ExecutionPlan(**request.confirmed_plan)
                 skip_confirmation = True
             else:
                 # Clarification resolution

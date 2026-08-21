@@ -4,7 +4,7 @@ Every success message presented to the user must originate from verified backend
 rather than planner arguments or user input. Mutation tools must return standardized 
 outputs containing `status`, `action`, `message`, `verified`, and `warnings`.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from app.ai.tools.base import BaseTool
 from app.services.task_service import TaskService
@@ -41,32 +41,52 @@ def _serialize(data: Any) -> Any:
 # Shared Helpers
 # -----------------
 
-async def resolve_board_id(board_id: Optional[int], board_name: Optional[str],
+async def resolve_board_id(board_id: Optional[Union[int, str]], board_name: Optional[str],
                            current_user: dict, services: Dict[str, Any]) -> int:
     """Helper to resolve a board by ID or name"""
-    board_service = services["board_service"]
-    
-    if board_id:
-        return board_id
-        
+    if board_id is not None:
+        if isinstance(board_id, int):
+            return board_id
+        if isinstance(board_id, str):
+            clean_str = board_id.strip()
+            if clean_str.isdigit():
+                return int(clean_str)
+            if not board_name:
+                board_name = clean_str
+
+    # Intercept pronouns, current board phrases, or empty board_name when active board context exists
+    board_phrases = {
+        "here", "this project", "that board", "it", "this", "this board",
+        "current board", "current project", "current board that i am looking at",
+        "the board", "active board", "active project", "current", "my board"
+    }
+    recent_entities = services.get("recent_entities", {})
+    if (not board_name or board_name.lower().strip() in board_phrases) and "board" in recent_entities:
+        board_ent = recent_entities["board"]
+        bid = board_ent.get("entity_id") or board_ent.get("id")
+        if bid:
+            return int(bid)
+
     if not board_name:
         raise ValueError("Either board_id or board_name must be provided")
-        
-    # Intercept pronouns
-    if board_name.lower() in ["here", "this project", "that board", "it", "this"]:
-        recent_entities = services.get("recent_entities", {})
-        if "board" in recent_entities:
-            return recent_entities["board"]["entity_id"]
-        
+
+    board_service = services.get("board_service")
+    if not board_service:
+        raise ValueError("Board service not available for board resolution")
+
     boards = await board_service.get_user_boards(include_archived=False, current_user=current_user)
     match = resolve_board(board_name, boards)
     if not match:
+        # If user is referencing 'this board' / 'current board' and only 1 board exists
+        if len(boards) == 1:
+            return boards[0].id
         if not boards:
-            raise ValueError(f"You don't have access to any projects. Please create one or request access first.")
+            raise ValueError("You don't have access to any projects. Please create one or request access first.")
         available = ", ".join(b.name for b in boards[:10])
         raise ValueError(f"Could not resolve board '{board_name}'. Available boards: {available if available else '(empty)'}")
-        
+
     return match.id
+
 
 
 async def resolve_assignee_id(assignee_name: str, current_user: dict,
@@ -112,12 +132,22 @@ def parse_due_date(due_date_str: str):
 
 async def resolve_task_id(params, current_user: dict, services: Dict[str, Any]) -> int:
     """Resolve a task by ID or by fuzzy name search across boards."""
-    if getattr(params, "task_id", None):
-        return params.task_id
-    
+    raw_id = getattr(params, "task_id", None)
     task_name = getattr(params, "task_name", None) or getattr(params, "title", None) or getattr(params, "task_title", None)
+
+    if raw_id is not None:
+        if isinstance(raw_id, int):
+            return raw_id
+        if isinstance(raw_id, str):
+            clean_str = raw_id.strip()
+            if clean_str.isdigit():
+                return int(clean_str)
+            if not task_name:
+                task_name = clean_str
+    
     if not task_name:
         raise ValueError("Must provide either task_id or task_name")
+
         
     # Intercept pronouns
     if task_name.lower() in ["it", "this", "that", "this task", "that one", "the task"]:
@@ -223,16 +253,19 @@ class CreateTaskTool(BaseTool):
         result = await task_service.create_task(task_in, current_user)
         await _broadcast_task_event(board_id, result.id, "created")
         if assigned_to and assigned_to != current_user.get("id"):
-            notif_svc = services.get("notification_service")
-            if notif_svc:
-                await notif_svc.notify_task_assigned(
-                    task_id=result.id,
-                    task_title=result.title,
-                    board_name=result.board_name or str(board_id),
-                    assignee_id=assigned_to,
-                    actor_id=current_user["id"],
-                    org_id=current_user["org_id"],
-                )
+            try:
+                notif_svc = services.get("notification_service")
+                if notif_svc:
+                    await notif_svc.notify_task_assigned(
+                        task_id=result.id,
+                        task_title=result.title,
+                        board_name=result.board_name or str(board_id),
+                        assignee_id=assigned_to,
+                        actor_id=current_user["id"],
+                        org_id=current_user.get("organization_id") or current_user.get("org_id"),
+                    )
+            except Exception:
+                pass
         return {
             "status": "success",
             "action": "created",
@@ -244,9 +277,9 @@ class CreateTaskTool(BaseTool):
 
 class UpdateTaskParams(BaseModel):
     model_config = {"populate_by_name": True}
-    task_id: Optional[int] = Field(None, description="ID of the task to update (if known)")
+    task_id: Optional[Union[int, str]] = Field(None, description="ID of the task to update (if known)")
     task_name: Optional[str] = Field(None, description="The EXISTING name of the task (use this to find the task if ID is unknown)")
-    board_id: Optional[int] = Field(None, description="ID of the board containing the task")
+    board_id: Optional[Union[int, str]] = Field(None, description="ID of the board containing the task")
     board_name: Optional[str] = Field(None, description="Name of the board containing the task")
     title: Optional[str] = Field(None, alias="new_name", description="The NEW title of the task (if you want to rename it)")
     description: Optional[str] = Field(None, description="The NEW description of the task")
@@ -333,10 +366,11 @@ class UpdateTaskTool(BaseTool):
 
 
 class DeleteTaskParams(BaseModel):
-    task_id: Optional[int] = Field(None, description="ID of the task to delete (if known)")
+    task_id: Optional[Union[int, str]] = Field(None, description="ID of the task to delete (if known)")
     task_name: Optional[str] = Field(None, description="Name/title of the task (if ID is unknown)")
-    board_id: Optional[int] = Field(None, description="ID of the board containing the task")
+    board_id: Optional[Union[int, str]] = Field(None, description="ID of the board containing the task")
     board_name: Optional[str] = Field(None, description="Name of the board containing the task")
+
 
 
 class DeleteTaskTool(BaseTool):
@@ -473,7 +507,7 @@ class DeleteBoardTool(BaseTool):
 
 class AddCommentParams(BaseModel):
     model_config = {"populate_by_name": True}
-    task_id: Optional[int] = Field(None, description="The ID of the task")
+    task_id: Optional[Union[int, str]] = Field(None, description="The ID of the task")
     task_name: Optional[str] = Field(None, alias="title", description="The name of the task (if ID is unknown)")
     board_name: Optional[str] = Field(None, description="Name of the board")
     content: str = Field(..., alias="comment", description="The comment content")
@@ -487,6 +521,8 @@ class AddCommentTool(BaseTool):
     action = "add_comment"
     risk_level = RiskLevel.SAFE
     is_write_action = True
+    # RBAC: intentionally open to all authenticated roles.
+    # Any org member may comment on tasks; task access is enforced by the comment service.
 
     async def execute(self, params: AddCommentParams, current_user: dict, services: Dict[str, Any]) -> Any:
         comment_service = services.get("comment_service")
@@ -505,9 +541,10 @@ class AddCommentTool(BaseTool):
         }
 
 class GetCommentsParams(BaseModel):
-    task_id: Optional[int] = Field(None, description="ID of the task (if known)")
+    task_id: Optional[Union[int, str]] = Field(None, description="ID of the task (if known)")
     task_name: Optional[str] = Field(None, description="Name of the task")
     board_name: Optional[str] = Field(None, description="Name of the board containing the task")
+
 
 class GetCommentsTool(BaseTool):
     name: str = "get_comments"
@@ -518,6 +555,8 @@ class GetCommentsTool(BaseTool):
     action = "get_comments"
     risk_level = RiskLevel.SAFE
     is_write_action = False
+    # RBAC: intentionally open to all authenticated roles.
+    # Any org member may read comments; task access is enforced by the comment service.
 
     async def execute(self, params: GetCommentsParams, current_user: dict, services: Dict[str, Any]) -> Any:
         comment_service = services.get("comment_service")

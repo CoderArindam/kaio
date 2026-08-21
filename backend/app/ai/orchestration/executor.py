@@ -8,9 +8,79 @@ from app.ai.schemas.planning import (
 )
 from app.ai.tools.base import BaseTool
 from app.ai.orchestration.recovery import RecoveryPolicy, RecoveryAction
+from app.ai.orchestration.plan_confirmation_store import plan_confirmation_store, hash_plan_from_model
 from app.ai.exceptions import ToolExecutionError, UserCancellationError
 
 logger = logging.getLogger(__name__)
+
+def _get_nested_val(data: Any, path: str) -> Any:
+    import re
+    normalized = re.sub(r'\[(\d+)\]', r'.\1', path)
+    tokens = [t for t in normalized.split('.') if t]
+    curr = data
+    for t in tokens:
+        if curr is None:
+            return None
+        if isinstance(curr, dict):
+            curr = curr.get(t)
+        elif isinstance(curr, list):
+            try:
+                idx = int(t)
+                curr = curr[idx] if 0 <= idx < len(curr) else None
+            except (ValueError, IndexError):
+                return None
+        else:
+            curr = getattr(curr, t, None)
+    return curr
+
+
+def _resolve_step_variables(args: Any, step_results: List[StepExecutionResult]) -> Any:
+    import re
+    if not step_results:
+        return args
+
+    ctx: Dict[str, Any] = {}
+    for i, sr in enumerate(step_results):
+        out = sr.output
+        step_id = sr.step_id
+        step_data: Dict[str, Any] = {"result": out, "output": out}
+        if isinstance(out, dict):
+            step_data.update(out)
+            if "tasks" in out and isinstance(out["tasks"], list) and len(out["tasks"]) > 0:
+                first_t = out["tasks"][0]
+                if isinstance(first_t, dict) and "id" in first_t:
+                    step_data["id"] = first_t["id"]
+                    step_data["task_id"] = first_t["id"]
+            if "task" in out and isinstance(out["task"], dict) and "id" in out["task"]:
+                step_data["id"] = out["task"]["id"]
+                step_data["task_id"] = out["task"]["id"]
+            if "board" in out and isinstance(out["board"], dict) and "id" in out["board"]:
+                step_data["board_id"] = out["board"]["id"]
+
+        ctx[step_id] = step_data
+        ctx[f"step_{i+1}"] = step_data
+
+    def _resolve_val(val: Any) -> Any:
+        if isinstance(val, str):
+            m_exact = re.fullmatch(r'\{\{\s*([\w\.\[\]_]+)\s*\}\}', val.strip())
+            if m_exact:
+                expr = m_exact.group(1)
+                res = _get_nested_val(ctx, expr)
+                if res is not None:
+                    return res
+            def _repl(m):
+                expr = m.group(1)
+                r = _get_nested_val(ctx, expr)
+                return str(r) if r is not None else m.group(0)
+            return re.sub(r'\{\{\s*([\w\.\[\]_]+)\s*\}\}', _repl, val)
+        elif isinstance(val, dict):
+            return {k: _resolve_val(v) for k, v in val.items()}
+        elif isinstance(val, list):
+            return [_resolve_val(item) for item in val]
+        return val
+
+    return _resolve_val(args)
+
 
 class Executor:
     """
@@ -82,9 +152,15 @@ class Executor:
                         continue
                         
                     risk = tool_cls.risk_level
+                    # NOTE (Phase 4): RiskLevel.MEDIUM is handled by this condition
+                    # but no tool currently sets it — the MEDIUM branch is structurally
+                    # present but functionally untested.  Phase 4 must add a smoke test
+                    # asserting MEDIUM behaves identically to HIGH for confirmation-gating.
                     if risk in [RiskLevel.MEDIUM, RiskLevel.HIGH] and not skip_confirmation:
+                        plan_hash = hash_plan_from_model(plan)
+                        plan_confirmation_store.store(context.conversation_id, plan_hash)
                         yield self._create_event(context, "confirmation_required", {
-                            "step_id": step.id, 
+                            "step_id": step.id,
                             "plan": plan.model_dump(),
                             "reason": f"Action '{step.action}' requires confirmation."
                         })
@@ -97,9 +173,10 @@ class Executor:
                     
                     tool_instance = tool_cls()
                     try:
-                        validated_args = tool_instance.input_schema(**step.arguments)
+                        resolved_args = _resolve_step_variables(step.arguments, result.step_results)
+                        validated_args = tool_instance.input_schema(**resolved_args)
                         
-                        cache_key = f"{step.action}_{json.dumps(step.arguments, sort_keys=True)}"
+                        cache_key = f"{step.action}_{json.dumps(resolved_args, sort_keys=True)}"
                         if cache_key in context.tool_cache:
                             tool_output = context.tool_cache[cache_key]
                         else:
@@ -120,6 +197,7 @@ class Executor:
                             output=tool_output
                         )
                         result.step_results.append(step_result)
+
                         
                         yield self._create_event(context, "step_completed", {"step_id": step.id, "result": "Success"})
                         result.completed_steps.append(step.id)

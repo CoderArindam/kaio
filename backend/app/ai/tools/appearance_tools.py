@@ -23,6 +23,8 @@ class UpdateAppearanceTool(BaseTool):
     category = "appearance"
     risk_level = RiskLevel.SAFE
     is_write_action = True
+    # RBAC: intentionally open to all authenticated roles.
+    # Self-scoped: execute() always writes to current_user["id"]'s preferences; no cross-user access.
     input_schema = UpdateAppearanceParams
 
     async def execute(self, params: UpdateAppearanceParams, current_user: dict, services: Dict[str, Any]) -> Any:
@@ -80,6 +82,8 @@ class GetMyAppearanceTool(BaseTool):
     category = "appearance"
     risk_level = RiskLevel.SAFE
     is_write_action = False
+    # RBAC: intentionally open to all authenticated roles.
+    # Self-scoped: execute() only reads preferences for current_user["id"].
     input_schema = GetMyAppearanceParams
 
     async def execute(self, params: GetMyAppearanceParams, current_user: dict, services: Dict[str, Any]) -> Any:

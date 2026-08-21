@@ -71,6 +71,36 @@ The LLM integration is abstracted to allow runtime switching between providers c
 - Uses function-calling tools (`app/ai/tools/`) to perform board queries, task operations, and meeting lookups.
 - Context builders (`app/ai/context/`) inject active workspace and task state into prompts.
 
+### 3.4 KAI Tool RBAC & Risk Reference
+
+Complete reference for all 15 tools. Entries with no `required_roles` are intentionally open — see the in-code `# RBAC:` comment on each class for the rationale.
+
+| Tool | File | `required_roles` | `risk_level` | `is_write_action` | Scope |
+|---|---|---|---|---|---|
+| `ListBoardsTool` | `workspace_tools.py` | None (all roles) | SAFE | No | Org-scoped via `current_user` |
+| `ListTasksTool` | `workspace_tools.py` | None (all roles) | SAFE | No | Org-scoped via `current_user` |
+| `GetWorkspaceUsersTool` | `workspace_tools.py` | None (all roles) | SAFE | No | Org-scoped via `current_user` |
+| `GetTaskTool` | `workspace_tools.py` | None (all roles) | SAFE | No | Board-access enforced by DB |
+| `GetBoardSummaryTool` | `workspace_tools.py` | None (all roles) | SAFE | No | Org-scoped via `current_user` |
+| `CreateTaskTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | SAFE | Yes | Org-scoped |
+| `UpdateTaskTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | SAFE | Yes | Org-scoped |
+| `DeleteTaskTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | **HIGH** | Yes | Org-scoped; confirmation required |
+| `CreateBoardTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | SAFE | Yes | Org-scoped |
+| `ArchiveBoardTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | **HIGH** | Yes | Org-scoped; confirmation required |
+| `DeleteBoardTool` | `domain_tools.py` | `MANAGER`, `SUPER_ADMIN` | **HIGH** | Yes | Org-scoped; confirmation required |
+| `AddCommentTool` | `domain_tools.py` | None (all roles) | SAFE | Yes | Task-access enforced by comment service |
+| `GetCommentsTool` | `domain_tools.py` | None (all roles) | SAFE | No | Task-access enforced by comment service |
+| `UpdateProfileTool` | `profile_tools.py` | None (all roles) | SAFE | Yes | Self-scoped to `current_user` |
+| `GetMyProfileTool` | `profile_tools.py` | None (all roles) | SAFE | No | Self-scoped (no DB query) |
+| `UpdateAppearanceTool` | `appearance_tools.py` | None (all roles) | SAFE | Yes | Self-scoped to `current_user["id"]` |
+| `GetMyAppearanceTool` | `appearance_tools.py` | None (all roles) | SAFE | No | Self-scoped to `current_user["id"]` |
+
+**Confirmation gate**: `HIGH`-risk tools trigger a `confirmation_required` SSE event. The Executor stores a SHA-256 hash of the pending plan (keyed by `conversation_id`, 5-minute TTL) and validates it when the client resubmits `confirmed_plan`. A tampered or expired plan is rejected with an error before any tool executes.
+
+**`RiskLevel.MEDIUM` (Phase 4 note)**: The enum value and the `if risk in [RiskLevel.MEDIUM, RiskLevel.HIGH]` condition in `executor.py` are structurally present, but **no tool currently sets `MEDIUM`**. This branch is untested. Phase 4 must include a smoke test confirming MEDIUM behaves identically to HIGH for confirmation-gating before any MEDIUM tool is shipped.
+
+**Pre-flight audit**: All `is_write_action = True` tools emit a `preflight_write` record to `logs/ai_tool_audit.jsonl` (interim sink) _before_ `execute()` is called, ensuring mutation intent is logged even on mid-call failures.
+
 ---
 
 ## 4. Automated Task Extraction & Approval Queue (`app/meeting/pipeline/stages/extraction.py`)

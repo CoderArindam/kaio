@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict, Any, Type
+from pydantic import BaseModel
 from app.ai.schemas.planning import ExecutionPlan, ExecutionContext
 from app.ai.tools.base import BaseTool
 
@@ -73,10 +74,46 @@ ACTION_REQUIRED_ROLES: Dict[str, List[str]] = {
     "get_comments": ROLES_ALL,
 }
 
+def _has_template_variables(val: Any) -> bool:
+    if isinstance(val, str):
+        return "{{" in val or val.startswith("$")
+    if isinstance(val, dict):
+        return any(_has_template_variables(v) for v in val.values())
+    if isinstance(val, list):
+        return any(_has_template_variables(item) for item in val)
+    return False
+
+
+def _sanitize_for_static_validation(arguments: Dict[str, Any], schema_cls: Type[BaseModel]) -> Dict[str, Any]:
+    """Replaces template references (e.g. {{step_1.result...}}) with valid dummy values so static schema validation succeeds."""
+    sanitized = {}
+    fields = getattr(schema_cls, "model_fields", {})
+    for k, v in arguments.items():
+        if _has_template_variables(v):
+            field_info = fields.get(k)
+            annotation = getattr(field_info, "annotation", None)
+            annot_str = str(annotation).lower() if annotation else ""
+            if "int" in annot_str:
+                sanitized[k] = 1
+            elif "float" in annot_str:
+                sanitized[k] = 1.0
+            elif "bool" in annot_str:
+                sanitized[k] = True
+            elif "list" in annot_str:
+                sanitized[k] = []
+            elif "dict" in annot_str:
+                sanitized[k] = {}
+            else:
+                sanitized[k] = "mock_template_val"
+        else:
+            sanitized[k] = v
+    return sanitized
+
+
 class PlanValidator:
     """
-    Validates an ExecutionPlan before execution.
-    Checks for available tools and permissions.
+    Validates that a generated ExecutionPlan is logically sound,
+    referentially correct, uses valid tools, and satisfies schema requirements.
     """
     
     @staticmethod
@@ -120,7 +157,8 @@ class PlanValidator:
                         
                 if tool_cls and hasattr(tool_cls, 'input_schema') and tool_cls.input_schema:
                     try:
-                        tool_cls.input_schema(**step.arguments)
+                        sanitized_args = _sanitize_for_static_validation(step.arguments, tool_cls.input_schema)
+                        tool_cls.input_schema(**sanitized_args)
                     except Exception as e:
                         # Attempt to check if it's a Pydantic ValidationError
                         if hasattr(e, 'errors') and callable(e.errors):
